@@ -1,4 +1,6 @@
-﻿using System.Collections.ObjectModel;
+﻿using System;
+using System.Collections.ObjectModel;
+using eft_dma_radar.Source.MonoSharp;
 using eft_dma_radar.Source.Tarkov;
 
 namespace eft_dma_radar
@@ -16,7 +18,7 @@ namespace eft_dma_radar
         private ExfilManager _exfilManager;
         private PlayerManager _playerManager;
         private Config _config;
-        private static CameraManager _cameraManager;
+        private CameraManager _cameraManager;
         private QuestManager _questManager;
         private Toolbox _toolbox;
         private ulong _localGameWorld;
@@ -27,7 +29,18 @@ namespace eft_dma_radar
         private volatile bool _refreshLoot = false;
         private volatile string _mapName = string.Empty;
         private volatile bool _isScav = false;
-        
+
+        public enum GameStatus
+        {
+            NotFound,
+            Found,
+            Menu,
+            LoadingLoot,
+            Matching,
+            InGame,
+            Error
+        }
+
         #region Getters
         public bool InGame
         {
@@ -70,7 +83,7 @@ namespace eft_dma_radar
         {
             get => _exfilManager?.Exfils;
         }
-        public static CameraManager CameraManager {
+        public CameraManager CameraManager {
             get => _cameraManager;
         }
         public PlayerManager PlayerManager
@@ -100,27 +113,16 @@ namespace eft_dma_radar
         /// Main Game Loop executed by Memory Worker Thread.
         /// It manages the updating of player list and game environment elements like loot, grenades, and exfils.
         /// </summary>
-        public async Task GameLoop()
+        public void GameLoop()
         {
             try
             {
-                // Update the list of players and their states
-                await UpdatePlayersAsync();
-
-                //if registered players is -1, then we are died or exfilled
-                if (_rgtPlayers != null && _rgtPlayers.PlayerCount == -1)
-                {
-                    throw new RaidEnded();
-                }
-                // Update game environment elements such as loot and exfils
-                if (_inGame && !InHideout )
-                {
-                    UpdateGameEnvironment();
-                }
+                this._rgtPlayers.UpdateList();
+                this._rgtPlayers.UpdateAllPlayers();
+                this.UpdateMisc();
             }
             catch (DMAShutdown)
             {
-                // Handle DMA shutdown scenarios
                 HandleDMAShutdown();
             }
             catch (RaidEnded e)
@@ -129,7 +131,6 @@ namespace eft_dma_radar
             }
             catch (Exception ex)
             {
-                // Handle any unexpected exceptions that occur during the game loop
                 HandleUnexpectedException(ex);
             }
         }
@@ -137,54 +138,27 @@ namespace eft_dma_radar
 
         #region Methods
         /// <summary>
-        /// Updates the list of players and their current states.
-        /// </summary>
-        private async Task UpdatePlayersAsync()
-        {
-            // Update the list of registered players
-            //_rgtPlayers.UpdateList();
-            
-            if ( _inGame && !InHideout ) {
-                await _rgtPlayers.UpdateListAsync();
-                // Update the state of each player (e.g., location, health)
-                _rgtPlayers.UpdateAllPlayers();
-            }
-        }
-
-        /// <summary>
         /// Method to get map name using local game world
         /// </summary>
         /// <returns></returns>
         private void GetMapName()
         {
-            //If in hideout, map name is empty
-            if (_inHideout)
+            if (this._inHideout)
             {
-                _mapName = string.Empty;
+                this._mapName = string.Empty;
                 return;
             }
 
-            var classNamePtr = Memory.ReadPtrChain(_localGameWorld, Offsets.UnityClass.Name);
-            var classNameString = Memory.ReadString(classNamePtr, 64).Replace("\0", string.Empty);
-            if (classNameString == "ClientLocalGameWorld") {
-                var mapNamePrt = Memory.ReadPtrChain(_localGameWorld, new uint[] { 0x148, 0x550 });
-                var mapName = Memory.ReadUnityString(mapNamePrt);
-                _mapName = mapName;
-            } else {
-                var mapNamePrt = Memory.ReadPtr(_localGameWorld + 0x40);
-                var mapName = Memory.ReadUnityString(mapNamePrt);
-                _mapName = mapName;
+            try
+            {
+                var mapNamePrt = Memory.ReadPtrChain(this._localGameWorld, new uint[] { 0x148, 0x550 });
+                this._mapName = Memory.ReadUnityString(mapNamePrt);
             }
-        }
-
-        /// <summary>
-        /// Updates miscellaneous game environment elements like loot, grenades, and exfils.
-        /// </summary>
-        private void UpdateGameEnvironment()
-        {
-            // This method encapsulates the logic for updating various elements in the game
-            // such as loot positions, grenade statuses, and exfil points
-            UpdateMisc();
+            catch
+            {
+                var mapNamePrt = Memory.ReadPtr(this._localGameWorld + 0x40);
+                this._mapName = Memory.ReadUnityString(mapNamePrt);
+            }
         }
 
         /// <summary>
@@ -192,8 +166,7 @@ namespace eft_dma_radar
         /// </summary>
         private void HandleDMAShutdown()
         {
-            _inGame = false;
-            // Additional logic to handle DMA shutdown
+            this._inGame = false;
         }
 
         /// <summary>
@@ -202,14 +175,9 @@ namespace eft_dma_radar
         /// <param name="e">The RaidEnded exception instance containing details about the raid end.</param>
         private void HandleRaidEnded(RaidEnded e) {
             Program.Log("Raid has ended!");
-            
-            //wait for game to end
-            Thread.Sleep(15000);
-            _cameraManager = null;
-            _playerManager = null;
 
-            Memory.Restart();
-            _inGame = false;
+            this._inGame = false;
+            Memory.GameStatus = Game.GameStatus.Menu;
         }
 
         /// <summary>
@@ -219,23 +187,23 @@ namespace eft_dma_radar
         private void HandleUnexpectedException(Exception ex)
         {
             Program.Log($"CRITICAL ERROR - Raid ended due to unhandled exception: {ex}");
-            _inGame = false;
-            // Additional logic to handle unexpected exceptions
+            this._inGame = false;
         }
 
         /// <summary>
         /// Waits until Raid has started before returning to caller.
         /// </summary>
         /// 
-        public async Task WaitForGameAsync()
+        public void WaitForGame()
         {
-            while (!(GetGOM() && await GetLGWAsync()))
-            {
-                _inGame = false;
-                await Task.Delay(1000);
-            }
-            Program.Log("Raid has started!");
-            _inGame = true;
+			while (!this.GetGOM() || !this.GetLGW())
+			{
+				Thread.Sleep(1500);
+			}
+			Thread.Sleep(1000);
+			Program.Log("Raid has started!");
+			this._inGame = true;
+			Thread.Sleep(1500);
         }
 
         /// <summary>
@@ -307,89 +275,84 @@ namespace eft_dma_radar
         /// <summary>
         /// Gets Local Game World address.
         /// </summary>
-        private async Task<bool> GetLGWAsync()
+        private bool GetLGW()
         {
-            int retryInterval = 500; // Time in milliseconds to wait before retrying
-            int maxRetries = 5000; // Maximum number of retries
-            int retryCount = 0;
-
-            while (retryCount < maxRetries)
+            var found = false;
+            try
             {
+                ulong gameWorld;
+                ulong activeNodes;
+                ulong lastActiveNode;
                 try
                 {
-                    GetGOM(); // Refresh GOM
-                    ulong activeNodes = Memory.ReadPtr(_gom.ActiveNodes);
-                    ulong lastActiveNode = Memory.ReadPtr(_gom.LastActiveNode);
-                    var gameWorld = GetObjectFromList(activeNodes, lastActiveNode, "GameWorld");
-                    if (gameWorld == 0)
+                    activeNodes = Memory.ReadPtr(_gom.ActiveNodes);
+                    lastActiveNode = Memory.ReadPtr(_gom.LastActiveNode);
+                    gameWorld = this.GetObjectFromList(activeNodes, lastActiveNode, "GameWorld");
+                }
+                catch
+                {
+                    this.GetGOM();
+                    return found;
+                }
+                if (gameWorld == 0)
+                {
+                    Program.Log("Unable to find GameWorld Object, likely not in raid.");
+                }
+                else
+                {
+                    try
                     {
-                        Program.Log("Unable to find GameWorld Object, likely not in raid. Retrying...");
-                        await Task.Delay(retryInterval);
-                        retryCount++;
-                        continue;
+                        this._localGameWorld = Memory.ReadPtrChain(gameWorld, Offsets.GameWorld.To_LocalGameWorld);
+                        Program.Log($"Found LocalGameWorld at 0x{this._localGameWorld.ToString("X")}");
+                    }
+                    catch
+                    {
+                        Program.Log("Couldnt find LocalGameWorld pointer");
+                        Memory.GameStatus = Game.GameStatus.Menu;
                     }
 
-                    _localGameWorld = Memory.ReadPtrChain(gameWorld, Offsets.GameWorld.To_LocalGameWorld);
-                    if (_localGameWorld == 0)
+                    if (this._localGameWorld == 0)
                     {
-                        Program.Log("ERROR - Local Game World is null. Retrying...");
-                        await Task.Delay(retryInterval);
-                        retryCount++;
-                        continue;
+                        Program.Log("LocalGameWorld found but is 0");
                     }
-                    var localPlayer = Memory.ReadPtr(_localGameWorld + Offsets.LocalGameWorld.MainPlayer);
-                    var playerInfoPtr = Memory.ReadPtrChain(localPlayer, new uint[] {0x588, 0x28});
-                    var localPlayerSide = Memory.ReadValue<int>(playerInfoPtr + Offsets.PlayerInfo.PlayerSide);
-                    _isScav = localPlayerSide == 4;
-                    var localGameWorldClassnamePtr = Memory.ReadPtrChain(_localGameWorld, Offsets.UnityClass.Name);
-                    var localGameWorldClassName = Memory.ReadString(localGameWorldClassnamePtr, 64).Replace("\0", string.Empty);
-                    var localPlayerClassnamePtr = Memory.ReadPtrChain(localPlayer, Offsets.UnityClass.Name);
-                    var classNameString = Memory.ReadString(localPlayerClassnamePtr, 64).Replace("\0", string.Empty);
-                    //Hideout handling
-                    if (classNameString == "HideoutPlayer")
+                    else
                     {
-                        var rgtPlayers = localPlayer;
-                        _rgtPlayers = new RegisteredPlayers(rgtPlayers);
-                        _inHideout = true;
-                        //Should skip loot, grenades, exfils, etc. But should still keep gearmanager
-                        return true;
-                    }
-                    //Online handling
-                    else if (classNameString == "ClientPlayer" || classNameString == "LocalPlayer" || localGameWorldClassName == "ClientLocalGameWorld")
-                    {
-                        _inHideout = false;
-                        var rgtPlayers = new RegisteredPlayers(Memory.ReadPtr(_localGameWorld + Offsets.LocalGameWorld.RegisteredPlayers));
-                        // retry if player count is 0
-                        if (rgtPlayers.PlayerCount == 0)
+                        Memory.GameStatus = Game.GameStatus.Matching;
+
+                        if (!Memory.ReadValue<bool>(this._localGameWorld + 0x220))
                         {
-                            await Task.Delay(retryInterval);
-                            retryCount++;
-                            continue;
+                            Program.Log("Raid hasn't started!");
                         }
-                        _rgtPlayers = rgtPlayers;
-                        return true; // Successful exit
+                        else
+                        {
+                            RegisteredPlayers registeredPlayers = new RegisteredPlayers(Memory.ReadPtr(this._localGameWorld + Offsets.LocalGameWorld.RegisteredPlayers));
+                            if (registeredPlayers.PlayerCount > 0)
+                            {
+                                var localPlayer = Memory.ReadPtr(this._localGameWorld + Offsets.LocalGameWorld.MainPlayer);
+                                var playerInfoPtr = Memory.ReadPtrChain(localPlayer, new uint[] { 0x588, 0x28 });
+                                var localPlayerSide = Memory.ReadValue<int>(playerInfoPtr + Offsets.PlayerInfo.PlayerSide);
+                                this._isScav = (localPlayerSide == 4);
+
+                                this._rgtPlayers = registeredPlayers;
+                                Memory.GameStatus = Game.GameStatus.InGame;
+                                found = true;
+
+                                Program.Log("Raid started!!");
+                            }
+                        }
                     }
-                    else {
-                        await Task.Delay(retryInterval);
-                        retryCount++;
-                        continue;
-                    }
-                }
-                catch (DMAShutdown)
-                {
-                    throw; // Propagate the DMAShutdown exception upwards
-                }
-                catch (Exception ex)
-                {
-                    Program.Log($"ERROR getting Local Game World: {ex}. Retrying...");
-                    await Task.Delay(retryInterval);
-                    retryCount++;
-                    continue;
                 }
             }
+            catch (DMAShutdown)
+            {
+                throw; // Propagate the DMAShutdown exception upwards
+            }
+            catch (Exception ex)
+            {
+                Program.Log($"ERROR getting Local Game World: {ex}. Retrying...");
+            }
 
-            Program.Log("Maximum retry attempts reached. Unable to retrieve Local Game World.");
-            return false; // Indicate failure after maximum retries
+            return found;
         }
 
         /// <summary>
@@ -397,131 +360,162 @@ namespace eft_dma_radar
         /// </summary>
         private void UpdateMisc()
         {
-            _config = Program.Config;
-            
-            if (_questManager is null)
+            this._config = Program.Config;
+
+            if (this._mapName == string.Empty)
             {
                 try
                 {
-                    var questManager = new QuestManager(_localGameWorld);
-                     _questManager = questManager; // update ref
-                }
-                catch (Exception ex)
-                {
-                    Program.Log($"ERROR loading QuestManager: {ex}");
-                }
-            }
-            
-            //if show loot is enabled, load loot
-            if (_config.LootEnabled)
-            {
-                if (_lootManager is null || _refreshLoot)
-                {
-                    _loadingLoot = true;
-                    if (_lootManager is null)
-                    {
-                        // wait for loot to be loaded
-                        Thread.Sleep(5000);
-                    }
-                    try
-                    {
-                        var loot = new LootManager(_localGameWorld);
-                        _lootManager = loot; // update ref
-                        _refreshLoot = false;
-                    }
-                    catch (Exception ex)
-                    {
-                        Program.Log($"ERROR loading LootEngine: {ex}");
-                    }
-                    _loadingLoot = false;
-                }
-            }
-            if (_mapName == string.Empty)
-            {
-                try
-                {
-                    GetMapName();
+                    this.GetMapName();
                 }
                 catch (Exception ex)
                 {
                     Program.Log($"ERROR getting map name: {ex}");
                 }
             }
-            if (_cameraManager is null) {
-                try {
-                    var cameraManager = new CameraManager(_unityBase);
-                    _cameraManager = cameraManager; // update ref
-                } catch (Exception ex) {
-                    Program.Log($"ERROR loading CameraManager: {ex}");
-                }
-            }
-            if (_playerManager is null)
+            else
             {
-                try
+                if (this._config.QuestHelperEnabled)
                 {
-                    var playerManager = new PlayerManager(_localGameWorld);
-                    _playerManager = playerManager;
-                } catch (Exception ex)
+                    if (this._questManager is null)
+                    {
+                        try
+                        {
+                            this._questManager = new QuestManager(this._localGameWorld);
+                        }
+                        catch (Exception ex)
+                        {
+                            Program.Log($"ERROR loading QuestManager: {ex}");
+                        }
+                    }
+                }
+
+                if (this._config.LootEnabled)
                 {
-                    Program.Log($"ERROR loading PlayerManager: {ex}");
+                    if (this._lootManager is null || this._refreshLoot)
+                    {
+                        this._loadingLoot = true;
+                        try
+                        {
+                            this._lootManager = new LootManager(this._localGameWorld);
+                            this._refreshLoot = false;
+                        }
+                        catch (Exception ex)
+                        {
+                            Program.Log($"ERROR loading LootEngine: {ex}");
+                        }
+                        this._loadingLoot = false;
+                    }
+                }
+
+                if (this._config.MasterSwitchEnabled)
+                {
+                    if (this._cameraManager is null)
+                    {
+                        try
+                        {
+                            this._cameraManager = new CameraManager(this._unityBase);
+                        }
+                        catch (Exception ex)
+                        {
+                            Program.Log($"ERROR loading CameraManager: {ex}");
+                        }
+                    }
+
+                    if (this._playerManager is null)
+                    {
+                        try
+                        {
+                            this._playerManager = new PlayerManager(this._localGameWorld);
+                        }
+                        catch (Exception ex)
+                        {
+                            Program.Log($"ERROR loading PlayerManager: {ex}");
+                        }
+                    }
+
+                    if (this._questManager is null)
+                    {
+                        try
+                        {
+                            this._questManager = new QuestManager(this._localGameWorld);
+                        }
+                        catch (Exception ex)
+                        {
+                            Program.Log($"ERROR loading QuestManager: {ex}");
+                        }
+                    }
+                }
+
+                if (this._grenadeManager is null)
+                {
+                    try
+                    {
+                        this._grenadeManager = new GrenadeManager(this._localGameWorld);
+                    }
+                    catch (Exception ex)
+                    {
+                        Program.Log($"ERROR loading GrenadeManager: {ex}");
+                    }
+                }
+                else this._grenadeManager.Refresh();
+
+                if (this._exfilManager is null)
+                {
+                    try
+                    {
+                        this._exfilManager = new ExfilManager(this._localGameWorld);
+                    }
+                    catch (Exception ex)
+                    {
+                        Program.Log($"ERROR loading ExfilController: {ex}");
+                    }
+                }
+                else this._exfilManager.Refresh();
+
+                if (this._toolbox is null)
+                {
+                    try
+                    {
+                        this._toolbox = new Toolbox(this._localGameWorld);
+                    }
+                    catch (Exception ex)
+                    {
+                        Program.Log($"ERROR loading Toolbox: {ex}");
+                    }
                 }
             }
-            if (_toolbox is null)
-            {
-                try
-                {
-                    var toolbox = new Toolbox(_localGameWorld);
-                    _toolbox = toolbox;
-                }
-                catch (Exception ex)
-                {
-                    Program.Log($"ERROR loading Toolbox: {ex}");
-                }
-            }
-            if (_questManager is null)
-            {
-                try
-                {
-                    var questManager = new QuestManager(_localGameWorld);
-                    _questManager = questManager;
-                }
-                catch (Exception ex)
-                {
-                    Program.Log($"ERROR loading QuestManager: {ex}");
-                }
-            }
-            if (_grenadeManager is null)
-            {
-                try
-                {
-                    var grenadeManager = new GrenadeManager(_localGameWorld);
-                    _grenadeManager = grenadeManager; // update ref
-                }
-                catch (Exception ex)
-                {
-                    Program.Log($"ERROR loading GrenadeManager: {ex}");
-                }
-            }
-            else _grenadeManager.Refresh(); // refresh via internal stopwatch
-            if (_exfilManager is null)
-            {
-                try
-                {
-                    var exfils = new ExfilManager(_localGameWorld);
-                    _exfilManager = exfils; // update ref
-                }
-                catch (Exception ex)
-                {
-                    Program.Log($"ERROR loading ExfilController: {ex}");
-                }
-            }
-            else _exfilManager.Refresh(); // periodically refreshes (internal stopwatch)
         }
+
+        /// <summary>
+        /// Triggers loot refresh
+        /// </summary>
         public void RefreshLoot()
         {
-            if (_inGame)
+            if (this._inGame)
             {
-                _refreshLoot = true;
+                this._refreshLoot = true;
+            }
+        }
+
+        /// <summary>
+        /// Sets the maximum loot/door interaction distance
+        /// </summary>
+        /// <param name="enabled"></param>
+        public static void SetInteractDistance(bool on)
+        {
+            var hardSettings = MonoSharp.GetStaticFieldDataOfClass("Assembly-CSharp", "EFTHardSettings");
+            var currentLootRaycastDistance = Memory.ReadValue<float>(hardSettings + 0x210);
+
+            if (on && currentLootRaycastDistance != 1.8f)
+            {
+                Memory.WriteValue<float>(hardSettings + 0x210, 1.8f);
+                Memory.WriteValue<float>(hardSettings + 0x214, 1.8f);
+            }
+            else if (!on && currentLootRaycastDistance == 1.8f)
+            {
+                Memory.WriteValue<float>(hardSettings + 0x210, 1.3f);
+                Memory.WriteValue<float>(hardSettings + 0x214, 1f);
             }
         }
         #endregion

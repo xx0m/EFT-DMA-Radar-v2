@@ -10,7 +10,6 @@ namespace eft_dma_radar.Source.Tarkov
     public class Toolbox
     {
         private readonly Thread _workerThread;
-        private bool noRecoilSwayToggled = false;
         private bool nightVisionToggled = false;
         private bool thermalVisionToggled = false;
         private bool doubleSearchToggled = false;
@@ -18,6 +17,22 @@ namespace eft_dma_radar.Source.Tarkov
         private bool throwPowerToggled = false;
         private bool juggernautToggled = false;
         private bool magDrillsToggled = false;
+        private bool extendedReachToggled = false;
+        private bool noSwayToggled = false;
+
+        private Config _config
+        {
+            get => Program.Config;
+        }
+        private CameraManager _cameraManager
+        {
+            get => Memory.CameraManager;
+        }
+
+        private PlayerManager _playerManager
+        {
+            get => Memory.PlayerManager;
+        }
 
         public Toolbox(ulong localGameWorld)
         {
@@ -30,7 +45,10 @@ namespace eft_dma_radar.Source.Tarkov
 
                 while (IsSafeToWriteMemory())
                 {
-                    this.ToolboxWorker();
+                    if (this._config.MasterSwitchEnabled)
+                    {
+                        this.ToolboxWorker();
+                    }
                     Thread.Sleep(500);
                 }
 
@@ -49,108 +67,152 @@ namespace eft_dma_radar.Source.Tarkov
 
         private void ToolboxWorker()
         {
-            if (Game.CameraManager is not null)
+            this._playerManager.isADS = Memory.ReadValue<bool>(this._playerManager.proceduralWeaponAnimation + 0x1BD);
+
+            // No Recoil
+            this._playerManager.SetNoRecoil(this._config.NoRecoilEnabled);
+
+            // Instant ADS
+            this._playerManager.SetInstantADS(this._config.InstantADSEnabled);
+
+            // No Sway
+            if (this._config.NoSwayEnabled && !this.noSwayToggled)
             {
-                if (!Game.CameraManager.IsReady)
+                this.noSwayToggled = true;
+                this._playerManager.SetNoSway(true);
+            }
+            else if (!this._config.NoSwayEnabled && this.noSwayToggled)
+            {
+                this.noSwayToggled = false;
+                this._playerManager.SetNoSway(false);
+            }
+
+            // Double Search
+            if (this._config.DoubleSearchEnabled && !this.doubleSearchToggled)
+            {
+                this.doubleSearchToggled = true;
+                this._playerManager.SetMaxSkill(PlayerManager.Skills.SearchDouble);
+            }
+            else if (!this._config.DoubleSearchEnabled && this.doubleSearchToggled)
+            {
+                this.doubleSearchToggled = false;
+                this._playerManager.SetMaxSkill(PlayerManager.Skills.SearchDouble, true);
+            }
+
+            // Jump Power
+            if (this._config.JumpPowerEnabled && !this.jumpPowerToggled)
+            {
+                this.jumpPowerToggled = true;
+                this._playerManager.SetMaxSkill(PlayerManager.Skills.JumpStrength);
+            }
+            else if (!this._config.JumpPowerEnabled && this.jumpPowerToggled)
+            {
+                this.jumpPowerToggled = false;
+                this._playerManager.SetMaxSkill(PlayerManager.Skills.JumpStrength, true);
+            }
+
+            // Throw Power
+            if (this._config.ThrowPowerEnabled && !this.throwPowerToggled)
+            {
+                this.throwPowerToggled = true;
+                this._playerManager.SetMaxSkill(PlayerManager.Skills.ThrowStrength);
+            }
+            else if (!_config.ThrowPowerEnabled && this.throwPowerToggled)
+            {
+                this.throwPowerToggled = false;
+                this._playerManager.SetMaxSkill(PlayerManager.Skills.ThrowStrength, true);
+            }
+
+            // Increase Max Weight
+            if (this._config.IncreaseMaxWeightEnabled && !this.juggernautToggled)
+            {
+                this.juggernautToggled = true;
+                this._playerManager.SetMaxSkill(PlayerManager.Skills.WeightStrength);
+            }
+            else if (!this._config.IncreaseMaxWeightEnabled && this.juggernautToggled)
+            {
+                this.juggernautToggled = false;
+                this._playerManager.SetMaxSkill(PlayerManager.Skills.WeightStrength, true);
+            }
+
+            // Mag Drills
+            if (this._config.MagDrillsEnabled && !this.magDrillsToggled)
+            {
+                this.magDrillsToggled = true;
+                this._playerManager.SetMaxSkill(PlayerManager.Skills.MagDrillsLoad);
+                this._playerManager.SetMaxSkill(PlayerManager.Skills.MagDrillsUnload);
+            }
+            else if (!this._config.MagDrillsEnabled && this.magDrillsToggled)
+            {
+                this.magDrillsToggled = false;
+                this._playerManager.SetMaxSkill(PlayerManager.Skills.MagDrillsLoad, true);
+                this._playerManager.SetMaxSkill(PlayerManager.Skills.MagDrillsUnload, true);
+            }
+
+            // Extended Reach
+            if (this._config.ExtendedReachEnabled && !this.extendedReachToggled)
+            {
+                this.extendedReachToggled = true;
+                Game.SetInteractDistance(true);
+            }
+            else if (!this._config.ExtendedReachEnabled && this.extendedReachToggled)
+            {
+                this.extendedReachToggled = false;
+                Game.SetInteractDistance(false);
+            }
+
+            // Camera Stuff
+            if (this._cameraManager is not null)
+            {
+                if (!this._cameraManager.IsReady)
                 {
-                    Game.CameraManager.UpdateCamera();
-                } else
+                    this._cameraManager.UpdateCamera();
+                }
+                else
                 {
-                    Game.CameraManager.VisorEffect(Program.Config.NoVisorEnabled);
+                    // No Visor
+                    this._cameraManager.VisorEffect(this._config.NoVisorEnabled);
 
-                    if (Program.Config.OpticThermalVisionEnabled && Memory.PlayerManager.isADS)
+                    // Smart Thermal Vision
+                    if (this._playerManager.isADS)
                     {
-                        Game.CameraManager.OpticThermalVision(true);
+                        if (this._config.OpticThermalVisionEnabled)
+                        {
+                            if (this.thermalVisionToggled)
+                            {
+                                this.thermalVisionToggled = false;
+                                this._cameraManager.ThermalVision(false);
+                            }
+
+                            this._cameraManager.OpticThermalVision(true);
+                        }
                     }
-                    else if (!Program.Config.OpticThermalVisionEnabled && !Memory.PlayerManager.isADS)
+                    else
                     {
-                        Game.CameraManager.OpticThermalVision(false);
+                        if (this._config.ThermalVisionEnabled && !this.thermalVisionToggled)
+                        {
+                            this.thermalVisionToggled = true;
+                            this._cameraManager.ThermalVision(true);
+                        }
+                        else if (!this._config.ThermalVisionEnabled && this.thermalVisionToggled)
+                        {
+                            this.thermalVisionToggled = false;
+                            this._cameraManager.ThermalVision(false);
+                        }
                     }
 
-                    if (Program.Config.ThermalVisionEnabled && !thermalVisionToggled)
+                    // Night Vision
+                    if (this._config.NightVisionEnabled && !this.nightVisionToggled)
                     {
-                        thermalVisionToggled = true;
-                        Game.CameraManager.ThermalVision(true);
+                        this.nightVisionToggled = true;
+                        this._cameraManager.NightVision(true);
                     }
-                    else if (!Program.Config.ThermalVisionEnabled && thermalVisionToggled)
+                    else if (!this._config.NightVisionEnabled && this.nightVisionToggled)
                     {
-                        thermalVisionToggled = false;
-                        Game.CameraManager.ThermalVision(false);
-                    }
-
-                    if (Program.Config.NightVisionEnabled && !nightVisionToggled)
-                    {
-                        nightVisionToggled = true;
-                        Game.CameraManager.NightVision(true);
-                    }
-                    else if (!Program.Config.NightVisionEnabled && nightVisionToggled)
-                    {
-                        nightVisionToggled = false;
-                        Game.CameraManager.NightVision(false);
+                        this.nightVisionToggled = false;
+                        this._cameraManager.NightVision(false);
                     }
                 }
-            }
-
-            Memory.PlayerManager.isADS = Memory.ReadValue<bool>(Memory.PlayerManager.proceduralWeaponAnimationPtr + 0x1BD);
-
-            // run every call so they can dynamically update to game changes (eg weapon swap / localplayer movement otherwise they are useless)
-            Memory.PlayerManager.SetNoRecoilSway(Program.Config.NoRecoilSwayEnabled);
-            Memory.PlayerManager.SetInstantADS(Program.Config.InstantADSEnabled);
-
-            if (Program.Config.DoubleSearchEnabled && !doubleSearchToggled)
-            {
-                doubleSearchToggled = true;
-                Memory.PlayerManager.SetMaxSkill(PlayerManager.Skills.SearchDouble);
-            } else if (!Program.Config.DoubleSearchEnabled && doubleSearchToggled)
-            {
-                doubleSearchToggled = false;
-                Memory.PlayerManager.SetMaxSkill(PlayerManager.Skills.SearchDouble, true);
-            }
-
-            if (Program.Config.JumpPowerEnabled && !jumpPowerToggled)
-            {
-                jumpPowerToggled = true;
-                Memory.PlayerManager.SetMaxSkill(PlayerManager.Skills.JumpStrength);
-            }
-            else if (!Program.Config.JumpPowerEnabled && jumpPowerToggled)
-            {
-                jumpPowerToggled = false;
-                Memory.PlayerManager.SetMaxSkill(PlayerManager.Skills.JumpStrength, true);
-            }
-
-            if (Program.Config.ThrowPowerEnabled && !throwPowerToggled)
-            {
-                throwPowerToggled = true;
-                Memory.PlayerManager.SetMaxSkill(PlayerManager.Skills.ThrowStrength);
-            }
-            else if (!Program.Config.ThrowPowerEnabled && throwPowerToggled)
-            {
-                throwPowerToggled = false;
-                Memory.PlayerManager.SetMaxSkill(PlayerManager.Skills.ThrowStrength, true);
-            }
-
-            if (Program.Config.IncreaseMaxWeightEnabled && !juggernautToggled)
-            {
-                juggernautToggled = true;
-                Memory.PlayerManager.SetMaxSkill(PlayerManager.Skills.WeightStrength);
-            }
-            else if (!Program.Config.IncreaseMaxWeightEnabled && juggernautToggled)
-            {
-                juggernautToggled = false;
-                Memory.PlayerManager.SetMaxSkill(PlayerManager.Skills.WeightStrength, true);
-            }
-
-            if (Program.Config.MagDrillsEnabled && !magDrillsToggled)
-            {
-                magDrillsToggled = true;
-                Memory.PlayerManager.SetMaxSkill(PlayerManager.Skills.MagDrillsLoad);
-                Memory.PlayerManager.SetMaxSkill(PlayerManager.Skills.MagDrillsUnload);
-            }
-            else if (!Program.Config.DoubleSearchEnabled && doubleSearchToggled)
-            {
-                magDrillsToggled = false;
-                Memory.PlayerManager.SetMaxSkill(PlayerManager.Skills.MagDrillsLoad, true);
-                Memory.PlayerManager.SetMaxSkill(PlayerManager.Skills.MagDrillsUnload, true);
             }
         }
     }

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using eft_dma_radar.Source.Misc;
+using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -39,17 +40,17 @@ namespace eft_dma_radar
         /// The main entry point for the application.
         /// </summary>
         [STAThread]
-        static void Main()
+        static async Task Main()
         {
             Console.OutputEncoding = System.Text.Encoding.Unicode; // allow russian chars
             try
             {
                 if (_singleton)
                 {
-                    RuntimeHelpers.RunClassConstructor(typeof(TarkovDevAPIManager).TypeHandle); // invoke static constructor
+                    RuntimeHelpers.RunClassConstructor(typeof(TarkovDevManager).TypeHandle); // invoke static constructor
                     RuntimeHelpers.RunClassConstructor(typeof(Memory).TypeHandle); // invoke static constructor
                     ApplicationConfiguration.Initialize();
-					Application.Run(new frmMain());
+                    Application.Run(new frmMain());
                 }
                 else
                 {

@@ -111,9 +111,24 @@ namespace eft_dma_radar
         /// (PMC ONLY) Player's Gear Loadout.
         /// Key = Slot Name, Value = Item 'Long Name' in Slot
         /// </summary>
-        public ReadOnlyDictionary<string, GearItem> Gear
+        public Dictionary<string, GearItem> Gear
         {
-            get => _gearManager?.Gear;
+            get => this._gearManager is not null ? this._gearManager.Gear : null;
+            set
+            {
+                this._gearManager.Gear = value;
+            }
+        }
+        /// <summary>
+        /// Gets all gear + mods/attachments of a player
+        /// </summary>
+        public List<LootItem> GearItemsAndMods
+        {
+            get
+            {
+                GearManager gearManager = this._gearManager;
+                return ((gearManager != null) ? gearManager.GearItemsAndMods : null) ?? new List<LootItem>();
+            }
         }
         /// <summary>
         /// If 'true', Player object is no longer in the RegisteredPlayers list.
@@ -134,8 +149,6 @@ namespace eft_dma_radar
         /// <summary>
         /// Contains history of Enemy Players (human-controlled) that are allocated during program runtime.
         /// </summary>
-        /// 
-        
         public static ListViewItem[] History
         {
             get => _history.Select(x => x.View).ToArray();
@@ -145,65 +158,69 @@ namespace eft_dma_radar
         /// </summary>
         public bool IsHostilePmc
         {
-            get => IsPmc && (Type is PlayerType.PMC || Type is PlayerType.SpecialPlayer);
+            get => this.IsPmc && (this.Type is PlayerType.PMC || this.Type is PlayerType.SpecialPlayer);
         }
         /// <summary>
         /// Player is human-controlled.
         /// </summary>
         public bool IsHuman
         {
-            get => (Type is PlayerType.LocalPlayer ||
-                Type is PlayerType.Teammate ||
-                Type is PlayerType.PMC ||
-                Type is PlayerType.SpecialPlayer ||
-                Type is PlayerType.PScav||
-                Type is PlayerType.BEAR ||
-                Type is PlayerType.USEC);
+            get => (
+                this.Type is PlayerType.LocalPlayer ||
+                this.Type is PlayerType.Teammate ||
+                this.Type is PlayerType.PMC ||
+                this.Type is PlayerType.SpecialPlayer ||
+                this.Type is PlayerType.PScav||
+                this.Type is PlayerType.BEAR ||
+                this.Type is PlayerType.USEC);
         }
         /// <summary>
         /// Player is human-controlled and Active/Alive.
         /// </summary>
         public bool IsHumanActive
         {
-            get => (Type is PlayerType.LocalPlayer ||
-                Type is PlayerType.Teammate ||
-                Type is PlayerType.PMC ||
-                Type is PlayerType.SpecialPlayer ||
-                Type is PlayerType.PScav||
-                Type is PlayerType.BEAR ||
-                Type is PlayerType.USEC) && IsActive && IsAlive;
+            get => (
+                this.Type is PlayerType.LocalPlayer ||
+                this.Type is PlayerType.Teammate ||
+                this.Type is PlayerType.PMC ||
+                this.Type is PlayerType.SpecialPlayer ||
+                this.Type is PlayerType.PScav||
+                this.Type is PlayerType.BEAR ||
+                this.Type is PlayerType.USEC) && IsActive && IsAlive;
         }
         /// <summary>
         /// Player is human-controlled & Hostile.
         /// </summary>
         public bool IsHumanHostile
         {
-            get => (Type is PlayerType.PMC ||
-                Type is PlayerType.SpecialPlayer ||
-                Type is PlayerType.PScav ||
-                Type is PlayerType.BEAR ||
-                Type is PlayerType.USEC);
+            get => (
+                this.Type is PlayerType.PMC ||
+                this.Type is PlayerType.SpecialPlayer ||
+                this.Type is PlayerType.PScav ||
+                this.Type is PlayerType.BEAR ||
+                this.Type is PlayerType.USEC);
         }
         /// <summary>
         /// Player is human-controlled, hostile, and Active/Alive.
         /// </summary>
         public bool IsHumanHostileActive
         {
-            get => (Type is PlayerType.BEAR || Type is PlayerType.USEC ||
-                    Type is PlayerType.SpecialPlayer ||
-                    Type is PlayerType.PScav)
-                    && IsActive && IsAlive;
+            get => (
+                this.Type is PlayerType.BEAR ||
+                this.Type is PlayerType.USEC ||
+                this.Type is PlayerType.SpecialPlayer ||
+                this.Type is PlayerType.PScav) && this.IsActive && this.IsAlive;
         }
         /// <summary>
         /// Player is AI & boss, rogue, raider etc.
         /// </summary>
         public bool IsBossRaider {
             get => (
-                Type is PlayerType.AIRaider ||
-                Type is PlayerType.AIBossFollower ||
-                Type is PlayerType.AIBossGuard ||
-                Type is PlayerType.AIRogue ||
-                Type is PlayerType.AIBoss);
+                this.Type is PlayerType.AIRaider ||
+                this.Type is PlayerType.AIBossFollower ||
+                this.Type is PlayerType.AIBossGuard ||
+                this.Type is PlayerType.AIRogue ||
+                this.Type is PlayerType.AIBoss);
         }
         /// <summary>
         /// Player is AI/human-controlled and Active/Alive.
@@ -211,57 +228,43 @@ namespace eft_dma_radar
         public bool IsHostileActive
         {
             get => (
-                Type is PlayerType.PMC ||
-                Type is PlayerType.BEAR ||
-                Type is PlayerType.USEC ||
-                Type is PlayerType.SpecialPlayer ||
-                Type is PlayerType.PScav ||
-                Type is PlayerType.AIScav ||
-                Type is PlayerType.AIRaider ||
-                Type is PlayerType.AIBossFollower ||
-                Type is PlayerType.AIBossGuard ||
-                Type is PlayerType.AIRogue ||
-                Type is PlayerType.AIOfflineScav ||
-                Type is PlayerType.AIBoss) && IsActive && IsAlive;
+                this.Type is PlayerType.PMC ||
+                this.Type is PlayerType.BEAR ||
+                this.Type is PlayerType.USEC ||
+                this.Type is PlayerType.SpecialPlayer ||
+                this.Type is PlayerType.PScav ||
+                this.Type is PlayerType.AIScav ||
+                this.Type is PlayerType.AIRaider ||
+                this.Type is PlayerType.AIBossFollower ||
+                this.Type is PlayerType.AIBossGuard ||
+                this.Type is PlayerType.AIRogue ||
+                this.Type is PlayerType.AIOfflineScav ||
+                this.Type is PlayerType.AIBoss) && this.IsActive && this.IsAlive;
         }
         /// <summary>
         /// Player is friendly to LocalPlayer (including LocalPlayer) and Active/Alive.
         /// </summary>
         public bool IsFriendlyActive
         {
-            get => ((Type is PlayerType.LocalPlayer ||
-                Type is PlayerType.Teammate) && IsActive && IsAlive);
+            get => ((
+                this.Type is PlayerType.LocalPlayer ||
+                this.Type is PlayerType.Teammate) && this.IsActive && this.IsAlive);
         }
         /// <summary>
         /// Player has exfil'd/left the raid.
         /// </summary>
         public bool HasExfild
         {
-            get => !IsActive && IsAlive;
+            get => !this.IsActive && this.IsAlive;
         }
-
         /// <summary>
         /// Gets value of player.
         /// </summary>
         /// 
-        public int PlayerValue {
-            get {
-                var total = 0;
-
-                if (this.Gear != null) {
-                    foreach (var gearItem in this.Gear) {
-                        var id = gearItem.Value.id;
-                        var item = TarkovDevAPIManager.AllItems[id].Item;
-                        var price = TarkovDevAPIManager.GetItemValue(item);
-
-                        total += price;
-                    }
-                }
-
-                return total;
-            }
+        public int TotalValue
+        {
+            get => this._gearManager is not null ? this._gearManager.TotalValue : 0;
         }
-
         /// <summary>
         /// EFT.Player Address
         /// </summary>
@@ -273,18 +276,16 @@ namespace eft_dma_radar
         /// <summary>
         /// PlayerInfo Address (GClass1044)
         /// </summary>
-        /// 
         public ulong NextObservedPlayerView { get; }
         public ulong Info { get; }
         public ulong TransformInternal { get; }
         public ulong VerticesAddr
         {
-            get => _transform?.VerticesAddr ?? 0x0;
+            get => this._transform?.VerticesAddr ?? 0x0;
         }
-
         public ulong IndicesAddr
         {
-            get => _transform?.IndicesAddr ?? 0x0;
+            get => this._transform?.IndicesAddr ?? 0x0;
         }
         /// <summary>
         /// Health Entries for each Body Part.
@@ -293,14 +294,14 @@ namespace eft_dma_radar
         public ulong MovementContext { get; }
         public ulong CorpsePtr
         {
-            get => Base + Offsets.Player.Corpse;
+            get => this.Base + Offsets.Player.Corpse;
         }
         /// <summary>
         /// IndicesAddress -> IndicesSize -> VerticesAddress -> VerticesSize
         /// </summary>
         public Tuple<ulong, int, ulong, int> TransformScatterReadParameters
         {
-            get => _transform?.GetScatterReadParameters() ?? new Tuple<ulong, int, ulong, int>(0, 0, 0, 0);
+            get => this._transform?.GetScatterReadParameters() ?? new Tuple<ulong, int, ulong, int>(0, 0, 0, 0);
         }
         #endregion
 
@@ -327,8 +328,8 @@ namespace eft_dma_radar
             Debug.WriteLine("Player Constructor: Initialization started.");
             try
             {
-                Base = playerBase;
-                Profile = playerProfile;
+                this.Base = playerBase;
+                this.Profile = playerProfile;
                 //Debug.WriteLine($"Player Base Address: 0x{playerBase:X}, Profile Address: 0x{playerProfile:X}");
                 if (pos is not null)
                 {
@@ -342,83 +343,93 @@ namespace eft_dma_radar
                 }
                 if (baseClassName == "ClientPlayer" || baseClassName == "LocalPlayer" || baseClassName == "HideoutPlayer") {
                     ulong localPlayerInfoOffset = playerProfile + Offsets.Profile.PlayerInfo;
-                    Info = Memory.ReadPtr(localPlayerInfoOffset);
-                    MovementContext = Memory.ReadPtr(playerBase + Offsets.Player.MovementContext);
-                    TransformInternal = Memory.ReadPtrChain(playerBase, Offsets.Player.To_TransformInternal);
-                    _transform = new Transform(TransformInternal, true);
-                    var namePtr = Memory.ReadPtr(Info + Offsets.PlayerInfo.Nickname);
-                    Name = Memory.ReadUnityString(namePtr);
+                    this.Info = Memory.ReadPtr(localPlayerInfoOffset);
+                    this.MovementContext = Memory.ReadPtr(playerBase + Offsets.Player.MovementContext);
+                    this.TransformInternal = Memory.ReadPtrChain(playerBase, Offsets.Player.To_TransformInternal);
+                    this._transform = new Transform(this.TransformInternal, true);
+                    var namePtr = Memory.ReadPtr(this.Info + Offsets.PlayerInfo.Nickname);
+                    this.Name = Memory.ReadUnityString(namePtr);
 
                     try {
-                        var gameVersionPtr = Memory.ReadPtr(Info + Offsets.PlayerInfo.GameVersion);
+                        var gameVersionPtr = Memory.ReadPtr(this.Info + Offsets.PlayerInfo.GameVersion);
                         var gameVersion = Memory.ReadUnityString(gameVersionPtr);
 
-                        var settings = Memory.ReadPtr(Info + Offsets.PlayerInfo.Settings);
+                        var settings = Memory.ReadPtr(this.Info + Offsets.PlayerInfo.Settings);
                         var roleFlag = Memory.ReadValue<int>(settings + Offsets.PlayerSettings.Role);
                         // roleflag switch
                         //Console.WriteLine($"RoleFlag: {roleFlag} Name: {Name}");
 
-                        GroupID = GetGroupID();
-                        try { _gearManager = new GearManager(playerBase, true, true); } catch { }
+                        this.GroupID = GetGroupID();
+                        try {
+                            this._gearManager = new GearManager(playerBase, true, true);
+                        } catch { }
 
                         //If empty, then it's a scav
                         if (gameVersion == "")
                         {
-                            Type = PlayerType.AIOfflineScav;
-                            IsLocalPlayer = false;
-                            IsPmc = false;
-                            Name =  Helpers.TransliterateCyrillic(Name); //Misc.TransliterateCyrillic(Name);
-                            HealthController = Memory.ReadPtrChain(playerBase, new uint[] { 0x80, 0xF0 });
+                            this.Type = PlayerType.AIOfflineScav;
+                            this.IsLocalPlayer = false;
+                            this.IsPmc = false;
+                            this.Name =  Helpers.TransliterateCyrillic(this.Name); //Misc.TransliterateCyrillic(Name);
+                            this.HealthController = Memory.ReadPtrChain(playerBase, new uint[] { 0x80, 0xF0 });
                             //Type = GetPlayerType(roleFlag);
 
                         }
                         else
                         {
-                            Type = PlayerType.LocalPlayer;
-                            IsLocalPlayer = true;
-                            IsPmc = true;
+                            this.Type = PlayerType.LocalPlayer;
+                            this.IsLocalPlayer = true;
+                            this.IsPmc = true;
                         }
                     } catch {}
                 } else if (baseClassName == "ObservedPlayerView") {
                     IsLocalPlayer = false;
                     //Debug.WriteLine("Processing PMC Player.");
                     var ObservedPlayerView = playerBase;
-                    MovementContext = Memory.ReadPtrChain(ObservedPlayerView, Offsets.ObservedPlayerView.To_MovementContext);
-                    TransformInternal = Memory.ReadPtrChain(ObservedPlayerView, Offsets.ObservedPlayerView.To_TransformInternal);
-                    _transform = new Transform(TransformInternal, true);
-                    Name = Memory.ReadUnityString(Memory.ReadPtr(ObservedPlayerView + Offsets.ObservedPlayerView.NickName));
-                    Name =  Helpers.TransliterateCyrillic(Name);
-                    Info = ObservedPlayerView;
+                    this.MovementContext = Memory.ReadPtrChain(ObservedPlayerView, Offsets.ObservedPlayerView.To_MovementContext);
+                    this.TransformInternal = Memory.ReadPtrChain(ObservedPlayerView, Offsets.ObservedPlayerView.To_TransformInternal);
+                    this._transform = new Transform(this.TransformInternal, true);
+                    this.Name = Memory.ReadUnityString(Memory.ReadPtr(ObservedPlayerView + Offsets.ObservedPlayerView.NickName));
+                    this.Name =  Helpers.TransliterateCyrillic(this.Name);
+                    this.Info = ObservedPlayerView;
                     var playerSide = GetNextObservedPlayerSide();
                     var playerIsAI = GetNextObservedPlayerIsAI();
 
-                    if (Helpers.NameTranslations.ContainsKey(Name)) {
-                        Name = Helpers.NameTranslations[Name];
+                    this.AccountID = Memory.ReadUnityString(Memory.ReadPtr(ObservedPlayerView + 0x50));
+
+                    //[40] string_0x40 : String //ProfileID
+                    //[48] string_0x48 : String //NickName
+                    //[50] string_0x50 : String //AccountID
+
+                    if (Helpers.NameTranslations.ContainsKey(this.Name)) {
+                        this.Name = Helpers.NameTranslations[this.Name];
                     }
                     
-                    try { _gearManager = new GearManager(playerBase, true, false); } catch { }
-                    GroupID = GetObservedPlayerGroupID();
-                    HealthController = Memory.ReadPtrChain(playerBase, new uint[] { 0x80, 0xF0 });
+                    try {
+                        this._gearManager = new GearManager(playerBase, true, false);
+                    } catch { }
+
+                    this.GroupID = this.GetObservedPlayerGroupID();
+                    this.HealthController = Memory.ReadPtrChain(playerBase, new uint[] { 0x80, 0xF0 });
 
                     if ((playerSide == 1 || playerSide == 2) && !playerIsAI) {
-                        IsPmc = true;
-                        //var healthContoller = Memory.ReadPtrChain(playerBase, new uint[] { 0x80, 0xF0});
-                        Type = (playerSide == 1 ? PlayerType.USEC : PlayerType.BEAR);
+                        this.IsPmc = true;
+                        this.Type = (playerSide == 1 ? PlayerType.USEC : PlayerType.BEAR);
                     } else if (playerSide == 4 && !playerIsAI) {
-                        Type = PlayerType.PScav;
+                        this.Type = PlayerType.PScav;
                     } else if (playerSide == 4 && playerIsAI) {
-                        if (Helpers.NameTranslations.ContainsValue(Name)) {
-                            Type = PlayerType.AIBoss;
-                        } else if (Helpers.RaiderGuardRogueNames.Contains(Name)) {
-                            Type = PlayerType.AIRaider;
+                        if (Helpers.NameTranslations.ContainsValue(this.Name)) {
+                            this.Type = PlayerType.AIBoss;
+                        } else if (Helpers.RaiderGuardRogueNames.Contains(this.Name)) {
+                            this.Type = PlayerType.AIRaider;
                         } else {
-                            Type = PlayerType.AIScav;
+                            this.Type = PlayerType.AIScav;
                         }
                     }
 
                 } else throw new ArgumentOutOfRangeException("classNameString");
 
-                FinishAlloc(); // Finish allocation (check watchlist, member type,etc.)
+                this.FinishAlloc(); // Finish allocation (check watchlist, member type,etc.)
             }
             catch (Exception ex)
             {
@@ -507,31 +518,35 @@ namespace eft_dma_radar
         {
             try
             {
-                if (obj is null) throw new NullReferenceException();
+                if (obj is null)
+                    throw new NullReferenceException();
                 //Debug.WriteLine($"Player '{Name}' Position: {obj[0]}, {obj[1]}, {obj[2]}");
-                this.Position = _transform.GetPosition(obj);
+                this.Position = this._transform.GetPosition(obj);
                 return true;
             }
             catch (Exception ex) // Attempt to re-allocate Transform on error
             {
                 Program.Log($"ERROR getting Player '{Name}' Position: {ex}");
-                if (!_posRefreshSw.IsRunning) _posRefreshSw.Start();
-                else if (_posRefreshSw.ElapsedMilliseconds < 250) // Rate limit attempts on getting pos to prevent stutters
+                if (!this._posRefreshSw.IsRunning)
+                    this._posRefreshSw.Start();
+                else if (this._posRefreshSw.ElapsedMilliseconds < 250) // Rate limit attempts on getting pos to prevent stutters
                 {
                     return false;
                 }
                 try
                 {
-                    Program.Log($"Attempting to get new Transform for Player '{Name}'...");
-                    var transform = new Transform(TransformInternal, true);
-                    _transform = transform;
-                    Program.Log($"Player '{Name}' obtained new Position Transform OK.");
+                    Program.Log($"Attempting to get new Transform for Player '{this.Name}'...");
+                    var transform = new Transform(this.TransformInternal, true);
+                    this._transform = transform;
+                    Program.Log($"Player '{this.Name}' obtained new Position Transform OK.");
                 }
                 catch (Exception ex2)
                 {
-                    Program.Log($"ERROR getting new Transform for Player '{Name}': {ex2}");
+                    Program.Log($"ERROR getting new Transform for Player '{this.Name}': {ex2}");
                 }
-                finally { _posRefreshSw.Restart(); }
+                finally {
+                    this._posRefreshSw.Restart();
+                }
                 return false;
             }
         }
@@ -559,28 +574,31 @@ namespace eft_dma_radar
         
         private void FinishAlloc()
         {
-            if (IsHumanHostile) // Hostile Human Controlled Players
+            if (this.IsHumanHostile) // Hostile Human Controlled Players
             {
                 // build log message
-                string baseMsg = $"{Name} ({Type}),  L:{Lvl}, "; // append name, type, level
-                if (GroupID != -1) baseMsg += $"G:{GroupID}, "; // append group (if in group)
-                if (Category is not null)
+                string baseMsg = $"{this.Name} ({this.Type}),  L:{this.Lvl}, "; // append name, type, level
+                if (this.GroupID != -1)
+                    baseMsg += $"G:{this.GroupID}, "; // append group (if in group)
+                if (this.Category is not null)
                 {
-                    Type = PlayerType.SpecialPlayer; // Flag Special Account Types
-                    baseMsg += $"Special Acct: {Category}, "; // append acct type (if special)
+                    this.Type = PlayerType.SpecialPlayer; // Flag Special Account Types
+                    baseMsg += $"Special Acct: {this.Category}, "; // append acct type (if special)
                 }
+
                 baseMsg += $"@{DateTime.Now.ToLongTimeString()}"; // append timestamp
-                if (AccountID is not null &&
+
+                if (this.AccountID is not null &&
                     Watchlist is not null &&
-                    Watchlist.TryGetValue(AccountID, out var reason)) // player is on watchlist
+                    Watchlist.TryGetValue(this.AccountID, out var reason)) // player is on watchlist
                 {
-                    Type = PlayerType.SpecialPlayer; // Flag watchlist player
-                    var entry = new PlayerHistoryEntry(AccountID, $"** WATCHLIST ALERT for {baseMsg} ~~ Reason: {reason}");
+                    this.Type = PlayerType.SpecialPlayer; // Flag watchlist player
+                    var entry = new PlayerHistoryEntry(this.AccountID, $"** WATCHLIST ALERT for {baseMsg} ~~ Reason: {reason}");
                     _history.Push(entry);
                 }
                 else // Not on watchlist
                 {
-                    var entry = new PlayerHistoryEntry(AccountID, baseMsg);
+                    var entry = new PlayerHistoryEntry(this.AccountID, baseMsg);
                     _history.Push(entry);
                 }
             }
@@ -590,7 +608,7 @@ namespace eft_dma_radar
         /// </summary>
         private string GetMemberCategory()
         {
-            var member = Memory.ReadValue<int>(Info + Offsets.PlayerInfo.MemberCategory);
+            var member = Memory.ReadValue<int>(this.Info + Offsets.PlayerInfo.MemberCategory);
             if (member == 0x0 || member == 0x2) return null; // Ignore 0x0 (Standard Acct) and 0x2 (EOD Acct)
             else
             {
@@ -601,14 +619,12 @@ namespace eft_dma_radar
 
         private int GetNextObservedPlayerSide()
         {
-            var side = Memory.ReadValue<int>(Base + Offsets.ObservedPlayerView.PlayerSide);
-            return side;
+            return Memory.ReadValue<int>(Base + Offsets.ObservedPlayerView.PlayerSide);
         }
 
         private bool GetNextObservedPlayerIsAI()
         {
-            var isAI = Memory.ReadValue<bool>(Base + Offsets.ObservedPlayerView.IsAI);
-            return isAI;
+            return Memory.ReadValue<bool>(Base + Offsets.ObservedPlayerView.IsAI);
         }
 
         /// <summary>
@@ -616,9 +632,8 @@ namespace eft_dma_radar
         /// </summary>
         private string GetAccountID()
         {
-            var idPtr = Memory.ReadPtr(Profile + Offsets.Profile.AccountId);
-            var id = Memory.ReadUnityString(idPtr);
-            return id;
+            var idPtr = Memory.ReadPtr(this.Profile + Offsets.Profile.AccountId);
+            return Memory.ReadUnityString(idPtr);
         }
 
         /// <summary>
@@ -628,23 +643,30 @@ namespace eft_dma_radar
         {
             try
             {
-                var grpPtr = Memory.ReadPtr(Info + Offsets.PlayerInfo.GroupId);
+                var grpPtr = Memory.ReadPtr(this.Info + Offsets.PlayerInfo.GroupId);
                 var grp = Memory.ReadUnityString(grpPtr);
                 _groups.TryAdd(grp, _groups.Count);
                 return _groups[grp];
             }
-            catch { return -1; } // will return null if Solo / Don't have a team
+            catch 
+            {
+                return -1; // will return null if Solo / Don't have a team
+            }
         }
+
         private int GetObservedPlayerGroupID()
         {
             try
             {
-                var grpPtr = Memory.ReadPtr(Info + 0x18);
+                var grpPtr = Memory.ReadPtr(this.Info + 0x18);
                 var grp = Memory.ReadUnityString(grpPtr);
                 _groups.TryAdd(grp, _groups.Count);
                 return _groups[grp];
             }
-            catch { return -1; } // will return null if Solo / Don't have a team
+            catch
+            {
+                return -1; // will return null if Solo / Don't have a team
+            }
         }
         /// <summary>
         /// Resets/Updates 'static' assets in preparation for a new game/raid instance.
@@ -652,10 +674,13 @@ namespace eft_dma_radar
         public static void Reset()
         {
             _groups = new(StringComparer.OrdinalIgnoreCase);
-            if (_history.TryPeek(out var last) && last.Entry == "---NEW GAME---") { } // Don't spam repeated entries
-            else _history.Push(new PlayerHistoryEntry(null, "---NEW GAME---")); // Insert separator in PMC History Log
+            if (_history.TryPeek(out var last) && last.Entry == "---NEW GAME---")
+            {
+                // Don't spam repeated entries
+            }
+            else
+                _history.Push(new PlayerHistoryEntry(null, "---NEW GAME---")); // Insert separator in PMC History Log
         }
-
         /// <summary>
         /// Reloads playerWatchlist.txt into Memory.
         /// </summary>
@@ -722,87 +747,6 @@ namespace eft_dma_radar
                 default: return PlayerType.AIScav;
             }
         }
-        #endregion
-
-        #region XP Table
-        private static readonly Dictionary<int, int> _expTable = new Dictionary<int, int>
-        {
-            {0, 1},
-            {1000, 2},
-            {4017, 3},
-            {8432, 4},
-            {14256, 5},
-            {21477, 6},
-            {30023, 7},
-            {39936, 8},
-            {51204, 9},
-            {63723, 10},
-            {77563, 11},
-            {92713, 12},
-            {111881, 13},
-            {134674, 14},
-            {161139, 15},
-            {191417, 16},
-            {225194, 17},
-            {262366, 18},
-            {302484, 19},
-            {345751, 20},
-            {391649, 21},
-            {440444, 22},
-            {492366, 23},
-            {547896, 24},
-            {609066, 25},
-            {675913, 26},
-            {748474, 27},
-            {826786, 28},
-            {910885, 29},
-            {1000809, 30},
-            {1096593, 31},
-            {1198275, 32},
-            {1309251, 33},
-            {1429580, 34},
-            {1559321, 35},
-            {1698532, 36},
-            {1847272, 37},
-            {2005600, 38},
-            {2173575, 39},
-            {2351255, 40},
-            {2538699, 41},
-            {2735966, 42},
-            {2946585, 43},
-            {3170637, 44},
-            {3408202, 45},
-            {3659361, 46},
-            {3924195, 47},
-            {4202784, 48},
-            {4495210, 49},
-            {4801553, 50},
-            {5121894, 51},
-            {5456314, 52},
-            {5809667, 53},
-            {6182063, 54},
-            {6573613, 55},
-            {6984426, 56},
-            {7414613, 57},
-            {7864284, 58},
-            {8333549, 59},
-            {8831052, 60},
-            {9360623, 61},
-            {9928578, 62},
-            {10541848, 63},
-            {11206300, 64},
-            {11946977, 65},
-            {12789143, 66},
-            {13820522, 67},
-            {15229487, 68},
-            {17206065, 69},
-            {19706065, 70},
-            {22706065, 71},
-            {26206065, 72},
-            {30206065, 73},
-            {34706065, 74},
-            {39706065, 75},
-        };
         #endregion
     }
 }

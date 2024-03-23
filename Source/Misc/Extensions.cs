@@ -112,10 +112,9 @@ namespace eft_dma_radar
         /// <summary>
         /// Determines the items paint color.
         /// </summary>
-        public static SKPaint GetEntityPaint(DevLootItem item)
+        public static SKPaint GetEntityPaint(LootItem item)
         {
-            int value = TarkovDevAPIManager.GetItemValue(item.Item);
-            bool isImportant = (item.Important || value >= Program.Config.MinImportantLootValue);
+            bool isImportant = (item.Important || item.Value >= Program.Config.MinImportantLootValue);
             bool isFiltered = Memory.Loot.LootFilterColors.ContainsKey(item.Item.id);
 
             SKPaint paintToUse = SKPaints.PaintLoot.Clone();
@@ -203,10 +202,9 @@ namespace eft_dma_radar
         /// <summary>
         /// Determines the loot items text color.
         /// </summary>
-        public static SKPaint GetTextPaint(DevLootItem item)
+        public static SKPaint GetTextPaint(LootItem item)
         {
-            int value = TarkovDevAPIManager.GetItemValue(item.Item);
-            bool isImportant = (item.Important || value >= Program.Config.MinImportantLootValue);
+            bool isImportant = (item.Important || item.Value >= Program.Config.MinImportantLootValue);
             bool isFiltered = Memory.Loot.LootFilterColors.ContainsKey(item.Item.id);
 
             SKPaint paintToUse = SKPaints.TextLoot.Clone();

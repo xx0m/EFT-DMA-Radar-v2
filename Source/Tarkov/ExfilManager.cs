@@ -3,6 +3,8 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Numerics;
 using eft_dma_radar.Source.Misc;
+using eft_dma_radar.Source.Tarkov;
+using Offsets;
 
 namespace eft_dma_radar
 {
@@ -27,68 +29,65 @@ namespace eft_dma_radar
         public ExfilManager(ulong localGameWorld)
         {
             //If we are in hideout, we don't need to do anything.
-            if (IsAtHideout)
+            if (this.IsAtHideout)
             {
                 Debug.WriteLine("In Hideout, not loading exfils.");
                 return;
             }
-            var list = new List<Exfil>();
-
-            var exfilController = Memory.ReadPtr(localGameWorld + Offsets.LocalGameWorld.ExfilController);
-
-            ulong exfilPoints;
-            if (IsScav) {
-                exfilPoints = Memory.ReadPtr(exfilController + 0x28);
-
+            try
+            {
+                var exfilController = Memory.ReadPtr(localGameWorld + Offsets.LocalGameWorld.ExfilController);
+                var exfilPoints = (this.IsScav ? Memory.ReadPtr(exfilController + 0x32) : Memory.ReadPtr(exfilController + Offsets.ExfilController.ExfilList));
                 var count = Memory.ReadValue<int>(exfilPoints + Offsets.ExfilController.ExfilCount);
-                if (count < 1 || count > 24) throw new ArgumentOutOfRangeException();
+
+                if (count < 1 || count > 24)
+                {
+                    throw new ArgumentOutOfRangeException();
+                }
+
+                var list = new List<Exfil>();
+
                 for (uint i = 0; i < count; i++)
                 {
                     var exfilAddr = Memory.ReadPtr(exfilPoints + Offsets.UnityListBase.Start + (i * 0x08));
-                    var exfil = new Exfil(exfilAddr);
+
+                    Exfil exfil = new Exfil(exfilAddr);
                     var exfilSettings = Memory.ReadPtr(exfilAddr + Offsets.Exfil.Settings);
                     var exfilName = Memory.ReadPtr(exfilSettings + Offsets.Exfil.Name);
                     var exfilUnityName = Memory.ReadUnityString(exfilName);
                     exfil.UpdateName(exfilUnityName);
-                    list.Add(exfil);
-                }
-            }
-            else 
-            {
-                var localPlayer = Memory.ReadPtr(localGameWorld + Offsets.LocalGameWorld.MainPlayer);
-                var localPlayerProfile = Memory.ReadPtr(localPlayer + Offsets.Player.Profile);
-                var localPlayerInfo = Memory.ReadPtr(localPlayerProfile + Offsets.Profile.PlayerInfo);
-                var localPlayerEntryPoint = Memory.ReadPtr(localPlayerInfo + 0x30);
-                var localPlayerEntryPointString = Memory.ReadUnityString(localPlayerEntryPoint);
 
-                exfilPoints = Memory.ReadPtr(exfilController + Offsets.ExfilController.ExfilList);
-                var count = Memory.ReadValue<int>(exfilPoints + Offsets.ExfilController.ExfilCount);
-                if (count < 1 || count > 24) throw new ArgumentOutOfRangeException();
-                for (uint i = 0; i < count; i++)
-                {
-                    var exfilAddr = Memory.ReadPtr(exfilPoints + Offsets.UnityListBase.Start + (i * 0x8));
-                    var eligibleEntryPoints = Memory.ReadPtr(exfilAddr + 0x80);
-                    var eligibleEntryPointsCount = Memory.ReadValue<int>(eligibleEntryPoints + 0x18);
-                    for (uint j = 0; j < eligibleEntryPointsCount; j++)
+                    if (this.IsScav)
                     {
-                        var entryPoint = Memory.ReadPtr(eligibleEntryPoints + 0x20 + (j * 0x8));
-                        var entryPointString = Memory.ReadUnityString(entryPoint);
-                        if (entryPointString.ToLower() == localPlayerEntryPointString.ToLower())
+                        list.Add(exfil);
+                    }
+                    else
+                    {
+                        var localPlayer = Memory.ReadPtr(localGameWorld + Offsets.LocalGameWorld.MainPlayer);
+                        var localPlayerProfile = Memory.ReadPtr(localPlayer + Offsets.Player.Profile);
+                        var localPlayerInfo = Memory.ReadPtr(localPlayerProfile + Offsets.Profile.PlayerInfo);
+                        var localPlayerEntryPoint = Memory.ReadPtr(localPlayerInfo + 0x30); // causes low fps in raid wait
+                        var localPlayerEntryPointString = Memory.ReadUnityString(localPlayerEntryPoint);
+
+                        var eligibleEntryPoints = Memory.ReadPtr(exfilAddr + 0x80);
+                        var eligibleEntryPointsCount = Memory.ReadValue<int>(eligibleEntryPoints + 0x18);
+                        for (uint j = 0; j < eligibleEntryPointsCount; j++)
                         {
-                            var exfil = new Exfil(exfilAddr);
-                            var exfilSettings = Memory.ReadPtr(exfilAddr + Offsets.Exfil.Settings);
-                            var exfilName = Memory.ReadPtr(exfilSettings + Offsets.Exfil.Name);
-                            var exfilUnityName = Memory.ReadUnityString(exfilName);
-                            exfil.UpdateName(exfilUnityName);
-                            list.Add(exfil);
-                            break;
+                            var entryPoint = Memory.ReadPtr(eligibleEntryPoints + 0x20 + (j * 0x8));
+                            var entryPointString = Memory.ReadUnityString(entryPoint);
+                            if (entryPointString.ToLower() == localPlayerEntryPointString.ToLower())
+                            {
+                                list.Add(exfil);
+                                break;
+                            }
                         }
                     }
                 }
-            }
-            Exfils = new(list); // update readonly ref
-            UpdateExfils(); // Get initial statuses
-            _sw.Start();
+
+                this.Exfils = new ReadOnlyCollection<Exfil>(list);
+                this.UpdateExfils();
+                this._sw.Start();
+            } catch {}
         }
 
         /// <summary>
@@ -166,7 +165,7 @@ namespace eft_dma_radar
         {
             this.BaseAddr = baseAddr;
             var transform_internal = Memory.ReadPtrChain(baseAddr, Offsets.GameObject.To_TransformInternal);
-            Position = new Transform(transform_internal).GetPosition();
+            this.Position = new Transform(transform_internal).GetPosition();
         }
 
         /// <summary>

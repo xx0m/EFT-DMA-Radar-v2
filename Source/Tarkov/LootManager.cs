@@ -1,14 +1,19 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Net.WebSockets;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Security.Policy;
 using System.Text;
+using System.Xml.Linq;
 using eft_dma_radar.Source.Misc;
+using Offsets;
 using SkiaSharp;
 using static System.Net.Mime.MediaTypeNames;
 
@@ -16,352 +21,404 @@ namespace eft_dma_radar
 {
     public class LootManager
     {
+
+        public ulong lootlistPtr;
+        public ulong lootListEntity;
+        public int countLootListObjects;
+        public ulong localGameWorld;
+
         private readonly Config _config;
         /// <summary>
         /// Filtered loot ready for display by GUI.
         /// </summary>
-        public ReadOnlyCollection<DevLootItem> Filter
-        {
-            get;
-            private set;
-        }
+        public ReadOnlyCollection<LootItem> Filter { get; private set; }
         /// <summary>
         /// All tracked loot/corpses in Local Game World.
         /// </summary>
-        public ReadOnlyCollection<DevLootItem> Loot
-        {
-            get;
-        }
-
-        private Collection<QuestItem> QuestItems
-        {
-            get => Memory.QuestManager.QuestItems;
-        }
+        public ReadOnlyCollection<LootItem> Loot { get; set; }
+        /// <summary>
+        /// all quest items
+        /// </summary>
+        private Collection<QuestItem> QuestItems { get => Memory.QuestManager.QuestItems; }
         /// <summary>
         /// key,value pair of filtered item ids (key) and their filtered color (value)
         /// </summary>
         public Dictionary<string, LootFilter.Colors> LootFilterColors { get; private set; }
+        /// <summary>
+        /// list of slots to skip over
+        /// </summary>
+        private readonly IReadOnlyCollection<string> slotsToSkip = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Scabbard", "SecuredContainer", "Dogtag", "Compass", "Eyewear", "ArmBand" };
         #region Constructor
         /// <summary>
         /// Initializes a new instance of the <see cref="LootManager"/> class.
         /// </summary>
-        /// <param name="localGameWorld"></param>
-        /// <exception cref="ArgumentOutOfRangeException"></exception>
-        ///
         public LootManager(ulong localGameWorld)
         {
-            Stopwatch stopwatch = new Stopwatch();
-            stopwatch.Start(); // Start timing
-            Program.Log("Parsing loot...");
+            this._config = Program.Config;
+            this.localGameWorld = localGameWorld;
+            this.RefreshLootListAddresses();
 
-            _config = Program.Config;
-            var lootlistPtr = Memory.ReadPtr(localGameWorld + Offsets.LocalGameWorld.LootList);
-            var lootListEntity = Memory.ReadPtr(lootlistPtr + Offsets.UnityList.Base);
-            var countLootListObjects = Memory.ReadValue<int>(lootListEntity + Offsets.UnityList.Count);
-            if (countLootListObjects < 0 || countLootListObjects > 4096) throw new ArgumentOutOfRangeException("countLootListObjects"); // Loot list sanity check
-            var loot = new List<DevLootItem>(countLootListObjects);
-
-            var scatterMap = new ScatterReadMap(countLootListObjects);
-            var round1 = scatterMap.AddRound();
-            var round2 = scatterMap.AddRound();
-            var round3 = scatterMap.AddRound();
-            var round4 = scatterMap.AddRound();
-            var round5 = scatterMap.AddRound();
-            var round6 = scatterMap.AddRound();
-            var round7 = scatterMap.AddRound();
-            var round8 = scatterMap.AddRound();
-            var round9 = scatterMap.AddRound();
-            var round10 = scatterMap.AddRound();
-            var round11 = scatterMap.AddRound();
-
-            for (int i = 0; i < countLootListObjects; i++)
+            new Thread((ThreadStart)delegate
             {
-                var p1 = round1.AddEntry<MemPointer>(i, 0, lootListEntity + Offsets.UnityListBase.Start + (uint)(i * 0x8));
-                var p2 = round2.AddEntry<MemPointer>(i, 1, p1, null, Offsets.LootListItem.LootUnknownPtr);
-                var p3 = round3.AddEntry<MemPointer>(i, 2, p2, null, Offsets.LootUnknownPtr.LootInteractiveClass);
-                var p4 = round4.AddEntry<MemPointer>(i, 3, p3, null, Offsets.LootInteractiveClass.LootBaseObject);
-                var p5 = round5.AddEntry<MemPointer>(i, 4, p4, null, Offsets.LootBaseObject.GameObject);
-                var p6 = round6.AddEntry<MemPointer>(i, 5, p5, null, Offsets.GameObject.ObjectName);
-                var p7 = round7.AddEntry<string>(i, 6, p6, 64);
-                //className
-                var p8 = round6.AddEntry<MemPointer>(i, 7, p3, null, 0x0);
-                var p9 = round7.AddEntry<MemPointer>(i, 8, p8, null, 0x0);
-                var p10 = round8.AddEntry<MemPointer>(i, 9, p9, null, 0x48);
-                var p11 = round9.AddEntry<string>(i, 10, p10, 64); // ClassName
-            }
-            scatterMap.Execute();
-            Parallel.For(0, countLootListObjects, i => {
-                try
+                Stopwatch stopwatch = Stopwatch.StartNew();
+                Console.WriteLine("[LootManager] Refresh thread started.");
+                while (Memory.GameStatus == Game.GameStatus.InGame)
                 {
-                    var result1 = scatterMap.Results[i][0].TryGetResult<MemPointer>(out var lootObjectsEntity);
-                    var result2 = scatterMap.Results[i][1].TryGetResult<MemPointer>(out var unknownPtr);
-                    if (!scatterMap.Results[i][2].TryGetResult<MemPointer>(out var interactiveClass))
-                    {
-                        return;
-                    }
-                    var result4 = scatterMap.Results[i][3].TryGetResult<MemPointer>(out var baseObject);
-                    if (!scatterMap.Results[i][4].TryGetResult<MemPointer>(out var gameObject))
-                    {
-                        return;
-                    }
-                    var result6 = scatterMap.Results[i][10].TryGetResult<string>(out var className);
-                    var result7 = scatterMap.Results[i][6].TryGetResult<string>(out var name);
-
-                    if (className == "LootableContainer")
-                    {
-                        var objectClass = Memory.ReadPtr(gameObject + Offsets.GameObject.ObjectClass);
-                        var transformInternal = Memory.ReadPtrChain(objectClass, Offsets.LootGameObjectClass.To_TransformInternal);
-                        var pos = new Transform(transformInternal).GetPosition();
-                        var containerIDPtr = Memory.ReadPtr(interactiveClass + 0x128); //[118] Template : String
-                        var containerID = Memory.ReadUnityString(containerIDPtr);
-                        TarkovDevAPIManager.AllLootContainers.TryGetValue(containerID, out var container);
-                        if (container != null)
-                        {
-                            try
-                            {
-                                var itemOwner = Memory.ReadPtr(interactiveClass + Offsets.LootInteractiveClass.ContainerItemOwner);
-                                var itemBase = Memory.ReadPtr(itemOwner + 0xC0); //Offsets.ContainerItemOwner.LootItemBase);
-                                var grids = Memory.ReadPtr(itemBase + Offsets.LootItemBase.Grids);
-                                GetItemsInGrid(grids, name, pos, loot, true, container.Name, name);
-                            }
-                            catch { }
-                        }
-                        else
-                        {
-                            Program.Log($"Container: {name} {containerID} is not in the list");
-                        }
-                    }
-                    else if (className == "ObservedCorpse")
-                    {
-                        if (interactiveClass == 0x0) return;
-                        var itemOwner = Memory.ReadPtr(interactiveClass + 0x40); //[40] ItemOwner : -.GClass24D0
-                        var rootItem = Memory.ReadPtr(itemOwner + 0xC0); //[C0] item_0xC0 : EFT.InventoryLogic.Item
-                        var slots = Memory.ReadPtr(rootItem + 0x78);
-                        var slotsArray = new MemArray(slots);
-                        var objectClass = Memory.ReadPtr(gameObject + Offsets.GameObject.ObjectClass);
-                        var transformInternal = Memory.ReadPtrChain(objectClass, Offsets.LootGameObjectClass.To_TransformInternal);
-                        var pos = new Transform(transformInternal).GetPosition();
-                        foreach (var slot in slotsArray.Data)
-                        {
-                            try
-                            {
-                                var namePtr = Memory.ReadPtr(slot + Offsets.Slot.Name);
-                                var slotName = Memory.ReadUnityString(namePtr);
-                                var containedItem = Memory.ReadPtr(slot + 0x40);
-                                if (containedItem == 0x0)
-                                {
-                                    continue;
-                                }
-                                if (slotName == "SecuredContainer")
-                                {
-                                    continue;
-                                }
-                                var itemTemplate = Memory.ReadPtr(containedItem + Offsets.LootItemBase.ItemTemplate); //EFT.InventoryLogic.ItemTemplate
-                                var BSGIdPtr = Memory.ReadPtr(itemTemplate + Offsets.ItemTemplate.BsgId);
-                                var id = Memory.ReadUnityString(BSGIdPtr);
-                                var corpseItemNamePtr = Memory.ReadPtr(itemTemplate + 0x58);
-                                var corpseItemName = Memory.ReadUnityString(corpseItemNamePtr);
-                                var grids = Memory.ReadPtr(containedItem + Offsets.LootItemBase.Grids);
-                                //var containerName = slotName;
-                                var containerName = "Corpse";
-                                if (grids == 0x0)
-                                {
-                                    //The loot item we found does not have any grids so it's weapon slot?
-                                    if (TarkovDevAPIManager.AllItems.TryGetValue(id, out
-                                            var entry))
-                                    {
-                                        loot.Add(new DevLootItem
-                                        {
-                                            Label = entry.Label,
-                                            AlwaysShow = entry.AlwaysShow,
-                                            Important = entry.Important,
-                                            Position = pos,
-                                            Item = entry.Item,
-                                            Container = true,
-                                            ContainerName = containerName
-                                        });
-                                    }
-                                };
-                                GetItemsInGrid(grids, id, pos, loot, true, containerName);
-                            }
-                            catch
-                            {
-                                continue;
-                            }
-
-                        }
-                    }
-                    else if (className == "ObservedLootItem")
-                    {
-                        //Loose loot
-                        var item = Memory.ReadPtr(interactiveClass + 0xB0); //EFT.InventoryLogic.Item
-                        var itemTemplate = Memory.ReadPtr(item + Offsets.LootItemBase.ItemTemplate); //EFT.InventoryLogic.ItemTemplate
-                        bool questItem = Memory.ReadValue<bool>(itemTemplate + Offsets.ItemTemplate.IsQuestItem);
-                        var objectClass = Memory.ReadPtr(gameObject + Offsets.GameObject.ObjectClass);
-                        var transformInternal = Memory.ReadPtrChain(objectClass, Offsets.LootGameObjectClass.To_TransformInternal);
-                        var pos = new Transform(transformInternal).GetPosition();
-                        var BSGIdPtr = Memory.ReadPtr(itemTemplate + Offsets.ItemTemplate.BsgId);
-                        var id = Memory.ReadUnityString(BSGIdPtr);
-                        if (id == null) return;
-                        if (!questItem)
-                        {
-                            if (TarkovDevAPIManager.AllItems.TryGetValue(id, out
-                                    var entry))
-                            {
-                                loot.Add(new DevLootItem
-                                {
-                                    Label = entry.Label,
-                                    AlwaysShow = entry.AlwaysShow,
-                                    Important = entry.Important,
-                                    Position = pos,
-                                    Item = entry.Item
-                                });
-                            }
-                        }
-                        else
-                        {
-                            var questItemTest = this.QuestItems.Where(x => x.Id == id).FirstOrDefault();
-                            if (questItemTest != null)
-                            {
-                                //update position
-                                questItemTest.Position = pos;
-                            }
-                        }
-                    }
-
+                    stopwatch.Restart();
+                    Console.WriteLine("[LootManager] Refreshing loot...");
+                    this.GetLoot();
+                    this.ApplyFilter();
+                    DefaultInterpolatedStringHandler defaultInterpolatedStringHandler = new DefaultInterpolatedStringHandler(34, 1);
+                    defaultInterpolatedStringHandler.AppendLiteral("[LootManager] Refreshed loot in ");
+                    defaultInterpolatedStringHandler.AppendFormatted<long>(stopwatch.ElapsedMilliseconds);
+                    defaultInterpolatedStringHandler.AppendLiteral("ms");
+                    Console.WriteLine(defaultInterpolatedStringHandler.ToStringAndClear());
+                    Thread.Sleep(10000);
                 }
-                catch
-                {
-                    Program.Log($"Error reading loot item {i}");
-                }
-            });
-
-            Loot = new(loot); // update readonly ref
-            stopwatch.Stop(); // Stop timing
-            TimeSpan ts = stopwatch.Elapsed;
-            string elapsedTime = String.Format("RunTime {0:00}:{1:00}:{2:00}.{3:00}", ts.Hours, ts.Minutes, ts.Seconds, ts.Milliseconds / 10);
-            Program.Log("RunTime " + elapsedTime);
-            //Console.WriteLine("Loot RunTime " + elapsedTime);
-            Program.Log("Loot parsing completed");
+                Console.WriteLine("[LootManager] Refresh thread stopped.");
+            })
+            {
+                Priority = ThreadPriority.BelowNormal,
+                IsBackground = true
+            }.Start();
         }
         #endregion
 
         #region Methods
+        public void GetLoot()
+        {
+            this.RefreshLootListAddresses();
+
+            if (this.countLootListObjects < 0 || this.countLootListObjects > 4096)
+                throw new ArgumentOutOfRangeException("countLootListObjects"); // Loot list sanity check
+
+            var loot = new List<LootItem>(countLootListObjects);
+
+            var scatterReadMap = new ScatterReadMap(countLootListObjects);
+            var round1 = scatterReadMap.AddRound();
+            var round2 = scatterReadMap.AddRound();
+            var round3 = scatterReadMap.AddRound();
+            var round4 = scatterReadMap.AddRound();
+            var round5 = scatterReadMap.AddRound();
+            var round6 = scatterReadMap.AddRound();
+            var round7 = scatterReadMap.AddRound();
+            var round8 = scatterReadMap.AddRound();
+            var round9 = scatterReadMap.AddRound();
+
+            for (int i = 0; i < countLootListObjects; i++)
+            {
+                var lootObjectBase = round1.AddEntry<ulong>(i, 0, lootListEntity + Offsets.UnityListBase.Start + (uint)(i * 0x8));
+
+                var lootUnknownPtr = round2.AddEntry<ulong>(i, 1, lootObjectBase, null, Offsets.LootListItem.LootUnknownPtr);
+
+                var interactiveClass = round3.AddEntry<ulong>(i, 2, lootUnknownPtr, null, Offsets.LootUnknownPtr.LootInteractiveClass);
+
+                var lootBaseObject = round4.AddEntry<ulong>(i, 3, interactiveClass, null, Offsets.LootInteractiveClass.LootBaseObject);
+
+                var gameObject = round5.AddEntry<ulong>(i, 4, lootBaseObject, null, Offsets.LootBaseObject.GameObject);
+
+                var objectName = round6.AddEntry<ulong>(i, 5, gameObject, null, Offsets.GameObject.ObjectName);
+                var entry7 = round6.AddEntry<ulong>(i, 7, interactiveClass, null, 0x0);
+                var objectClass = round6.AddEntry<ulong>(i, 11, gameObject, null, Offsets.GameObject.ObjectClass);
+
+                var transformOne = round7.AddEntry<ulong>(i, 12, objectClass, null, LootGameObjectClass.To_TransformInternal[0]);
+                var containerName = round7.AddEntry<string>(i, 6, objectName, 64);
+                var entry9 = round7.AddEntry<ulong>(i, 8, entry7, null, 0x0);
+
+                var transformTwo = round8.AddEntry<ulong>(i, 13, transformOne, null, LootGameObjectClass.To_TransformInternal[1]);
+                var entry10 = round8.AddEntry<ulong>(i, 9, entry9, null, 0x48);
+
+                var position = round9.AddEntry<ulong>(i, 14, transformTwo, null, LootGameObjectClass.To_TransformInternal[2]);
+                var className = round9.AddEntry<string>(i, 10, entry10, 64);
+            }
+
+            scatterReadMap.Execute();
+
+            List<Player> players = new List<Player>();
+            ReadOnlyDictionary<string, Player> playersDict = Memory.Players;
+
+            if (playersDict is not null)
+            {
+                var enumerable = from x in playersDict select x.Value into x where x.CorpsePtr > 0x000 select x;
+                players = enumerable.ToList<Player>();
+            }
+
+            Parallel.For(0, this.countLootListObjects, i =>
+            {
+                try
+                {
+                    var result1 = scatterReadMap.Results[i][0].TryGetResult<ulong>(out var lootObjectsEntity);
+                    var result2 = scatterReadMap.Results[i][1].TryGetResult<ulong>(out var unknownPtr);
+                    if (!scatterReadMap.Results[i][2].TryGetResult<ulong>(out var interactiveClass))
+                        return;
+                    var result4 = scatterReadMap.Results[i][3].TryGetResult<ulong>(out var baseObject);
+                    if (!scatterReadMap.Results[i][4].TryGetResult<ulong>(out var gameObject))
+                        return;
+                    var result6 = scatterReadMap.Results[i][10].TryGetResult<string>(out var className);
+                    var result7 = scatterReadMap.Results[i][6].TryGetResult<string>(out var containerName);
+                    var result8 = scatterReadMap.Results[i][11].TryGetResult<ulong>(out var objectClass);
+                    var result9 = scatterReadMap.Results[i][14].TryGetResult<ulong>(out var pos);
+
+                    bool isCorpse = className.Contains("Corpse", StringComparison.OrdinalIgnoreCase);
+                    bool isLooseLoot = className.Equals("ObservedLootItem", StringComparison.OrdinalIgnoreCase);
+                    bool isContainer = className.Equals("LootableContainer", StringComparison.OrdinalIgnoreCase);
+
+                    if (!containerName.Contains("script", StringComparison.OrdinalIgnoreCase))
+                    {
+                        Vector3 position = new Transform(pos, false).GetPosition(null);
+
+                        if (isContainer)
+                        {
+                            var containerIDPtr = Memory.ReadPtr(interactiveClass + 0x128);
+                            var containerID = Memory.ReadUnityString(containerIDPtr);
+                            TarkovDevManager.AllLootContainers.TryGetValue(containerID, out var container);
+                            if (container != null)
+                            {
+                                try
+                                {
+                                    var itemOwner = Memory.ReadPtr(interactiveClass + Offsets.LootInteractiveClass.ContainerItemOwner);
+                                    var itemBase = Memory.ReadPtr(itemOwner + 0xC0); //Offsets.ContainerItemOwner.LootItemBase);
+                                    var grids = Memory.ReadPtr(itemBase + Offsets.LootItemBase.Grids);
+                                    GetItemsInGrid(grids, containerName, position, loot, true, container.Name, containerName);
+                                }
+                                catch { }
+                            }
+                            else
+                            {
+                                Program.Log($"Container: {containerName} {containerID} is not in the list");
+                            }
+                        }
+                        else
+                        {
+                            if (isCorpse)
+                            {
+                                Player player = players.FirstOrDefault(x => x.CorpsePtr == interactiveClass);
+
+                                if (interactiveClass == 0x0)
+                                    return;
+
+                                var itemOwner = Memory.ReadPtr(interactiveClass + 0x40);
+                                var rootItem = Memory.ReadPtr(itemOwner + 0xC0);
+                                var slots = Memory.ReadPtr(rootItem + 0x78);
+                                var slotsArray = new MemArray(slots);
+
+                                foreach (var slot in slotsArray.Data)
+                                {
+                                    try
+                                    {
+                                        var namePtr = Memory.ReadPtr(slot + Offsets.Slot.Name);
+                                        var slotName = Memory.ReadUnityString(namePtr);
+                                        
+                                        if (slotsToSkip.Contains(slotName))
+                                            continue;
+
+                                        var containedItem = Memory.ReadPtrNullable(slot + 0x40);
+
+                                        if (containedItem == 0x0)
+                                            continue;
+
+                                        var itemTemplate = Memory.ReadPtr(containedItem + Offsets.LootItemBase.ItemTemplate); //EFT.InventoryLogic.ItemTemplate
+                                        var BSGIdPtr = Memory.ReadPtr(itemTemplate + Offsets.ItemTemplate.BsgId);
+                                        var id = Memory.ReadUnityString(BSGIdPtr);
+                                        var grids = Memory.ReadPtr(containedItem + Offsets.LootItemBase.Grids);
+
+                                        containerName = "Corpse" + (player is not null ? $" [{player.Name}]" : "");
+
+                                        if (grids == 0x0)
+                                        {
+                                            if (TarkovDevManager.AllItems.TryGetValue(id, out var lootItem))
+                                            {
+                                                loot.Add(new LootItem
+                                                {
+                                                    Label = lootItem.Label,
+                                                    AlwaysShow = lootItem.AlwaysShow,
+                                                    Important = lootItem.Important,
+                                                    Position = position,
+                                                    Item = lootItem.Item,
+                                                    Container = true,
+                                                    ContainerName = containerName,
+                                                    Value = TarkovDevManager.GetItemValue(lootItem.Item)
+                                                });
+                                            }
+                                        };
+                                        GetItemsInGrid(grids, id, position, loot, true, containerName);
+                                        continue;
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        Console.WriteLine("Corpse Error: " + ex.Message);
+                                        continue;
+                                    }
+                                }
+                            }
+                            else if (isLooseLoot)
+                            {
+                                var item = Memory.ReadPtr(interactiveClass + 0xB0);
+                                var itemTemplate = Memory.ReadPtr(item + Offsets.LootItemBase.ItemTemplate);
+                                var BSGIdPtr = Memory.ReadPtr(itemTemplate + Offsets.ItemTemplate.BsgId);
+                                var id = Memory.ReadUnityString(BSGIdPtr);
+                                bool questItem = Memory.ReadValue<bool>(itemTemplate + Offsets.ItemTemplate.IsQuestItem);
+
+                                if (id == null)
+                                    return;
+
+                                if (!questItem)
+                                {
+                                    if (TarkovDevManager.AllItems.TryGetValue(id, out var lootItem))
+                                    {
+                                        loot.Add(new LootItem
+                                        {
+                                            Label = lootItem.Label,
+                                            AlwaysShow = lootItem.AlwaysShow,
+                                            Important = lootItem.Important,
+                                            Position = position,
+                                            Item = lootItem.Item,
+                                            Value = TarkovDevManager.GetItemValue(lootItem.Item)
+                                        });
+                                    }
+                                }
+                                else
+                                {
+                                    var questItemTest = this.QuestItems.Where(x => x.Id == id).FirstOrDefault();
+                                    if (questItemTest != null)
+                                    {
+                                        questItemTest.Position = position;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error with LootManager.GetLoot(): {ex.Message}");
+                }
+            });
+
+            this.Loot = new(loot);
+        }
+
         /// <summary>
         /// Applies loot filter
         /// </summary>
         public void ApplyFilter()
         {
             var loot = this.Loot;
-            var activeFilters = _config.Filters.Where(f => f.IsActive).ToList();
-            var minValueLootItems = loot.Where(x => x.AlwaysShow || TarkovDevAPIManager.GetItemValue(x.Item) > _config.MinLootValue).ToList();
-
-            var itemsWithData = activeFilters.SelectMany(f => f.Items)
-                .Distinct()
-                .Select(item => new {
-                    ItemId = item,
-                    Filter = activeFilters
-                        .Where(f => f.Items.Contains(item))
-                        .OrderBy(f => f.Order)
-                        .First()
-                });
-
-            var orderedItems = itemsWithData
-               .OrderBy(x => x.Filter.Order)
-               .Select(x => new {
-                   x.ItemId,
-                   x.Filter.Color
-               })
-               .ToList();
-
-            var orderedIds = orderedItems.Select(x => x.ItemId).ToList();
-
-            //ghetto way to prevent overriding DevLootItems in the original loot list
-            var lootCopy = loot.Select(l => new DevLootItem
+            if (loot is not null)
             {
-                Label = l.Label,
-                Important = l.Important,
-                Position = l.Position,
-                AlwaysShow = l.AlwaysShow,
-                BsgId = l.BsgId,
-                ContainerName = l.ContainerName,
-                Container = l.Container,
-                Item = l.Item
-            }).ToList();
+                var activeFilters = this._config.Filters.Where(f => f.IsActive).ToList();
+                var minValueLootItems = loot.Where(x => x.AlwaysShow || x.Value > this._config.MinLootValue).ToList();
 
-            var filteredLoot = from l in lootCopy
-                               join id in orderedItems on l.Item.id equals id.ItemId
-                               select l;
+                var itemsWithData = activeFilters.SelectMany(f => f.Items)
+                    .Distinct()
+                    .Select(item => new {
+                        ItemId = item,
+                        Filter = activeFilters
+                            .Where(f => f.Items.Contains(item))
+                            .OrderBy(f => f.Order)
+                            .First()
+                    });
 
-            // ghetto quickfix lmao
-            filteredLoot = filteredLoot.ToList();
+                var orderedItems = itemsWithData
+                   .OrderBy(x => x.Filter.Order)
+                   .Select(x => new {
+                       x.ItemId,
+                       x.Filter.Color
+                   })
+                   .ToList();
 
-            foreach (var lootItem in filteredLoot)
-            {
-                lootItem.Important = true;
-            }
+                var orderedIds = orderedItems.Select(x => x.ItemId).ToList();
 
-            foreach (var lootItem in minValueLootItems)
-            {
-                if (TarkovDevAPIManager.GetItemValue(lootItem.Item) >= _config.MinImportantLootValue)
+                //ghetto way to prevent overriding LootItems in the original loot list
+                var lootCopy = loot.Select(l => new LootItem
+                {
+                    Label = l.Label,
+                    Important = l.Important,
+                    Position = l.Position,
+                    AlwaysShow = l.AlwaysShow,
+                    BsgId = l.BsgId,
+                    ContainerName = l.ContainerName,
+                    Container = l.Container,
+                    Item = l.Item
+                }).ToList();
+
+                var filteredLoot = from l in lootCopy
+                                   join id in orderedItems on l.Item.id equals id.ItemId
+                                   select l;
+
+                // ghetto quickfix lmao
+                filteredLoot = filteredLoot.ToList();
+
+                foreach (var lootItem in filteredLoot)
                 {
                     lootItem.Important = true;
                 }
+
+                foreach (var lootItem in minValueLootItems)
+                {
+                    if (lootItem.Value >= this._config.MinImportantLootValue)
+                    {
+                        lootItem.Important = true;
+                    }
+                }
+
+                filteredLoot = filteredLoot.Union(minValueLootItems)
+                    .GroupBy(x => x.Position)
+                    .Select(g => g.OrderBy(x => {
+                        var match = orderedItems.FirstOrDefault(oi => oi.ItemId == x.Item.id);
+                        return match == null ? int.MaxValue : orderedItems.IndexOf(match);
+                    })
+                    .First())
+                    .OrderBy(x => {
+                        var match = orderedItems.FirstOrDefault(oi => oi.ItemId == x.Item.id);
+                        return match == null ? int.MaxValue : orderedItems.IndexOf(match);
+                    });
+
+                this.LootFilterColors = orderedItems.ToDictionary(item => item.ItemId, item => item.Color);
+                this.Filter = new ReadOnlyCollection<LootItem>(filteredLoot.ToList());
             }
-
-            filteredLoot = filteredLoot.Union(minValueLootItems)
-                .GroupBy(x => x.Position)
-                .Select(g => g.OrderBy(x => {
-                    var match = orderedItems.FirstOrDefault(oi => oi.ItemId == x.Item.id);
-                    return match == null ? int.MaxValue : orderedItems.IndexOf(match);
-                })
-                .First())
-                .OrderBy(x => {
-                    var match = orderedItems.FirstOrDefault(oi => oi.ItemId == x.Item.id);
-                    return match == null ? int.MaxValue : orderedItems.IndexOf(match);
-                });
-
-            this.LootFilterColors = orderedItems.ToDictionary(item => item.ItemId, item => item.Color);
-            this.Filter = new ReadOnlyCollection<DevLootItem>(filteredLoot.ToList());
         }
 
         /// <summary>
         /// Removes an item from the loot filter list
         /// </summary>
         /// <param name="itemToRemove">The item to remove</param>
-        public void RemoveFilterItem(DevLootItem itemToRemove)
+        public void RemoveFilterItem(LootItem itemToRemove)
         {
             var filter = this.Filter.ToList();
             filter.Remove(itemToRemove);
 
-            this.Filter = new ReadOnlyCollection<DevLootItem>(new List<DevLootItem>(filter));
+            this.Filter = new ReadOnlyCollection<LootItem>(new List<LootItem>(filter));
             this.ApplyFilter();
         }
 
-        ///This method recursively searches grids. Grids work as follows:
-        ///Take a Groundcache which holds a Blackrock which holds a pistol.
-        ///The Groundcache will have 1 grid array, this method searches for whats inside that grid.
-        ///Then it finds a Blackrock. This method then invokes itself recursively for the Blackrock.
-        ///The Blackrock has 11 grid arrays (not to be confused with slots!! - a grid array contains slots. Look at the blackrock and you'll see it has 20 slots but 11 grids).
-        ///In one of those grid arrays is a pistol. This method would recursively search through each item it finds
-        ///To Do: add slot logic, so we can recursively search through the pistols slots...maybe it has a high value scope or something.
-        private void GetItemsInGrid(ulong gridsArrayPtr, string id, Vector3 pos, List<DevLootItem> loot, bool isContainer = false, string containerName = "", string realContainerName = "")
+        /// <summary>
+        /// Refresh loot list pointers
+        /// </summary>
+        public void RefreshLootListAddresses()
         {
-            //write console which item is in which container
-            //Console.WriteLine($"{id} in {containerName} - {realContainerName}");
+            this.lootlistPtr = Memory.ReadPtr(localGameWorld + Offsets.LocalGameWorld.LootList);
+            this.lootListEntity = Memory.ReadPtr(lootlistPtr + Offsets.UnityList.Base);
+            this.countLootListObjects = Memory.ReadValue<int>(lootListEntity + Offsets.UnityList.Count);
+        }
 
-            if (TarkovDevAPIManager.AllItems.TryGetValue(id, out
-                    var entry))
+        /// <summary>
+        /// Recursively searches items within a grid
+        /// </summary>
+        private void GetItemsInGrid(ulong gridsArrayPtr, string id, Vector3 pos, List<LootItem> loot, bool isContainer = false, string containerName = "", string realContainerName = "")
+        {
+            if (TarkovDevManager.AllItems.TryGetValue(id, out LootItem lootItem))
             {
-                loot.Add(new DevLootItem
+                loot.Add(new LootItem
                 {
-                    Label = entry.Label,
-                    AlwaysShow = entry.AlwaysShow,
-                    Important = entry.Important,
+                    Label = lootItem.Label,
+                    AlwaysShow = lootItem.AlwaysShow,
+                    Important = lootItem.Important,
                     Position = pos,
-                    Item = entry.Item,
+                    Item = lootItem.Item,
                     Container = isContainer,
                     ContainerName = containerName,
+                    Value = TarkovDevManager.GetItemValue(lootItem.Item)
                 });
             }
 
@@ -372,31 +429,34 @@ namespace eft_dma_radar
 
             var gridsArray = new MemArray(gridsArrayPtr);
 
-            // Check all sections of the container
-            foreach (var grid in gridsArray.Data)
+            try
             {
-                var gridEnumerableClass = Memory.ReadPtr(grid + Offsets.Grids.GridsEnumerableClass); // -.GClass178A->gClass1797_0x40 // Offset: 0x0040 (Type: -.GClass1797)
-                var itemListPtr = Memory.ReadPtr(gridEnumerableClass + 0x18); // -.GClass1797->list_0x18 // Offset: 0x0018 (Type: System.Collections.Generic.List<Item>)
-                var itemList = new MemList(itemListPtr);
-
-                foreach (var childItem in itemList.Data)
+                foreach (var grid in gridsArray.Data)
                 {
-                    try
+                    var gridEnumerableClass = Memory.ReadPtr(grid + Offsets.Grids.GridsEnumerableClass);
+                    var itemListPtr = Memory.ReadPtr(gridEnumerableClass + 0x18);
+                    var itemList = new MemList(itemListPtr);
+
+                    foreach (var childItem in itemList.Data)
                     {
-                        var childItemTemplate = Memory.ReadPtr(childItem + Offsets.LootItemBase.ItemTemplate); // EFT.InventoryLogic.Item->_template // Offset: 0x0038 (Type: EFT.InventoryLogic.ItemTemplate)
-                        var childItemIdPtr = Memory.ReadPtr(childItemTemplate + Offsets.ItemTemplate.BsgId);
-                        var childItemIdStr = Memory.ReadUnityString(childItemIdPtr).Replace("\\0", "");
-                        //Set important and always show if quest item using ID
-                        // Check to see if the child item has children
-                        var childGridsArrayPtr = Memory.ReadPtrNullable(childItem + Offsets.LootItemBase.Grids); // -.GClassXXXX->Grids // Offset: 0x0068 (Type: -.GClass1497[])
-                        GetItemsInGrid(childGridsArrayPtr, childItemIdStr, pos, loot, true, containerName, realContainerName); // Recursively add children to the entity
-                    }
-                    catch
-                    {
-                        //Program.Log("Error reading child item");
-                        //Program.Log($"Child item: {childItem} in {id}");
+                        try
+                        {
+                            var childItemTemplate = Memory.ReadPtr(childItem + Offsets.LootItemBase.ItemTemplate);
+                            var childItemIdPtr = Memory.ReadPtr(childItemTemplate + Offsets.ItemTemplate.BsgId);
+                            var childItemId = Memory.ReadUnityString(childItemIdPtr).Replace("\\0", "");
+                            var childGridsArrayPtr = Memory.ReadPtrNullable(childItem + Offsets.LootItemBase.Grids);
+
+                            GetItemsInGrid(childGridsArrayPtr, childItemId, pos, loot, true, containerName, realContainerName);
+                        }
+                        catch
+                        {
+                        }
                     }
                 }
+            }
+            catch
+            {
+
             }
         }
         #endregion
@@ -492,7 +552,7 @@ namespace eft_dma_radar
         }
     }
 
-    public class DevLootItem
+    public class LootItem
     {
         public string Label
         {
@@ -534,6 +594,13 @@ namespace eft_dma_radar
             get;
             init;
         } = new();
+        public int Value
+        {
+            get;
+            init;
+        }
+
+        public Player PlayerCorpse { get; set; }
 
         /// <summary>
         /// Cached 'Zoomed Position' on the Radar GUI. Used for mouseover events.
@@ -545,7 +612,7 @@ namespace eft_dma_radar
         /// </summary>
         public string GetFormattedValue()
         {
-            return TarkovDevAPIManager.FormatNumber(TarkovDevAPIManager.GetItemValue(this.Item));
+            return TarkovDevManager.FormatNumber(this.Value);
         }
 
         /// <summary>

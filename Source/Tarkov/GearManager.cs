@@ -1,54 +1,74 @@
-﻿using System;
+﻿using Offsets;
+using System;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Drawing;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace eft_dma_radar
 {
     public class GearManager
     {
-        private static readonly List<string> _skipSlots = new()
-        {
-            "Scabbard", "SecuredContainer", "Dogtag", "Compass", "Eyewear", "ArmBand"
-        };
+        private static readonly List<string> _skipSlots = new List<string> { "SecuredContainer", "Dogtag", "Compass", "Eyewear", "ArmBand" };
+        private static readonly List<string> _skipSlotsPmc = new List<string> { "Scabbard", "SecuredContainer", "Dogtag", "Compass", "Eyewear", "ArmBand" };
+        private static readonly List<string> _thermalScopes = new List<string> { "5a1eaa87fcdbcb001865f75e", "5d1b5e94d7ad1a2b865a96b0", "63fc44e2429a8a166c7f61e6", "6478641c19d732620e045e17", "63fc44e2429a8a166c7f61e6" };
         /// <summary>
         /// List of equipped items in PMC Inventory Slots.
         /// </summary>
-        public ReadOnlyDictionary<string, GearItem> Gear { get; }
+        public Dictionary<string, GearItem> Gear { get; set; }
+
+        /// <summary>
+        /// Total value of all equipped items.
+        /// </summary>
+        public int TotalValue { get; set; }
+
+        /// <summary>
+        /// All gear items and mods.
+        /// </summary>
+        public List<LootItem> GearItemsAndMods { get; set; }
 
         public GearManager(ulong playerBase, bool isPMC, bool isLocal)
         {
-            var size = 0;
-            var slots = 0UL;
+            this.GearItemsAndMods = new List<LootItem>();
             var slotDict = new Dictionary<string, ulong>(StringComparer.OrdinalIgnoreCase);
-            if (isLocal){
-                var inventorycontroller = Memory.ReadPtr(playerBase + Offsets.Player.InventoryController);
-                var inventory = Memory.ReadPtr(inventorycontroller + Offsets.InventoryController.Inventory);
-                var equipment = Memory.ReadPtr(inventory + Offsets.Inventory.Equipment);
-                slots = Memory.ReadPtr(equipment + Offsets.Equipment.Slots);
-                size = Memory.ReadValue<int>(slots + Offsets.UnityList.Count);
+            var inventorycontroller = 0UL;
 
-            } else {
-                var observedPlayerController = Memory.ReadPtr(playerBase + Offsets.ObservedPlayerView.ObservedPlayerController);
-                var inventorycontroller = Memory.ReadPtr(observedPlayerController + Offsets.ObservedPlayerController.InventoryController);
-                var inventory = Memory.ReadPtr(inventorycontroller + Offsets.InventoryController.ObservedPlayerInventory);
-                var equipment = Memory.ReadPtr(inventory + Offsets.Inventory.Equipment);
-                slots = Memory.ReadPtr(equipment + Offsets.Equipment.Slots);
-                size = Memory.ReadValue<int>(slots + Offsets.UnityList.Count);
+            if (isLocal)
+            {
+                inventorycontroller = Memory.ReadPtr(playerBase + Offsets.Player.InventoryController);
             }
-            if (size == 0 || slots == 0) return;
+            else
+            {
+                var observedPlayerController = Memory.ReadPtr(playerBase + Offsets.ObservedPlayerView.ObservedPlayerController);
+                inventorycontroller = Memory.ReadPtr(observedPlayerController + Offsets.ObservedPlayerController.InventoryController);
+            }
+
+            var inventory = Memory.ReadPtr(inventorycontroller + Offsets.InventoryController.ObservedPlayerInventory);
+            var equipment = Memory.ReadPtr(inventory + Offsets.Inventory.Equipment);
+            var slots = Memory.ReadPtr(equipment + Offsets.Equipment.Slots);
+            var size = Memory.ReadValue<int>(slots + Offsets.UnityList.Count);
+
+            if (size == 0 || slots == 0)
+                return;
 
             for (int slotID = 0; slotID < size; slotID++)
             {
                 var slotPtr = Memory.ReadPtr(slots + Offsets.UnityListBase.Start + (uint)slotID * 0x8);
                 var namePtr = Memory.ReadPtr(slotPtr + Offsets.Slot.Name);
                 var name = Memory.ReadUnityString(namePtr);
-                if (_skipSlots.Contains(name, StringComparer.OrdinalIgnoreCase)) continue;
+                if (_skipSlots.Contains(name, StringComparer.OrdinalIgnoreCase))
+                    continue;
+
                 slotDict.TryAdd(name, slotPtr);
             }
+
             var gearDict = new Dictionary<string, GearItem>(StringComparer.OrdinalIgnoreCase);
+
             foreach (var slotName in slotDict.Keys)
             {
-                if (_skipSlots.Contains(slotName, StringComparer.OrdinalIgnoreCase)) continue;
+                if (_skipSlots.Contains(slotName, StringComparer.OrdinalIgnoreCase))
+                    continue;
+
                 try
                 {
                     if (slotDict.TryGetValue(slotName, out var slot))
@@ -58,44 +78,58 @@ namespace eft_dma_radar
                         var idPtr = Memory.ReadPtr(inventorytemplate + Offsets.ItemTemplate.BsgId);
                         var id = Memory.ReadUnityString(idPtr);
 
-                        if (TarkovDevAPIManager.AllItems.TryGetValue(id, out var entry))
+                        if (TarkovDevManager.AllItems.TryGetValue(id, out var lootItem))
                         {
-                            string longName = entry.Item.name; // Contains 'full' item name
-                            string shortName = entry.Item.shortName; // Contains 'full' item name
-                            string extraSlotInfo = null; // Contains additional slot information (ammo type,etc.)
-                            if (isPMC) // Only recurse further for PMCs (we don't care about P Scavs)
+                            string longName = lootItem.Item.name;
+                            string shortName = lootItem.Item.shortName;
+                            bool hasThermal = false;
+                            string extraSlotInfo = null;
+                            List<LootItem> gearMods = new List<LootItem>();
+                            var totalGearValue = TarkovDevManager.GetItemValue(lootItem.Item);
+                            if (isPMC)
                             {
-                                if (slotName == "FirstPrimaryWeapon" || slotName == "SecondPrimaryWeapon") // Only interested in weapons
+                                if (slotName == "FirstPrimaryWeapon" || slotName == "SecondPrimaryWeapon" || slotName == "Holster") // Only interested in weapons
                                 {
                                     try
                                     {
                                         var result = new PlayerWeaponInfo();
-                                        RecurseSlotsForThermalsAmmo(containedItem, ref result); // Check weapon ammo type, and if it contains a thermal scope
+                                        this.RecurseSlotsForThermalsAmmo(containedItem, ref result); // Check weapon ammo type, and if it contains a thermal scope
                                         extraSlotInfo = result.ToString();
+                                        hasThermal = result.ThermalScope != null;
                                     }
                                     catch { }
                                 }
                             }
+
+                            totalGearValue += gearMods.Sum(x => x.Value);
+                            this.TotalValue += totalGearValue;
+                            this.GearItemsAndMods.AddRange(gearMods);
+
                             if (extraSlotInfo is not null)
                             {
                                 longName += $" ({extraSlotInfo})";
                                 shortName += $" ({extraSlotInfo})";
                             }
+
                             var gear = new GearItem()
                             {
-                                id = id,
+                                ID = id,
                                 Long = longName,
-                                Short = shortName
+                                Short = shortName,
+                                Value = totalGearValue,
+                                HasThermal = hasThermal
                             };
+
                             gearDict.TryAdd(slotName, gear);
                         } else {
-                            Debug.WriteLine($"GearManager: ID: {id} not found in TarkovMarketManager.AllItems");
+                            Debug.WriteLine($"GearManager: ID: {id} not found in TarkovDevManager.AllItems");
                         }
                     }
                 }
-                catch { } // Skip over empty slots
+                catch { }
             }
-            Gear = new(gearDict); // update readonly ref
+            
+            this.Gear = new(gearDict);
         }
 
         /// <summary>
@@ -103,17 +137,6 @@ namespace eft_dma_radar
         /// </summary>
         private void RecurseSlotsForThermalsAmmo(ulong lootItemBase, ref PlayerWeaponInfo result)
         {
-            const string reapIR = "5a1eaa87fcdbcb001865f75e";
-            const string flir = "5d1b5e94d7ad1a2b865a96b0";
-
-            //609bab8b455afd752b2e6138 ## T12W 30Hz thermal reflex sight
-            //6478641c19d732620e045e17 ## ECHO1 1-2x30mm 30Hz thermal reflex
-            //63fc44e2429a8a166c7f61e6 ## Armasight 2-8x50 30Hz thermal scope
-            
-            const string T12W = "63fc44e2429a8a166c7f61e6";
-            const string ECHO1 = "6478641c19d732620e045e17";
-            const string Armasight = "63fc44e2429a8a166c7f61e6";
-
             //Debug.WriteLine($"GearManager Scope: Starting...");
             try
             {
@@ -126,7 +149,8 @@ namespace eft_dma_radar
                     var slotPtr = Memory.ReadPtr(parentSlots + Offsets.UnityListBase.Start + (uint)slotID * 0x8);
                     var namePtr = Memory.ReadPtr(slotPtr + Offsets.Slot.Name);
                     var name = Memory.ReadUnityString(namePtr);
-                    if (_skipSlots.Contains(name, StringComparer.OrdinalIgnoreCase)) continue;
+                    if (_skipSlots.Contains(name, StringComparer.OrdinalIgnoreCase))
+                        continue;
                     slotDict.TryAdd(name, slotPtr);
                 }
                 foreach (var slotName in slotDict.Keys)
@@ -145,7 +169,7 @@ namespace eft_dma_radar
                                 var firstRoundItemTemplate = Memory.ReadPtr(firstRoundItem + Offsets.LootItemBase.ItemTemplate);
                                 var firstRoundIdPtr = Memory.ReadPtr(firstRoundItemTemplate + Offsets.ItemTemplate.BsgId);
                                 var firstRoundId = Memory.ReadUnityString(firstRoundIdPtr);
-                                if (TarkovDevAPIManager.AllItems.TryGetValue(firstRoundId, out var firstRound)) // Lookup ammo type
+                                if (TarkovDevManager.AllItems.TryGetValue(firstRoundId, out var firstRound)) // Lookup ammo type
                                 {
                                     result.AmmoType = firstRound.Item.shortName;
                                 }
@@ -155,14 +179,9 @@ namespace eft_dma_radar
                                 var inventorytemplate = Memory.ReadPtr(containedItem + Offsets.LootItemBase.ItemTemplate);
                                 var idPtr = Memory.ReadPtr(inventorytemplate + Offsets.ItemTemplate.BsgId);
                                 var id = Memory.ReadUnityString(idPtr);
-                                if (id.Equals(reapIR, StringComparison.OrdinalIgnoreCase) ||
-                                    id.Equals(flir, StringComparison.OrdinalIgnoreCase) ||
-                                    id.Equals(T12W, StringComparison.OrdinalIgnoreCase) ||
-                                    id.Equals(ECHO1, StringComparison.OrdinalIgnoreCase) ||
-                                    id.Equals(Armasight, StringComparison.OrdinalIgnoreCase)
-                                    )
+                                if (_thermalScopes.Contains(id))
                                 {
-                                    if (TarkovDevAPIManager.AllItems.TryGetValue(id, out var entry))
+                                    if (TarkovDevManager.AllItems.TryGetValue(id, out var entry))
                                     {
                                         result.ThermalScope = entry.Item.shortName;
                                     }
@@ -176,6 +195,49 @@ namespace eft_dma_radar
             }
             catch
             {
+            }
+        }
+
+        private static void GetItemsInGrid(ulong gridsArrayPtr, string id, List<LootItem> loot)
+        {
+            if (TarkovDevManager.AllItems.TryGetValue(id, out LootItem lootItem))
+            {
+                loot.Add(new LootItem
+                {
+                    Label = lootItem.Label,
+                    AlwaysShow = lootItem.AlwaysShow,
+                    Important = lootItem.Important,
+                    Item = lootItem.Item,
+                    Value = TarkovDevManager.GetItemValue(lootItem.Item)
+                });
+            }
+
+            if (gridsArrayPtr == 0x0)
+            {
+                return;
+            }
+
+            var gridsArray = new MemArray(gridsArrayPtr);
+            foreach (var grid in gridsArray.Data)
+            {
+                try
+                {
+                    var gridEnumerableClass = Memory.ReadPtr(grid + Offsets.Grids.GridsEnumerableClass);
+                    var itemListPtr = Memory.ReadPtr(gridEnumerableClass + 0x18);
+                    var itemList = new MemList(itemListPtr);
+                    foreach (var childItem in itemList.Data)
+                    {
+                        try
+                        {
+                            var childItemTemplate = Memory.ReadPtr(childItem + Offsets.LootItemBase.ItemTemplate);
+                            var childItemIdPtr = Memory.ReadPtr(childItemTemplate + Offsets.ItemTemplate.BsgId);
+                            var childItemId = Memory.ReadUnityString(childItemIdPtr).Replace("\\0", "");
+                            var childGridsArrayPtr = Memory.ReadPtrNullable(childItem + Offsets.LootItemBase.Grids);
+                            GearManager.GetItemsInGrid(childGridsArrayPtr, childItemId, loot);
+                        }
+                        catch {}
+                    }
+                } catch {}
             }
         }
     }

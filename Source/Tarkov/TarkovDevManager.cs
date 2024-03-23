@@ -4,36 +4,29 @@ using System.Text.Json;
 
 namespace eft_dma_radar
 {
-    internal static class TarkovDevAPIManager
+    internal static class TarkovDevManager
     {
         /// <summary>
         /// Contains all Tarkov Loot, Quests Items and Tasks mapped via BSGID String.
         /// </summary>
         ///
-        public static ReadOnlyDictionary<string, DevLootItem> AllItems { get; }
+        public static ReadOnlyDictionary<string, LootItem> AllItems { get; }
         public static ReadOnlyDictionary<string, QuestItems> AllQuestItems { get; }
         public static ReadOnlyDictionary<string, Tasks> AllTasks { get; }
-        public static ReadOnlyDictionary<string, LootContainers> AllLootContainers { get;}
+        public static ReadOnlyDictionary<string, LootContainers> AllLootContainers { get; }
 
         #region Static_Constructor
 
-        static TarkovDevAPIManager()
+        static TarkovDevManager()
         {
             TarkovDevResponse jsonResponse;
 
             var jsonItems = new List<TarkovDevResponse>();
-            var allItems = new Dictionary<string, DevLootItem>(StringComparer.OrdinalIgnoreCase);
-            var allQuestItems = new Dictionary<string, QuestItems>(
-                StringComparer.OrdinalIgnoreCase
-            );
+            var allItems = new Dictionary<string, LootItem>(StringComparer.OrdinalIgnoreCase);
+            var allQuestItems = new Dictionary<string, QuestItems>(StringComparer.OrdinalIgnoreCase);
             var allTasks = new Dictionary<string, Tasks>(StringComparer.OrdinalIgnoreCase);
-            var allLootContainers = new Dictionary<string, LootContainers>(
-                StringComparer.OrdinalIgnoreCase
-            );
-            if (
-                !File.Exists("api_tarkov_dev_items.json")
-                || File.GetLastWriteTime("api_tarkov_dev_items.json").AddHours(480) < DateTime.Now
-            ) // only update every 480h
+            var allLootContainers = new Dictionary<string, LootContainers>(StringComparer.OrdinalIgnoreCase);
+            if (!File.Exists("api_tarkov_dev_items.json") || File.GetLastWriteTime("api_tarkov_dev_items.json").AddHours(480) < DateTime.Now) // only update every 480h
             {
                 using (var client = new HttpClient())
                 {
@@ -228,9 +221,7 @@ namespace eft_dma_radar
                     };
                     var jsonBody = JsonSerializer.Serialize(body);
                     var content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
-                    var response = client
-                        .PostAsync("https://api.tarkov.dev/graphql", content)
-                        .Result;
+                    var response = client.PostAsync("https://api.tarkov.dev/graphql", content).Result;
                     var responseString = response.Content.ReadAsStringAsync().Result;
                     jsonResponse = JsonSerializer.Deserialize<TarkovDevResponse>(responseString);
                     jsonItems.Add(jsonResponse);
@@ -250,18 +241,17 @@ namespace eft_dma_radar
                 {
                     foreach (var tarkovItem in item.data.items)
                     {
-                        var value = GetItemValue(tarkovItem);
-                        
                         allItems.TryAdd(
                             tarkovItem.id,
-                            new DevLootItem()
+                            new LootItem()
                             {
                                 Label = tarkovItem.name,
-                                Item = tarkovItem
+                                Item = tarkovItem,
                             }
                         );
                     }
                 }
+
                 if (item.data?.tasks != null)
                 {
                     foreach (var task in item.data.tasks)
@@ -369,6 +359,7 @@ namespace eft_dma_radar
                         );
                     }
                 }
+
                 if (item.data?.lootContainers != null)
                 {
                     foreach (var lootContainer in item.data.lootContainers)
@@ -403,26 +394,16 @@ namespace eft_dma_radar
                 return num.ToString();
         }
 
-        public static int GetItemValue(TarkovItem tarkovItem)
+        public static int GetItemValue(TarkovItem item)
         {
-            //find the best price to sell
-            int bestPrice;
-
-            //if (tarkovItem.avg24hPrice > tarkovItem.basePrice)
-            //{
-                bestPrice = (int)tarkovItem.avg24hPrice;
-                foreach (var vendor in tarkovItem.sellFor)
+            int bestPrice = (int)item.avg24hPrice;
+            foreach (var vendor in item.sellFor)
                 {
                     if (vendor.price > bestPrice)
                     {
                         bestPrice = vendor.price;
                     }
                 }
-            //}
-            //else
-            //{
-                //bestPrice = tarkovItem.basePrice;
-            //}
 
             return bestPrice;
         }
@@ -510,14 +491,12 @@ namespace eft_dma_radar
         }
     }
 
-
     public class ObjectiveMaps
     {
         public string id { get; set; }
         public string name { get; set; }
         public string normalizedName { get; set; }
     }
-
 
     public class TarkovQuestItems
     {

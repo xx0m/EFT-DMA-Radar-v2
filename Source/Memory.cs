@@ -1,4 +1,5 @@
 ﻿using eft_dma_radar.Source.Tarkov;
+using System;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -27,6 +28,9 @@ namespace eft_dma_radar
         private static int _ticksCounter = 0;
         private static volatile int _ticks = 0;
         private static readonly Stopwatch _tickSw = new();
+
+        public static Game.GameStatus GameStatus = Game.GameStatus.NotFound;
+
         #region Getters
         public static int Ticks
         {
@@ -80,6 +84,10 @@ namespace eft_dma_radar
         {
             get => _game?.QuestManager;
         }
+        public static CameraManager CameraManager
+        {
+            get => _game?.CameraManager;
+        }
         public static Toolbox Toolbox
         {
             get => _game?.Toolbox;
@@ -118,22 +126,25 @@ namespace eft_dma_radar
                     Program.Log("No MemMap, attempting to generate...");
                     vmmInstance = new Vmm("-printf", "-v", "-device", "fpga", "-waitinitialize");
                     GetMemMap();
-                }
+                }   
                 else
                 {
                     Program.Log("MemMap found, loading...");
                     vmmInstance = new Vmm("-printf", "-v", "-device", "fpga", "-memmap", "mmap.txt");
                 }
                 Program.Log("Starting Memory worker thread...");
-                _worker = new Thread(async () => await WorkerAsync())
-                { 
+                Memory._worker = new Thread((ThreadStart)delegate
+                {
+                    Memory.Worker();
+                })
+                {
                     IsBackground = true,
                     Priority = ThreadPriority.AboveNormal
                 };
-                _running = true;
-                _worker.Start(); // Start new background thread to do memory operations on
+                Memory._running = true;
+                Memory._worker.Start(); // Start new background thread to do memory operations on
                 Program.HideConsole();
-                _tickSw.Start(); // Start stopwatch for Mem Ticks/sec
+                Memory._tickSw.Start(); // Start stopwatch for Mem Ticks/sec
             }
             catch (Exception ex)
             {
@@ -239,54 +250,51 @@ namespace eft_dma_radar
         /// </summary>
         /// 
         private static CancellationTokenSource _cts = new CancellationTokenSource();
-        private static async Task WorkerAsync()
+        private static void Worker()
         {
             try
             {
                 while (true)
                 {
                     Program.Log("Attempting to find EFT Process...");
-                    while (true) // Startup loop
+                    while (!Memory.GetPid() || !Memory.GetModuleBase())
                     {
-                        if (GetPid()
-                        && GetModuleBase()
-                        )
-                        {
-                            Program.Log($"EFT process located! Startup successful.");
-                            break;
-                        }
-                        else
-                        {
-                            Program.Log("EFT startup failed, trying again in 15 seconds...");
-                            Thread.Sleep(15000);
-                        }
+                        Program.Log("EFT startup failed, trying again in 15 seconds...");
+                        Memory.GameStatus = Game.GameStatus.NotFound;
+                        Thread.Sleep(15000);
                     }
-                    while (true) // Game is running
+                    Program.Log("EFT process located! Startup successful.");
+                    while (true)
                     {
-                        _game = new Game(_unityBase);
-                        Player.Reset(); // Reset static assets for a new raid/game.
+                        Memory._game = new Game(Memory._unityBase);
+                        Player.Reset();
                         try
                         {
                             Program.Log("Ready -- Waiting for raid...");
-                            _ready = true;
-                            Task.Run(async () => await _game.WaitForGameAsync()).Wait();
-                            while (_game.InGame || _game.InHideout)
+                            Memory.GameStatus = Game.GameStatus.Menu;
+                            Memory._ready = true;
+                            Memory._game.WaitForGame();
+                            while (Memory.GameStatus == Game.GameStatus.InGame)
                             {
-                                if (_tickSw.ElapsedMilliseconds >= 1000)
+                                if (Memory._tickSw.ElapsedMilliseconds >= 1000)
                                 {
-                                    _ticks = _ticksCounter; // push count to public property
-                                    _ticksCounter = 0;
-                                    _tickSw.Restart();
+                                    Memory._ticks = _ticksCounter;
+                                    Memory._ticksCounter = 0;
+                                    Memory._tickSw.Restart();
                                 }
-                                else _ticksCounter++;
-                                if (_restart)
+                                else
                                 {
+                                    Memory._ticksCounter++;
+                                }
+                                if (Memory._restart)
+                                {
+                                    Memory.GameStatus = Game.GameStatus.Menu;
                                     Program.Log("Restarting game... getting fresh GameWorld instance");
-                                    _restart = false;
+                                    Memory._restart = false;
                                     break;
                                 }
-                                await _game.GameLoop();
-                                Thread.SpinWait(LOOP_DELAY * 1000); // rate-limit, high performance
+                                Memory._game.GameLoop();
+                                Thread.SpinWait(LOOP_DELAY * 1000);
                             }
                         }
                         catch (GameNotRunningException) { break; }
@@ -298,23 +306,23 @@ namespace eft_dma_radar
                         }
                         finally
                         {
-                            _ready = false;
-                            await Task.Delay(100, _cts.Token); // Short delay before restarting the loop
+                            Memory._ready = false;
+                            Thread.Sleep(100);
                         }
                     }
                     Program.Log("Game is no longer running! Attempting to restart...");
                 }
             }
-            catch (ThreadInterruptedException) { } // Do nothing
-            catch (DMAShutdown) { } // Do nothing
+            catch (ThreadInterruptedException) { }
+            catch (DMAShutdown) { }
             catch (Exception ex)
             {
-                Environment.FailFast($"FATAL ERROR on Memory Thread: {ex}"); // Force shutdown asap
+                Environment.FailFast($"FATAL ERROR on Memory Thread: {ex}");
             }
             finally
             {
                 Program.Log("Uninitializing DMA Device...");
-                vmmInstance.Close(); // Un-init DMA
+                Memory.vmmInstance.Dispose();
                 Program.Log("Memory Thread closing down gracefully...");
             }
         }

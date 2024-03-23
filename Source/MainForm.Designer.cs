@@ -134,19 +134,22 @@ namespace eft_dma_radar
             chkShowAimview = new CheckBox();
             chkHideNames = new CheckBox();
             grpMemoryWriting = new GroupBox();
+            chkMasterSwitch = new CheckBox();
             grpGlobalFeatures = new GroupBox();
             chkChams = new CheckBox();
             chkDoubleSearch = new CheckBox();
             grpGearFeatures = new GroupBox();
+            chkNoSway = new CheckBox();
             chkInstantADS = new CheckBox();
             trkMagDrills = new TrackBar();
-            chkNoRecoilSway = new CheckBox();
+            chkNoRecoil = new CheckBox();
             chkMagDrills = new CheckBox();
             chkNoVisor = new CheckBox();
             chkNightVision = new CheckBox();
             chkOpticThermalVision = new CheckBox();
             chkThermalVision = new CheckBox();
             grpPhysicalFeatures = new GroupBox();
+            chkInfiniteStamina = new CheckBox();
             chkIncreaseMaxWeight = new CheckBox();
             trkThrowPower = new TrackBar();
             trkJumpPower = new TrackBar();
@@ -168,6 +171,7 @@ namespace eft_dma_radar
             tabControl = new TabControl();
             colDialog = new ColorDialog();
             toolTip = new ToolTip(components);
+            chkExtendedReach = new CheckBox();
             tabLootFilter.SuspendLayout();
             tabPlayerHistory.SuspendLayout();
             tabPlayerLoadouts.SuspendLayout();
@@ -1331,6 +1335,7 @@ namespace eft_dma_radar
             // 
             // grpMemoryWriting
             // 
+            grpMemoryWriting.Controls.Add(chkMasterSwitch);
             grpMemoryWriting.Controls.Add(grpGlobalFeatures);
             grpMemoryWriting.Controls.Add(grpGearFeatures);
             grpMemoryWriting.Controls.Add(grpPhysicalFeatures);
@@ -1341,8 +1346,20 @@ namespace eft_dma_radar
             grpMemoryWriting.TabStop = false;
             grpMemoryWriting.Text = "Memory Writing [RISKY]";
             // 
+            // chkMasterSwitch
+            // 
+            chkMasterSwitch.AutoSize = true;
+            chkMasterSwitch.Location = new Point(362, 11);
+            chkMasterSwitch.Name = "chkMasterSwitch";
+            chkMasterSwitch.Size = new Size(100, 19);
+            chkMasterSwitch.TabIndex = 35;
+            chkMasterSwitch.Text = "Master Switch";
+            chkMasterSwitch.UseVisualStyleBackColor = true;
+            chkMasterSwitch.CheckedChanged += chkMasterSwitch_CheckedChanged;
+            // 
             // grpGlobalFeatures
             // 
+            grpGlobalFeatures.Controls.Add(chkExtendedReach);
             grpGlobalFeatures.Controls.Add(chkChams);
             grpGlobalFeatures.Controls.Add(chkDoubleSearch);
             grpGlobalFeatures.Location = new Point(6, 22);
@@ -1379,9 +1396,10 @@ namespace eft_dma_radar
             // 
             // grpGearFeatures
             // 
+            grpGearFeatures.Controls.Add(chkNoSway);
             grpGearFeatures.Controls.Add(chkInstantADS);
             grpGearFeatures.Controls.Add(trkMagDrills);
-            grpGearFeatures.Controls.Add(chkNoRecoilSway);
+            grpGearFeatures.Controls.Add(chkNoRecoil);
             grpGearFeatures.Controls.Add(chkMagDrills);
             grpGearFeatures.Controls.Add(chkNoVisor);
             grpGearFeatures.Controls.Add(chkNightVision);
@@ -1393,6 +1411,18 @@ namespace eft_dma_radar
             grpGearFeatures.TabIndex = 34;
             grpGearFeatures.TabStop = false;
             grpGearFeatures.Text = "Gear Features";
+            // 
+            // chkNoSway
+            // 
+            chkNoSway.AutoSize = true;
+            chkNoSway.Location = new Point(118, 22);
+            chkNoSway.Name = "chkNoSway";
+            chkNoSway.Size = new Size(72, 19);
+            chkNoSway.TabIndex = 35;
+            chkNoSway.Text = "No Sway";
+            toolTip.SetToolTip(chkNoSway, "Removes weapon sway");
+            chkNoSway.UseVisualStyleBackColor = true;
+            chkNoSway.CheckedChanged += chkNoSway_CheckedChanged;
             // 
             // chkInstantADS
             // 
@@ -1410,7 +1440,7 @@ namespace eft_dma_radar
             // trkMagDrills
             // 
             trkMagDrills.LargeChange = 10;
-            trkMagDrills.Location = new Point(85, 122);
+            trkMagDrills.Location = new Point(85, 147);
             trkMagDrills.Maximum = 7;
             trkMagDrills.Minimum = 1;
             trkMagDrills.Name = "trkMagDrills";
@@ -1422,23 +1452,23 @@ namespace eft_dma_radar
             trkMagDrills.Visible = false;
             trkMagDrills.Scroll += trkMagDrills_Scroll;
             // 
-            // chkNoRecoilSway
+            // chkNoRecoil
             // 
-            chkNoRecoilSway.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            chkNoRecoilSway.AutoSize = true;
-            chkNoRecoilSway.Location = new Point(6, 22);
-            chkNoRecoilSway.Name = "chkNoRecoilSway";
-            chkNoRecoilSway.Size = new Size(109, 19);
-            chkNoRecoilSway.TabIndex = 25;
-            chkNoRecoilSway.Text = "No Recoil/Sway";
-            toolTip.SetToolTip(chkNoRecoilSway, "Removes weapon recoil/sway");
-            chkNoRecoilSway.UseVisualStyleBackColor = true;
-            chkNoRecoilSway.CheckedChanged += chkNoRecoilSway_CheckedChanged;
+            chkNoRecoil.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            chkNoRecoil.AutoSize = true;
+            chkNoRecoil.Location = new Point(6, 22);
+            chkNoRecoil.Name = "chkNoRecoil";
+            chkNoRecoil.Size = new Size(77, 19);
+            chkNoRecoil.TabIndex = 25;
+            chkNoRecoil.Text = "No Recoil";
+            toolTip.SetToolTip(chkNoRecoil, "Removes weapon recoil");
+            chkNoRecoil.UseVisualStyleBackColor = true;
+            chkNoRecoil.CheckedChanged += chkNoRecoil_CheckedChanged;
             // 
             // chkMagDrills
             // 
             chkMagDrills.AutoSize = true;
-            chkMagDrills.Location = new Point(6, 122);
+            chkMagDrills.Location = new Point(6, 147);
             chkMagDrills.Name = "chkMagDrills";
             chkMagDrills.Size = new Size(79, 19);
             chkMagDrills.TabIndex = 32;
@@ -1451,7 +1481,7 @@ namespace eft_dma_radar
             // 
             chkNoVisor.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             chkNoVisor.AutoSize = true;
-            chkNoVisor.Location = new Point(118, 22);
+            chkNoVisor.Location = new Point(6, 122);
             chkNoVisor.Name = "chkNoVisor";
             chkNoVisor.Size = new Size(71, 19);
             chkNoVisor.TabIndex = 21;
@@ -1501,6 +1531,7 @@ namespace eft_dma_radar
             // 
             // grpPhysicalFeatures
             // 
+            grpPhysicalFeatures.Controls.Add(chkInfiniteStamina);
             grpPhysicalFeatures.Controls.Add(chkIncreaseMaxWeight);
             grpPhysicalFeatures.Controls.Add(trkThrowPower);
             grpPhysicalFeatures.Controls.Add(trkJumpPower);
@@ -1512,6 +1543,18 @@ namespace eft_dma_radar
             grpPhysicalFeatures.TabIndex = 26;
             grpPhysicalFeatures.TabStop = false;
             grpPhysicalFeatures.Text = "Physical Features";
+            // 
+            // chkInfiniteStamina
+            // 
+            chkInfiniteStamina.AutoSize = true;
+            chkInfiniteStamina.Location = new Point(6, 97);
+            chkInfiniteStamina.Name = "chkInfiniteStamina";
+            chkInfiniteStamina.Size = new Size(109, 19);
+            chkInfiniteStamina.TabIndex = 32;
+            chkInfiniteStamina.Text = "Infinite Stamina";
+            toolTip.SetToolTip(chkInfiniteStamina, "Allows you to run forever");
+            chkInfiniteStamina.UseVisualStyleBackColor = true;
+            chkInfiniteStamina.CheckedChanged += chkInfiniteStamina_CheckedChanged;
             // 
             // chkIncreaseMaxWeight
             // 
@@ -1732,6 +1775,18 @@ namespace eft_dma_radar
             // 
             colDialog.FullOpen = true;
             // 
+            // chkExtendedReach
+            // 
+            chkExtendedReach.AutoSize = true;
+            chkExtendedReach.Location = new Point(143, 47);
+            chkExtendedReach.Name = "chkExtendedReach";
+            chkExtendedReach.Size = new Size(110, 19);
+            chkExtendedReach.TabIndex = 23;
+            chkExtendedReach.Text = "Extended Reach";
+            toolTip.SetToolTip(chkExtendedReach, "Increases maximum loot/door interaction distance");
+            chkExtendedReach.UseVisualStyleBackColor = true;
+            chkExtendedReach.CheckedChanged += chkExtendedReach_CheckedChanged;
+            // 
             // frmMain
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -1784,6 +1839,7 @@ namespace eft_dma_radar
             ((System.ComponentModel.ISupportInitialize)trkZoom).EndInit();
             ((System.ComponentModel.ISupportInitialize)trkUIScale).EndInit();
             grpMemoryWriting.ResumeLayout(false);
+            grpMemoryWriting.PerformLayout();
             grpGlobalFeatures.ResumeLayout(false);
             grpGlobalFeatures.PerformLayout();
             grpGearFeatures.ResumeLayout(false);
@@ -1906,9 +1962,7 @@ namespace eft_dma_radar
         private Label lblImportantLootColor;
         private CheckBox chkChams;
         private CheckBox chkNoRecoil;
-        private CheckBox chkNoRecoilSway;
         private CheckBox chkShowHoverArmor;
-        private Button button1;
         private GroupBox grpPhysicalFeatures;
         private CheckBox chkThrowPower;
         private CheckBox chkJumpPower;
@@ -1943,6 +1997,10 @@ namespace eft_dma_radar
         private PictureBox picTextOutlineColor;
         private Label lblTextOutlineColor;
         private CheckBox chkHideTextOutline;
+        private CheckBox chkNoSway;
+        private CheckBox chkMasterSwitch;
+        private CheckBox chkInfiniteStamina;
+        private CheckBox chkExtendedReach;
     }
 }
 

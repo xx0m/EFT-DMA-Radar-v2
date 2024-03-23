@@ -1,3 +1,6 @@
+
+using System.Collections.ObjectModel;
+using System.Text.RegularExpressions;
 using Offsets;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -22,6 +25,7 @@ namespace eft_dma_radar
 
         public QuestManager(ulong localGameWorld)
         {
+            //@Keeegi fix this shit :D
             var mainPlayer = Memory.ReadPtr(localGameWorld + Offsets.LocalGameWorld.MainPlayer);
             var profile = Memory.ReadPtr(mainPlayer + Offsets.Player.Profile);
             var questData = Memory.ReadPtr(profile + 0x78);
@@ -33,25 +37,35 @@ namespace eft_dma_radar
 
             for (int i = 0; i < questDataCount; i++)
             {
-                var questEntry = Memory.ReadPtr(questDataBaseList + 0x20 + (uint)(i * 0x8)); //[Class] -.GClass306A : Object
-                if (questEntry == 0)
+                ulong questEntry;
+                string questID;
+                try
                 {
+                    questEntry = Memory.ReadPtr(questDataBaseList + 0x20 + (uint)(i * 0x8)); //[Class] -.GClass306A : Object
+                    if (questEntry == 0)
+                    {
+                        continue;
+                    }
+                    var questTemplate = Memory.ReadPtr(questEntry + 0x28); //[28] Template : -.GClass306D [Class] -.GClass306D : Object
+                    if (questTemplate == 0x0)
+                    {
+                        continue;
+                    }
+                    var questIDPtr = Memory.ReadPtr(questTemplate + 0x10);
+                    questID = Memory.ReadUnityString(questIDPtr);
+                }
+                catch
+                {
+                    //Noticed that some template reaad is null for some reason so we skip it for now
                     continue;
                 }
-                var questTemplate = Memory.ReadPtr(questEntry + 0x28); //[28] Template : -.GClass306D [Class] -.GClass306D : Object
-                if (questTemplate == 0)
-                {
-                    continue;
-                }
-                var questIDPtr = Memory.ReadPtr(questTemplate + 0x10);
-                var questID = Memory.ReadUnityString(questIDPtr);
                 try
                 {
                     var questStatus = Memory.ReadValue<int>(questEntry + 0x34);
                     //2 = started
                     if (questStatus == 2)
                     {
-                        TarkovDevAPIManager.AllTasks.TryGetValue(questID, out var task);
+                        TarkovDevManager.AllTasks.TryGetValue(questID, out var task);
                         if (task != null)
                         {
                             //Console.WriteLine($"Quest: {task.Name} is started ID: {questID}");
@@ -74,6 +88,12 @@ namespace eft_dma_radar
                                 {
                                     foreach (var zone in zones)
                                     {
+
+                                        if (zone.map.name == "Streets of Tarkov")
+                                        {
+                                            zone.map.name = "Streets";
+                                        }
+
                                         questZones.Add(new QuestZone
                                         {
                                             ID = zone.id,
@@ -99,6 +119,10 @@ namespace eft_dma_radar
                                     });
                                 }
                             }
+                        }
+                        else
+                        {
+                            Console.WriteLine($"Quest: {questID} is not in the list");
                         }
                         continue;
                     }
@@ -135,5 +159,4 @@ namespace eft_dma_radar
         public Vector2 ZoomedPosition { get; set; } = new();
         public string ObjectiveType { get; internal set; }
     }
-
 }

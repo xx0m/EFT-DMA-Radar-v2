@@ -7,11 +7,6 @@ using System.Runtime.InteropServices;
 using System.Text;
 using eft_dma_radar.Source.Misc;
 using System.Runtime.Intrinsics;
-using Offsets;
-using System.Numerics;
-using static System.Net.Mime.MediaTypeNames;
-using System.IO;
-using static System.Windows.Forms.LinkLabel;
 
 namespace eft_dma_radar
 {
@@ -168,8 +163,14 @@ namespace eft_dma_radar
         /// <summary>
         /// Enables / disables no recoil.
         /// </summary>
-        [JsonPropertyName("noRecoilSwayEnabled")]
-        public bool NoRecoilSwayEnabled { get; set; }
+        [JsonPropertyName("noRecoilEnabled")]
+        public bool NoRecoilEnabled { get; set; }
+
+        /// <summary>
+        /// Enables / disables no sway.
+        /// </summary>
+        [JsonPropertyName("noSwayEnabled")]
+        public bool NoSwayEnabled { get; set; }
 
         /// <summary>
         /// Enables / disables max / infinite stamina.
@@ -250,6 +251,24 @@ namespace eft_dma_radar
         public bool HideTextOutline { get; set; }
 
         /// <summary>
+        /// Enables / disables memory writing master switch.
+        /// </summary>
+        [JsonPropertyName("masterSwitchEnabled")]
+        public bool MasterSwitchEnabled { get; set; }
+
+        /// <summary>
+        /// Enables / disables extended reach.
+        /// </summary>
+        [JsonPropertyName("extendedReachEnabled")]
+        public bool ExtendedReachEnabled { get; set; }
+
+        /// <summary>
+        /// Enables / disables memory writing master switch.
+        /// </summary>
+        [JsonPropertyName("infiniteStaminaEnabled")]
+        public bool InfiniteStaminaEnabled { get; set; }
+
+        /// <summary>
         /// Allows storage of multiple loot filters.
         /// </summary>
         [JsonPropertyName("LootFilters")]
@@ -274,7 +293,8 @@ namespace eft_dma_radar
             HideNames = false;
             ImportantLootOnly = false;
             HideLootValue = false;
-            NoRecoilSwayEnabled = false;
+            NoRecoilEnabled = false;
+            NoSwayEnabled = false;
             MaxStaminaEnabled = false;
             LoggingEnabled = false;
             ShowHoverArmor = false;
@@ -325,6 +345,9 @@ namespace eft_dma_radar
             InstantADSEnabled = false;
             HideExfilNames = false;
             HideTextOutline = false;
+            MasterSwitchEnabled = false;
+            InfiniteStaminaEnabled = false;
+            ExtendedReachEnabled = false;
         }
 
         /// <summary>
@@ -390,6 +413,8 @@ namespace eft_dma_radar
         /// Unit 'height' as determined by Vector3.Z
         /// </summary>
         public float Height = 0;
+
+        private Config _config { get => Program.Config; }
 
         /// <summary>
         /// Get exact player location (with optional X,Y offsets).
@@ -466,7 +491,7 @@ namespace eft_dma_radar
                 canvas.DrawCircle(this.GetPoint(), 4 * UIScale, paint);
             }
 
-            if (!Program.Config.HideExfilNames)
+            if (!_config.HideExfilNames)
             {
                 var coords = this.GetPoint();
                 var textWidth = text.MeasureText(exfil.Name);
@@ -474,7 +499,7 @@ namespace eft_dma_radar
                 coords.X = (coords.X - textWidth / 2);
                 coords.Y = (coords.Y - text.TextSize / 2) - 3;
 
-                if (!Program.Config.HideTextOutline)
+                if (!_config.HideTextOutline)
                     canvas.DrawText(exfil.Name, coords, Extensions.GetTextOutlinePaint());
 
                 canvas.DrawText(exfil.Name, coords, text);
@@ -491,10 +516,10 @@ namespace eft_dma_radar
         /// Draws a loot item on this location.
         /// </summary>
         //public void DrawLoot(SKCanvas canvas, string label, SKPaint paint, SKPaint text, float heightDiff)
-        public void DrawLoot(SKCanvas canvas, DevLootItem item, float heightDiff) {
+        public void DrawLoot(SKCanvas canvas, LootItem item, float heightDiff) {
             var paint = Extensions.GetEntityPaint(item);
             var text = Extensions.GetTextPaint(item);
-            var label = (item.Container) ? item.ContainerName : (Program.Config.HideLootValue ? item.Item.shortName : item.GetFormattedValueShortName());
+            var label = (item.Container) ? item.ContainerName : (_config.HideLootValue ? item.Item.shortName : item.GetFormattedValueShortName());
  
             if (heightDiff > 1.45) // loot is above player
             {
@@ -512,7 +537,7 @@ namespace eft_dma_radar
             }
 
             var coords = this.GetPoint(7 * UIScale, 3 * UIScale);
-            if (!Program.Config.HideTextOutline)
+            if (!_config.HideTextOutline)
                 canvas.DrawText(label, coords, Extensions.GetTextOutlinePaint());
             canvas.DrawText(label, coords, text);
         }
@@ -541,7 +566,7 @@ namespace eft_dma_radar
             }
 
             var coords = this.GetPoint(7 * UIScale, 3 * UIScale);
-            if (!Program.Config.HideTextOutline)
+            if (!_config.HideTextOutline)
                 canvas.DrawText(label, coords, Extensions.GetTextOutlinePaint());
             canvas.DrawText(label, coords, text);
         }
@@ -570,7 +595,7 @@ namespace eft_dma_radar
             }
 
             var coords = this.GetPoint(7 * UIScale, 3 * UIScale);
-            if (!Program.Config.HideTextOutline)
+            if (!_config.HideTextOutline)
                 canvas.DrawText(label, coords, Extensions.GetTextOutlinePaint());
             canvas.DrawText(label, coords, text);
         }
@@ -612,7 +637,7 @@ namespace eft_dma_radar
             {
                 var coords = this.GetPoint(9 * UIScale, spacing);
 
-                if (!Program.Config.HideTextOutline)
+                if (!_config.HideTextOutline)
                     canvas.DrawText(line, coords, Extensions.GetTextOutlinePaint());
                 canvas.DrawText(line, coords, text);
                 spacing += 12 * UIScale;
@@ -621,14 +646,14 @@ namespace eft_dma_radar
         /// <summary>
         /// Draws Loot information on this location
         /// </summary>
-        public void DrawContainerTooltip(SKCanvas canvas, DevLootItem item)
+        public void DrawContainerTooltip(SKCanvas canvas, LootItem item)
         {
             if (item.Container)
             {
                 DrawToolTip(canvas, Helpers.GetContainerItems(item));
             } else
             {
-                DrawToolTip(canvas, new List<DevLootItem> { item });
+                DrawToolTip(canvas, new List<LootItem> { item });
             }
         }
         /// <summary>
@@ -727,7 +752,7 @@ namespace eft_dma_radar
         /// <summary>
         /// Draws the tool tip for loot items/containers
         /// </summary>
-        private void DrawToolTip(SKCanvas canvas, List<DevLootItem> items)
+        private void DrawToolTip(SKCanvas canvas, List<LootItem> items)
         {
             var maxWidth = 0f;
 
@@ -784,7 +809,7 @@ namespace eft_dma_radar
                     }
                 }
 
-                if (Program.Config.ShowHoverArmor)
+                if (_config.ShowHoverArmor)
                 {
                     var gearSlots = new Dictionary<string, string>()
                     {
@@ -805,7 +830,7 @@ namespace eft_dma_radar
                 }
             }
 
-            lines.Insert(0, $"Value: {TarkovDevAPIManager.FormatNumber(player.PlayerValue)}");
+            lines.Insert(0, $"Value: {TarkovDevManager.FormatNumber(player.TotalValue)}");
 
             DrawToolTip(canvas, string.Join("\n", lines));
         }
@@ -860,15 +885,6 @@ namespace eft_dma_radar
                 y -= textSpacing;
             }
         }
-    }
-    /// <summary>
-    /// Contains long/short names for player gear.
-    /// </summary>
-    public class GearItem
-    {
-        public string Long { get; init; }
-        public string Short { get; init; }
-        public string id { get; init; }
     }
 
     /// <summary>
@@ -1189,7 +1205,7 @@ namespace eft_dma_radar
         }
     }
 
-        public class ScatterReadEntry<T> : IScatterEntry
+    public class ScatterReadEntry<T> : IScatterEntry
     {
         #region Properties
 
@@ -1386,6 +1402,18 @@ namespace eft_dma_radar
     #endregion
 
     #region Custom EFT Classes
+    /// <summary>
+    /// Defines a piece of gear
+    /// </summary>
+    public class GearItem
+    {
+        public string ID { get; set; }
+        public string Long { get; set; }
+        public string Short { get; set; }
+        public int Value { get; set; }
+        public List<LootItem> Loot { get; set; }
+        public bool HasThermal { get; set; }
+    }
     /// <summary>
     /// Contains weapon info for Primary Weapons.
     /// </summary>
@@ -1982,9 +2010,9 @@ namespace eft_dma_radar
             return output.ToString();
         }
 
-        public static List<DevLootItem> GetContainerItems(DevLootItem item) {
+        public static List<LootItem> GetContainerItems(LootItem item) {
             return Memory.Loot.Loot.Where(x => x.Container && x.Position == item.Position)
-                .OrderBy(x => TarkovDevAPIManager.GetItemValue(x.Item))
+                .OrderBy(x => x.Value)
                 .ToList();
         }
     }
