@@ -186,11 +186,9 @@ namespace eft_dma_radar
         {
             foreach (var player in this._players)
             {
-                if (player.Value.Type is PlayerType.LocalPlayer) {
-                    if (!registered.Contains(player.Key))
-                    {
-                        player.Value.LastUpdate = true;
-                    }
+                if (!registered.Contains(player.Key) && player.Value.IsActive)
+                {
+                    player.Value.LastUpdate = true;
                 }
                 else if (!registered.Contains(player.Key))
                 {
@@ -311,9 +309,7 @@ namespace eft_dma_radar
                     var player = players[i];
                     if (player.LastUpdate) // player may be dead/exfil'd
                     {
-                        if (player.Type == PlayerType.LocalPlayer) {
-                            var corpse = round1.AddEntry<MemPointer>(i, 6, player.CorpsePtr);
-                        }
+                        var corpse = round1.AddEntry<MemPointer>(i, 6, player.CorpsePtr);
                     } 
                     else {
                         var rotation = round1.AddEntry<Vector2>(i, 0,
@@ -342,8 +338,7 @@ namespace eft_dma_radar
                 {
                     var player = players[i];
 
-                    if (this._localPlayerGroup != -100 && player.GroupID != -1 && player.IsHumanHostile) { // Teammate check
-                        if (player.GroupID == _localPlayerGroup)
+                    if (this._localPlayerGroup != -100 && player.GroupID != -1 && player.IsHumanHostile && player.GroupID == this._localPlayerGroup) { // Teammate check
                             player.Type = PlayerType.Teammate;
                     }
 
@@ -351,8 +346,9 @@ namespace eft_dma_radar
                     {
                         if (scatterMap.Results[i][6].TryGetResult<MemPointer>(out var corpsePtr))
                         {
-                            if (corpsePtr == 0)
+                            if (corpsePtr != null)
                             {
+                                Console.WriteLine($"{player.Name} => {corpsePtr}");
                                 player.IsAlive = false;
                             }
                         }
@@ -433,6 +429,8 @@ namespace eft_dma_radar
                             {
                                 p3 = player.SetPosition(posBufs);
                             }
+
+                            player.SetKDAsync();
 
                             if (p1 && p2 && p3)
                                 player.ErrorCount = 0;

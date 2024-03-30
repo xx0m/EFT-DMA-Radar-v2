@@ -151,12 +151,12 @@ namespace eft_dma_radar
 
             try
             {
-                var mapNamePrt = Memory.ReadPtrChain(this._localGameWorld, new uint[] { 0x148, 0x550 });
+                var mapNamePrt = Memory.ReadPtrChain(this._localGameWorld, new uint[] { 0x150, 0x550 });
                 this._mapName = Memory.ReadUnityString(mapNamePrt);
             }
             catch
             {
-                var mapNamePrt = Memory.ReadPtr(this._localGameWorld + 0x40);
+                var mapNamePrt = Memory.ReadPtr(this._localGameWorld + 0x48);
                 this._mapName = Memory.ReadUnityString(mapNamePrt);
             }
         }
@@ -201,7 +201,7 @@ namespace eft_dma_radar
 				Thread.Sleep(1500);
 			}
 			Thread.Sleep(1000);
-			Program.Log("Raid has started!");
+			Program.Log("Match found!");
 			this._inGame = true;
 			Thread.Sleep(1500);
         }
@@ -337,7 +337,7 @@ namespace eft_dma_radar
                                 Memory.GameStatus = Game.GameStatus.InGame;
                                 found = true;
 
-                                Program.Log("Raid started!!");
+                                Program.Log("Raid has started!!");
                             }
                         }
                     }
@@ -375,38 +375,33 @@ namespace eft_dma_radar
             }
             else
             {
-                if (this._config.QuestHelperEnabled)
+                if (this._config.QuestHelperEnabled && this._questManager is null)
                 {
-                    if (this._questManager is null)
+                    try
                     {
-                        try
-                        {
-                            this._questManager = new QuestManager(this._localGameWorld);
-                        }
-                        catch (Exception ex)
-                        {
-                            Program.Log($"ERROR loading QuestManager: {ex}");
-                        }
+                        this._questManager = new QuestManager(this._localGameWorld);
+                    }
+                    catch (Exception ex)
+                    {
+                        Program.Log($"ERROR loading QuestManager: {ex}");
                     }
                 }
 
-                if (this._config.LootEnabled)
+                if (this._config.LootEnabled && (this._lootManager is null || this._refreshLoot))
                 {
-                    if (this._lootManager is null || this._refreshLoot)
+                    this._loadingLoot = true;
+                    try
                     {
-                        this._loadingLoot = true;
-                        try
-                        {
-                            this._lootManager = new LootManager(this._localGameWorld);
-                            this._refreshLoot = false;
-                        }
-                        catch (Exception ex)
-                        {
-                            Program.Log($"ERROR loading LootEngine: {ex}");
-                        }
-                        this._loadingLoot = false;
+                        this._lootManager = new LootManager(this._localGameWorld);
+                        this._refreshLoot = false;
                     }
+                    catch (Exception ex)
+                    {
+                        Program.Log($"ERROR loading LootEngine: {ex}");
+                    }
+                    this._loadingLoot = false;
                 }
+
 
                 if (this._config.MasterSwitchEnabled)
                 {

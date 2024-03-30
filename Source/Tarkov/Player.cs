@@ -76,6 +76,12 @@ namespace eft_dma_radar
         
         public ulong HealthController { get; }
 
+        public ulong InventoryController { get; }
+
+        public ulong InventorySlots { get; }
+
+        public ulong PlayerBody { get; }
+
         private Vector3 _pos = new Vector3(0, 0, 0); // backing field
         /// <summary>
         /// Player's Unity Position in Local Game World.
@@ -122,12 +128,12 @@ namespace eft_dma_radar
         /// <summary>
         /// Gets all gear + mods/attachments of a player
         /// </summary>
-        public List<LootItem> GearItemsAndMods
+        public List<LootItem> GearItemMods
         {
             get
             {
                 GearManager gearManager = this._gearManager;
-                return ((gearManager != null) ? gearManager.GearItemsAndMods : null) ?? new List<LootItem>();
+                return ((gearManager != null) ? gearManager.GearItemMods : null) ?? new List<LootItem>();
             }
         }
         /// <summary>
@@ -261,9 +267,9 @@ namespace eft_dma_radar
         /// Gets value of player.
         /// </summary>
         /// 
-        public int TotalValue
+        public int Value
         {
-            get => this._gearManager is not null ? this._gearManager.TotalValue : 0;
+            get => this._gearManager is not null ? this._gearManager.Value : 0;
         }
         /// <summary>
         /// EFT.Player Address
@@ -349,37 +355,30 @@ namespace eft_dma_radar
                     this._transform = new Transform(this.TransformInternal, true);
                     var namePtr = Memory.ReadPtr(this.Info + Offsets.PlayerInfo.Nickname);
                     this.Name = Memory.ReadUnityString(namePtr);
+                    this.InventoryController = Memory.ReadPtr(playerBase + Offsets.Player.InventoryController);
+                    var inventory = Memory.ReadPtr(InventoryController + Offsets.InventoryController.Inventory);
+                    var equipment = Memory.ReadPtr(inventory + Offsets.Inventory.Equipment);
+                    this.InventorySlots = Memory.ReadPtr(equipment + Offsets.Equipment.Slots);
 
                     try {
-                        var gameVersionPtr = Memory.ReadPtr(this.Info + Offsets.PlayerInfo.GameVersion);
+                        var gameVersionPtr = Memory.ReadPtr(Info + Offsets.PlayerInfo.GameVersion);
                         var gameVersion = Memory.ReadUnityString(gameVersionPtr);
-
-                        var settings = Memory.ReadPtr(this.Info + Offsets.PlayerInfo.Settings);
-                        var roleFlag = Memory.ReadValue<int>(settings + Offsets.PlayerSettings.Role);
-                        // roleflag switch
-                        //Console.WriteLine($"RoleFlag: {roleFlag} Name: {Name}");
-
-                        this.GroupID = GetGroupID();
-                        try {
-                            this._gearManager = new GearManager(playerBase, true, true);
-                        } catch { }
 
                         //If empty, then it's a scav
                         if (gameVersion == "")
                         {
-                            this.Type = PlayerType.AIOfflineScav;
-                            this.IsLocalPlayer = false;
-                            this.IsPmc = false;
-                            this.Name =  Helpers.TransliterateCyrillic(this.Name); //Misc.TransliterateCyrillic(Name);
-                            this.HealthController = Memory.ReadPtrChain(playerBase, new uint[] { 0x80, 0xF0 });
-                            //Type = GetPlayerType(roleFlag);
+                            //Console.WriteLine("Scav Detected");
+                            Type = PlayerType.AIOfflineScav;
+                            IsLocalPlayer = false;
+                            IsPmc = false;
+                            Name = Helpers.TransliterateCyrillic(Name);
 
                         }
                         else
                         {
-                            this.Type = PlayerType.LocalPlayer;
-                            this.IsLocalPlayer = true;
-                            this.IsPmc = true;
+                            Type = PlayerType.LocalPlayer;
+                            IsLocalPlayer = true;
+                            IsPmc = true;
                         }
                     } catch {}
                 } else if (baseClassName == "ObservedPlayerView") {
@@ -395,19 +394,20 @@ namespace eft_dma_radar
                     var playerSide = GetNextObservedPlayerSide();
                     var playerIsAI = GetNextObservedPlayerIsAI();
 
+                    this.PlayerBody = Memory.ReadPtr(ObservedPlayerView + 0x60);
+                    this.InventoryController = Memory.ReadPtrChain(ObservedPlayerView, new uint[] { 0x80, 0x118 });
+                    var inventory = Memory.ReadPtr(InventoryController + Offsets.InventoryController.Inventory);
+                    var equipment = Memory.ReadPtr(inventory + Offsets.Inventory.Equipment);
+                    this.InventorySlots = Memory.ReadPtr(equipment + Offsets.Equipment.Slots);
+
                     this.AccountID = Memory.ReadUnityString(Memory.ReadPtr(ObservedPlayerView + 0x50));
 
-                    //[40] string_0x40 : String //ProfileID
-                    //[48] string_0x48 : String //NickName
-                    //[50] string_0x50 : String //AccountID
 
                     if (Helpers.NameTranslations.ContainsKey(this.Name)) {
                         this.Name = Helpers.NameTranslations[this.Name];
                     }
                     
-                    try {
-                        this._gearManager = new GearManager(playerBase, true, false);
-                    } catch { }
+                    try { this._gearManager = new GearManager(this.InventorySlots); } catch { }
 
                     this.GroupID = this.GetObservedPlayerGroupID();
                     this.HealthController = Memory.ReadPtrChain(playerBase, new uint[] { 0x80, 0xF0 });
@@ -415,6 +415,7 @@ namespace eft_dma_radar
                     if ((playerSide == 1 || playerSide == 2) && !playerIsAI) {
                         this.IsPmc = true;
                         this.Type = (playerSide == 1 ? PlayerType.USEC : PlayerType.BEAR);
+                        this.KDA = KDManager.GetKD(this.AccountID).Result;
                     } else if (playerSide == 4 && !playerIsAI) {
                         this.Type = PlayerType.PScav;
                     } else if (playerSide == 4 && playerIsAI) {
@@ -548,6 +549,33 @@ namespace eft_dma_radar
                     this._posRefreshSw.Restart();
                 }
                 return false;
+            }
+        }
+
+        /// <summary>
+        /// Set PMC Player K/D.
+        /// </summary>
+        public async Task SetKDAsync()
+        {
+            try
+            {
+                if ( this.KDA == -1f && this.IsHumanActive) // Get K/D for Hostile PMCs
+                {
+                    if (this._kdRefreshSw.IsRunning && this._kdRefreshSw.ElapsedMilliseconds < 20000)
+                        return; // Rate-limit check
+
+                    if (!this._kdRefreshSw.IsRunning || this._kdRefreshSw.ElapsedMilliseconds >= 20000)
+                    {
+                        this._kdRefreshSw.Restart();
+                        this.KDA = await KDManager.GetKD(this.AccountID).ConfigureAwait(true);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Program.Log($"ERROR getting Player '{this.Name}' K/D: {ex}");
+                if (!this._kdRefreshSw.IsRunning)
+                    this._kdRefreshSw.Start();
             }
         }
         #endregion

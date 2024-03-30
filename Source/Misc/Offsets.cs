@@ -30,11 +30,11 @@
     }
     public struct LocalGameWorld // [Class] -.ClientLocalGameWorld : ClientGameWorld
     {
-        public const uint MainPlayer = 0x148; // to EFT.Player
+        public const uint MainPlayer = 0x150; // to EFT.Player
         public const uint ExfilController = 0x18; // to ExfilController
-        public const uint LootList = 0xC8; // to UnityList
-        public const uint RegisteredPlayers = 0xF0; // to RegisteredPlayers
-        public const uint Grenades = 0x1A0; // to Grenades
+        public const uint LootList = 0xD0; // to UnityList
+        public const uint RegisteredPlayers = 0xF8; // to RegisteredPlayers
+        public const uint Grenades = 0x1A8; // to Grenades
     }
     public struct ExfilController // -.GClass0B67
     {
@@ -87,14 +87,14 @@
         public const uint ID = 0x40; // to UnityString
         public const uint NickName = 0x48; // to UnityString
         public const uint ObservedPlayerController = 0x80; // to PlayerController
-        public static readonly uint[] To_MovementContext = new uint[] { 0x80, 0xC8, 0x10}; // to MovementContext
+        public static readonly uint[] To_MovementContext = new uint[] { 0x80, 0xC8, 0x10 }; // to MovementContext
         public static readonly uint[] To_TransformInternal = new uint[] { 0x60, 0x28, 0x28, 0x10, 0x20, 0x10 }; // to TransformInternal
     }
 
     public struct ObservedPlayerController //[Class] -.GClass1E0D : Object, GInterface94D4, IDisposable
     {
         public const uint InventoryController = 0x118; // to InventoryController
-        
+
     }
 
     public struct ObserverdPlayerMovementContext

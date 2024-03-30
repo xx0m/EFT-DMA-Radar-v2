@@ -174,7 +174,7 @@ namespace eft_dma_radar.Source.Tarkov
                     this._cameraManager.VisorEffect(this._config.NoVisorEnabled);
 
                     // Smart Thermal Vision
-                    if (this._playerManager.isADS)
+                    if (this._playerManager is not null && this._playerManager.isADS)
                     {
                         if (this._config.OpticThermalVisionEnabled)
                         {

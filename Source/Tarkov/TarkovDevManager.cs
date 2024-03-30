@@ -13,7 +13,7 @@ namespace eft_dma_radar
         public static ReadOnlyDictionary<string, LootItem> AllItems { get; }
         public static ReadOnlyDictionary<string, QuestItems> AllQuestItems { get; }
         public static ReadOnlyDictionary<string, Tasks> AllTasks { get; }
-        public static ReadOnlyDictionary<string, LootContainers> AllLootContainers { get; }
+        public static ReadOnlyDictionary<string, LootContainerInfo> AllLootContainers { get; }
 
         #region Static_Constructor
 
@@ -25,7 +25,7 @@ namespace eft_dma_radar
             var allItems = new Dictionary<string, LootItem>(StringComparer.OrdinalIgnoreCase);
             var allQuestItems = new Dictionary<string, QuestItems>(StringComparer.OrdinalIgnoreCase);
             var allTasks = new Dictionary<string, Tasks>(StringComparer.OrdinalIgnoreCase);
-            var allLootContainers = new Dictionary<string, LootContainers>(StringComparer.OrdinalIgnoreCase);
+            var allLootContainers = new Dictionary<string, LootContainerInfo>(StringComparer.OrdinalIgnoreCase);
             if (!File.Exists("api_tarkov_dev_items.json") || File.GetLastWriteTime("api_tarkov_dev_items.json").AddHours(480) < DateTime.Now) // only update every 480h
             {
                 using (var client = new HttpClient())
@@ -245,7 +245,7 @@ namespace eft_dma_radar
                             tarkovItem.id,
                             new LootItem()
                             {
-                                Label = tarkovItem.name,
+                                Name = tarkovItem.name,
                                 Item = tarkovItem,
                             }
                         );
@@ -366,7 +366,7 @@ namespace eft_dma_radar
                     {
                         allLootContainers.TryAdd(
                             lootContainer.id,
-                            new LootContainers()
+                            new LootContainerInfo()
                             {
                                 Name = lootContainer.name,
                                 ID = lootContainer.id,
@@ -506,11 +506,18 @@ namespace eft_dma_radar
         public string normalizedName { get; set; }
     }
 
-    public class LootContainer
+    public class LootContainerInfo
+    {
+        public string ID { get; set; }
+        public string NormalizedName { get; set; }
+        public string Name { get; set; }
+    }
+
+    public class TarkovLootContainerInfo
     {
         public string id { get; set; }
-        public string normalizedName { get; set; }
         public string name { get; set; }
+        public string normalizedName { get; set; }
     }
 
     public class QuestItems
@@ -561,7 +568,7 @@ namespace eft_dma_radar
         public List<TarkovItem> items { get; set; }
         public List<TarkovTasks> tasks { get; set; } 
         public List<TarkovQuestItems> questItems { get; set; }
-        public List<LootContainer> lootContainers { get; set; }
+        public List<TarkovLootContainerInfo> lootContainers { get; set; }
     }
     #endregion
 }

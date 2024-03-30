@@ -421,16 +421,70 @@ namespace eft_dma_radar
             _config.ExtendedReachEnabled = chkExtendedReach.Checked;
         }
 
+        private void chkShowCorpses_CheckedChanged(object sender, EventArgs e)
+        {
+            _config.ShowCorpsesEnabled = chkShowCorpses.Checked;
+        }
+
+        private void chkImportantLootOnly_CheckedChanged(object sender, EventArgs e)
+        {
+            _config.ImportantLootOnly = chkImportantLootOnly.Checked;
+        }
+
+        private void chkAutoLootRefresh_CheckedChanged(object sender, EventArgs e)
+        {
+            _config.AutoLootRefreshEnabled = chkAutoLootRefresh.Checked;
+        }
+
+        private void picDeathMarkerColor_Click(object sender, EventArgs e)
+        {
+            UpdatePaintColorByName("DeathMarker", picDeathMarkerColor);
+        }
+
+        private void trkCorpseLootValue_Scroll(object sender, EventArgs e)
+        {
+            int value = trkCorpseLootValue.Value * 1000;
+            lblCorpseDisplay.Text = TarkovDevManager.FormatNumber(value);
+            _config.MinCorpseValue = value;
+
+            if (Loot is not null)
+            {
+                Loot.ApplyFilter();
+            }
+        }
+
+        private void trkSubItemLootValue_Scroll(object sender, EventArgs e)
+        {
+            int value = trkSubItemLootValue.Value * 1000;
+            lblSubItemDisplay.Text = TarkovDevManager.FormatNumber(value);
+            _config.MinSubItemValue = value;
+
+            if (Loot is not null)
+            {
+                Loot.ApplyFilter();
+            }
+        }
+
+        private void chkShowSubItems_CheckedChanged(object sender, EventArgs e)
+        {
+            _config.ShowSubItemsEnabled = chkShowSubItems.Checked;
+
+            if (Loot is not null)
+            {
+                Loot.ApplyFilter();
+            }
+        }
+
         /// <summary>
         /// Fired when Chams checkbox has been adjusted
         /// </summary>
         private void chkChams_CheckedChanged(object sender, EventArgs e)
         {
             var allPlayers = this.AllPlayers
-                ?.Select(x => x.Value)
-                .Where(x => !x.HasExfild);
+               ?.Select(x => x.Value)
+               .Where(x => !x.HasExfild);
 
-            ulong playerBase = 0;
+            ulong playerBody = 0;
             if (allPlayers is not null)
             {
                 foreach (var player in allPlayers)
@@ -441,15 +495,19 @@ namespace eft_dma_radar
                     }
                     if (player.Type == PlayerType.AIOfflineScav)
                     {
-                        playerBase = player.Base;
+                        playerBody = player.PlayerBody;
                     }
-                    if (playerBase == 0)
+                    if (player.Type == PlayerType.AIScav)
+                    {
+                        playerBody = player.PlayerBody;
+                    }
+                    if (playerBody == 0)
                     {
                         continue;
                     }
                     if (chkChams.Checked)
                     {
-                        Chams.ClothingChams(playerBase);
+                        Chams.ClothingChams(playerBody);
                     }
                     else
                     {
@@ -495,7 +553,7 @@ namespace eft_dma_radar
 
                 if (selectedFilter != null)
                 {
-                    if (selectedFilter.Items.Contains(selectedItem.Item.id))
+                    if (selectedFilter.Items.Contains(selectedItem.ID))
                     {
                         return; // item already exists
                     }
@@ -528,8 +586,8 @@ namespace eft_dma_radar
                 var itemToSearch = txtItemFilter.Text;
                 List<LootItem> lootList = TarkovDevManager.AllItems
                     .Select(x => x.Value)
-                    .Where(x => x.Label.Contains(itemToSearch.Trim(), StringComparison.OrdinalIgnoreCase))
-                    .OrderBy(x => x.Label)
+                    .Where(x => x.Name.Contains(itemToSearch.Trim(), StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(x => x.Name)
                     .Take(25)
                     .ToList();
 
@@ -649,22 +707,27 @@ namespace eft_dma_radar
                     else
                         ClearPlayerRefs();
 
-                    if (loot is not null && loot.Any())
+                    if (_config.LootEnabled)
                     {
-                        var closestItem = loot.Aggregate(
-                            (x1, x2) =>
-                                Vector2.Distance(x1.ZoomedPosition, mouse)
-                                < Vector2.Distance(x2.ZoomedPosition, mouse)
-                                    ? x1
-                                    : x2
-                        ); // Get loot object 'closest' to mouse position
-
-                        if (closestItem is not null)
+                        if (loot is not null && loot.Any())
                         {
-                            var dist = Vector2.Distance(closestItem.ZoomedPosition, mouse);
-                            if (dist < 12) // See if 'closest object' is close enough.
+                            var closestItem = loot.Aggregate(
+                                (x1, x2) =>
+                                    Vector2.Distance(x1.ZoomedPosition, mouse)
+                                    < Vector2.Distance(x2.ZoomedPosition, mouse)
+                                        ? x1
+                                        : x2
+                            ); // Get loot object 'closest' to mouse position
+
+                            if (closestItem is not null)
                             {
-                                _closestItemToMouse = closestItem; // Save ref to closest item object
+                                var dist = Vector2.Distance(closestItem.ZoomedPosition, mouse);
+                                if (dist < 12) // See if 'closest object' is close enough.
+                                {
+                                    _closestItemToMouse = closestItem; // Save ref to closest item object
+                                }
+                                else
+                                    ClearItemRefs();
                             }
                             else
                                 ClearItemRefs();
@@ -673,7 +736,9 @@ namespace eft_dma_radar
                             ClearItemRefs();
                     }
                     else
+                    {
                         ClearItemRefs();
+                    }
 
                     if (tasksItems is not null && tasksItems.Any())
                     {
@@ -1336,8 +1401,12 @@ namespace eft_dma_radar
             txtTeammateID.Text = _config.PrimaryTeammateId;
             trkRegularLootValue.Value = _config.MinLootValue / 1000;
             trkImportantLootValue.Value = _config.MinImportantLootValue / 1000;
+            trkCorpseLootValue.Value = _config.MinCorpseValue / 1000;
+            trkSubItemLootValue.Value = _config.MinSubItemValue / 1000;
             lblRegularLootDisplay.Text = TarkovDevManager.FormatNumber(_config.MinLootValue);
             lblImportantLootDisplay.Text = TarkovDevManager.FormatNumber(_config.MinImportantLootValue);
+            lblCorpseDisplay.Text = TarkovDevManager.FormatNumber(_config.MinCorpseValue);
+            lblSubItemDisplay.Text = TarkovDevManager.FormatNumber(_config.MinSubItemValue);
             chkNoRecoil.Checked = _config.NoRecoilEnabled;
             chkNoSway.Checked = _config.NoSwayEnabled;
             chkNightVision.Checked = _config.NightVisionEnabled;
@@ -1354,6 +1423,9 @@ namespace eft_dma_radar
             chkInfiniteStamina.Checked = _config.InfiniteStaminaEnabled;
             chkMagDrills.Checked = _config.MagDrillsEnabled;
             trkMagDrills.Value = _config.MagDrillSpeed;
+            chkShowCorpses.Checked = _config.ShowCorpsesEnabled;
+            chkShowSubItems.Checked = _config.ShowSubItemsEnabled;
+            chkAutoLootRefresh.Checked = _config.AutoLootRefreshEnabled;
 
             if (_config.Filters.Count == 0)
             { // add a default, blank config
@@ -1378,10 +1450,10 @@ namespace eft_dma_radar
 
             if (cboLootItems.Items.Count == 0)
             { // add loot items loot item combobox
-                List<LootItem> lootList = TarkovDevManager.AllItems.Select(x => x.Value).OrderBy(x => x.Label).Take(25).ToList();
+                List<LootItem> lootList = TarkovDevManager.AllItems.Select(x => x.Value).OrderBy(x => x.Name).Take(25).ToList();
 
                 cboLootItems.DataSource = lootList;
-                cboLootItems.DisplayMember = "Label";
+                cboLootItems.DisplayMember = "Name";
             }
 
             UpdateLootFilterComboBoxes();
@@ -1582,7 +1654,8 @@ namespace eft_dma_radar
 
                     listItem.SubItems.Add(item.Item.name);
                     listItem.SubItems.Add(item.Item.shortName);
-                    listItem.SubItems.Add(TarkovDevManager.FormatNumber(item.Value));
+                    //listItem.SubItems.Add(TarkovDevManager.FormatNumber(item.Value));
+                    listItem.SubItems.Add(TarkovDevManager.FormatNumber(TarkovDevManager.GetItemValue(item.Item)));
 
                     lstViewLootFilter.Items.Add(listItem);
                 }
@@ -1650,6 +1723,7 @@ namespace eft_dma_radar
             setColor(picExfilClosedTextColor, "ExfilClosedText");
             setColor(picExfilClosedIconColor, "ExfilClosedIcon");
             setColor(picTextOutlineColor, "TextOutline");
+            setColor(picDeathMarkerColor, "DeathMarker");
         }
 
         /// <summary>
@@ -1855,8 +1929,9 @@ namespace eft_dma_radar
                                 int aimlineLength = 15;
 
                                 if (!player.IsAlive)
-                                { // Draw 'X' death marker
-                                    playerZoomedPos.DrawDeathMarker(canvas);
+                                {
+                                    // Draw 'X' death marker
+                                    //playerZoomedPos.DrawDeathMarker(canvas);
                                     continue;
 
                                 }
@@ -1957,12 +2032,12 @@ namespace eft_dma_radar
                                     if (filter is not null)
                                         foreach (var item in filter)
                                         {
-                                            float position = item.Position.Z - localPlayerMapPos.Height;
-
-                                            if (chkImportantLootOnly.Checked && !item.Important)
+                                            if ((chkImportantLootOnly.Checked && !(item.Important || item.AlwaysShow)))
                                             {
                                                 continue;
                                             }
+
+                                            float position = item.Position.Z - localPlayerMapPos.Height;
 
                                             var itemZoomedPos = item.Position
                                                                     .ToMapPos(_selectedMap)
@@ -1980,8 +2055,6 @@ namespace eft_dma_radar
                                                 position
                                             );
                                         }
-
-                                    // coprses = ootItem {Position = pos,AlwaysShow = true,Label = "Corpse"
                                 }
                             }
 
@@ -2012,7 +2085,6 @@ namespace eft_dma_radar
                                                     item,
                                                     position
                                                 );
-
                                             }
                                         }
                                     }
@@ -2042,7 +2114,6 @@ namespace eft_dma_radar
                                                     position
                                                 );
                                             }
-
                                         }
                                     }
                                 }

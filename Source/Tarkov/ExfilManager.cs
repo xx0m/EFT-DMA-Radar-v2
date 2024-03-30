@@ -37,7 +37,7 @@ namespace eft_dma_radar
             try
             {
                 var exfilController = Memory.ReadPtr(localGameWorld + Offsets.LocalGameWorld.ExfilController);
-                var exfilPoints = (this.IsScav ? Memory.ReadPtr(exfilController + 0x32) : Memory.ReadPtr(exfilController + Offsets.ExfilController.ExfilList));
+                var exfilPoints = (this.IsScav ? Memory.ReadPtr(exfilController + 0x28) : Memory.ReadPtr(exfilController + Offsets.ExfilController.ExfilList));
                 var count = Memory.ReadValue<int>(exfilPoints + Offsets.ExfilController.ExfilCount);
 
                 if (count < 1 || count > 24)

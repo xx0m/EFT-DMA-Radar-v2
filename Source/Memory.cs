@@ -16,7 +16,7 @@ namespace eft_dma_radar
         /// 
 
         private static Vmm vmmInstance;
-        private const int LOOP_DELAY = 125;
+        private const int LOOP_DELAY = 100;
 
         private static volatile bool _running = false;
         private static volatile bool _restart = false;

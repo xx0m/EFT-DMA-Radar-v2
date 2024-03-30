@@ -53,6 +53,8 @@ namespace eft_dma_radar
             tabSettings = new TabPage();
             grpConfig = new GroupBox();
             grpColors = new GroupBox();
+            picDeathMarkerColor = new PictureBox();
+            lblDeathMarkerColor = new Label();
             picTextOutlineColor = new PictureBox();
             lblTextOutlineColor = new Label();
             picExfilClosedIconColor = new PictureBox();
@@ -107,7 +109,15 @@ namespace eft_dma_radar
             txtLootFilterEditName = new TextBox();
             picLootFilterEditColor = new PictureBox();
             grpLoot = new GroupBox();
+            chkShowSubItems = new CheckBox();
+            chkShowCorpses = new CheckBox();
             grpLootValues = new GroupBox();
+            lblSubItemDisplay = new Label();
+            lblSubItemValueSlider = new Label();
+            trkSubItemLootValue = new TrackBar();
+            lblCorpseDisplay = new Label();
+            lblCorpsValueSlider = new Label();
+            trkCorpseLootValue = new TrackBar();
             lblImportantLootDisplay = new Label();
             lblRegularLootDisplay = new Label();
             lblImportantLootSlider = new Label();
@@ -136,6 +146,7 @@ namespace eft_dma_radar
             grpMemoryWriting = new GroupBox();
             chkMasterSwitch = new CheckBox();
             grpGlobalFeatures = new GroupBox();
+            chkExtendedReach = new CheckBox();
             chkChams = new CheckBox();
             chkDoubleSearch = new CheckBox();
             grpGearFeatures = new GroupBox();
@@ -171,13 +182,14 @@ namespace eft_dma_radar
             tabControl = new TabControl();
             colDialog = new ColorDialog();
             toolTip = new ToolTip(components);
-            chkExtendedReach = new CheckBox();
+            chkAutoLootRefresh = new CheckBox();
             tabLootFilter.SuspendLayout();
             tabPlayerHistory.SuspendLayout();
             tabPlayerLoadouts.SuspendLayout();
             tabSettings.SuspendLayout();
             grpConfig.SuspendLayout();
             grpColors.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)picDeathMarkerColor).BeginInit();
             ((System.ComponentModel.ISupportInitialize)picTextOutlineColor).BeginInit();
             ((System.ComponentModel.ISupportInitialize)picExfilClosedIconColor).BeginInit();
             ((System.ComponentModel.ISupportInitialize)picExfilPendingIconColor).BeginInit();
@@ -202,6 +214,8 @@ namespace eft_dma_radar
             ((System.ComponentModel.ISupportInitialize)picLootFilterEditColor).BeginInit();
             grpLoot.SuspendLayout();
             grpLootValues.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)trkSubItemLootValue).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)trkCorpseLootValue).BeginInit();
             ((System.ComponentModel.ISupportInitialize)trkImportantLootValue).BeginInit();
             ((System.ComponentModel.ISupportInitialize)trkRegularLootValue).BeginInit();
             grpUserInterface.SuspendLayout();
@@ -436,6 +450,8 @@ namespace eft_dma_radar
             // 
             // grpColors
             // 
+            grpColors.Controls.Add(picDeathMarkerColor);
+            grpColors.Controls.Add(lblDeathMarkerColor);
             grpColors.Controls.Add(picTextOutlineColor);
             grpColors.Controls.Add(lblTextOutlineColor);
             grpColors.Controls.Add(picExfilClosedIconColor);
@@ -478,10 +494,29 @@ namespace eft_dma_radar
             grpColors.Controls.Add(lblAIScavColor);
             grpColors.Location = new Point(888, 22);
             grpColors.Name = "grpColors";
-            grpColors.Size = new Size(162, 510);
+            grpColors.Size = new Size(162, 522);
             grpColors.TabIndex = 28;
             grpColors.TabStop = false;
             grpColors.Text = "Colors";
+            // 
+            // picDeathMarkerColor
+            // 
+            picDeathMarkerColor.BackColor = Color.Transparent;
+            picDeathMarkerColor.Location = new Point(108, 492);
+            picDeathMarkerColor.Name = "picDeathMarkerColor";
+            picDeathMarkerColor.Size = new Size(47, 18);
+            picDeathMarkerColor.TabIndex = 55;
+            picDeathMarkerColor.TabStop = false;
+            picDeathMarkerColor.Click += picDeathMarkerColor_Click;
+            // 
+            // lblDeathMarkerColor
+            // 
+            lblDeathMarkerColor.AutoSize = true;
+            lblDeathMarkerColor.Location = new Point(21, 492);
+            lblDeathMarkerColor.Name = "lblDeathMarkerColor";
+            lblDeathMarkerColor.Size = new Size(81, 15);
+            lblDeathMarkerColor.TabIndex = 54;
+            lblDeathMarkerColor.Text = "Death Marker:";
             // 
             // picTextOutlineColor
             // 
@@ -877,9 +912,9 @@ namespace eft_dma_radar
             grpLootFilters.Controls.Add(lblFilterEditName);
             grpLootFilters.Controls.Add(txtLootFilterEditName);
             grpLootFilters.Controls.Add(picLootFilterEditColor);
-            grpLootFilters.Location = new Point(474, 238);
+            grpLootFilters.Location = new Point(474, 274);
             grpLootFilters.Name = "grpLootFilters";
-            grpLootFilters.Size = new Size(408, 388);
+            grpLootFilters.Size = new Size(408, 352);
             grpLootFilters.TabIndex = 27;
             grpLootFilters.TabStop = false;
             grpLootFilters.Text = "Loot Filters/Profiles";
@@ -889,7 +924,7 @@ namespace eft_dma_radar
             lstEditLootFilters.DisplayMember = "Name";
             lstEditLootFilters.FormattingEnabled = true;
             lstEditLootFilters.ItemHeight = 15;
-            lstEditLootFilters.Location = new Point(6, 21);
+            lstEditLootFilters.Location = new Point(6, 22);
             lstEditLootFilters.Name = "lstEditLootFilters";
             lstEditLootFilters.Size = new Size(168, 259);
             lstEditLootFilters.TabIndex = 14;
@@ -897,7 +932,7 @@ namespace eft_dma_radar
             // 
             // btnCancelEditFilter
             // 
-            btnCancelEditFilter.Location = new Point(331, 102);
+            btnCancelEditFilter.Location = new Point(331, 103);
             btnCancelEditFilter.Name = "btnCancelEditFilter";
             btnCancelEditFilter.Size = new Size(71, 23);
             btnCancelEditFilter.TabIndex = 13;
@@ -909,7 +944,7 @@ namespace eft_dma_radar
             // 
             // btnEditSaveFilter
             // 
-            btnEditSaveFilter.Location = new Point(269, 102);
+            btnEditSaveFilter.Location = new Point(269, 103);
             btnEditSaveFilter.Name = "btnEditSaveFilter";
             btnEditSaveFilter.Size = new Size(56, 23);
             btnEditSaveFilter.TabIndex = 12;
@@ -922,7 +957,7 @@ namespace eft_dma_radar
             // 
             chkLootFilterEditActive.AutoSize = true;
             chkLootFilterEditActive.Enabled = false;
-            chkLootFilterEditActive.Location = new Point(269, 77);
+            chkLootFilterEditActive.Location = new Point(269, 78);
             chkLootFilterEditActive.Name = "chkLootFilterEditActive";
             chkLootFilterEditActive.Size = new Size(70, 19);
             chkLootFilterEditActive.TabIndex = 11;
@@ -932,7 +967,7 @@ namespace eft_dma_radar
             // 
             // btnAddNewFilter
             // 
-            btnAddNewFilter.Location = new Point(180, 228);
+            btnAddNewFilter.Location = new Point(180, 229);
             btnAddNewFilter.Name = "btnAddNewFilter";
             btnAddNewFilter.Size = new Size(22, 23);
             btnAddNewFilter.TabIndex = 9;
@@ -942,7 +977,7 @@ namespace eft_dma_radar
             // 
             // btnRemoveFilter
             // 
-            btnRemoveFilter.Location = new Point(180, 257);
+            btnRemoveFilter.Location = new Point(180, 258);
             btnRemoveFilter.Name = "btnRemoveFilter";
             btnRemoveFilter.Size = new Size(22, 23);
             btnRemoveFilter.TabIndex = 8;
@@ -953,7 +988,7 @@ namespace eft_dma_radar
             // lblLootFilterColor
             // 
             lblLootFilterColor.AutoSize = true;
-            lblLootFilterColor.Location = new Point(224, 52);
+            lblLootFilterColor.Location = new Point(224, 53);
             lblLootFilterColor.Name = "lblLootFilterColor";
             lblLootFilterColor.Size = new Size(39, 15);
             lblLootFilterColor.TabIndex = 6;
@@ -961,7 +996,7 @@ namespace eft_dma_radar
             // 
             // btnFilterPriorityDown
             // 
-            btnFilterPriorityDown.Location = new Point(180, 50);
+            btnFilterPriorityDown.Location = new Point(180, 51);
             btnFilterPriorityDown.Name = "btnFilterPriorityDown";
             btnFilterPriorityDown.Size = new Size(22, 23);
             btnFilterPriorityDown.TabIndex = 5;
@@ -971,7 +1006,7 @@ namespace eft_dma_radar
             // 
             // btnFilterPriorityUp
             // 
-            btnFilterPriorityUp.Location = new Point(180, 21);
+            btnFilterPriorityUp.Location = new Point(180, 22);
             btnFilterPriorityUp.Name = "btnFilterPriorityUp";
             btnFilterPriorityUp.Size = new Size(22, 23);
             btnFilterPriorityUp.TabIndex = 4;
@@ -982,7 +1017,7 @@ namespace eft_dma_radar
             // lblFilterEditName
             // 
             lblFilterEditName.AutoSize = true;
-            lblFilterEditName.Location = new Point(221, 23);
+            lblFilterEditName.Location = new Point(221, 24);
             lblFilterEditName.Name = "lblFilterEditName";
             lblFilterEditName.Size = new Size(42, 15);
             lblFilterEditName.TabIndex = 2;
@@ -991,7 +1026,7 @@ namespace eft_dma_radar
             // txtLootFilterEditName
             // 
             txtLootFilterEditName.Enabled = false;
-            txtLootFilterEditName.Location = new Point(269, 20);
+            txtLootFilterEditName.Location = new Point(269, 21);
             txtLootFilterEditName.Name = "txtLootFilterEditName";
             txtLootFilterEditName.Size = new Size(133, 23);
             txtLootFilterEditName.TabIndex = 1;
@@ -1000,7 +1035,7 @@ namespace eft_dma_radar
             // 
             picLootFilterEditColor.BackColor = Color.Transparent;
             picLootFilterEditColor.Enabled = false;
-            picLootFilterEditColor.Location = new Point(269, 52);
+            picLootFilterEditColor.Location = new Point(269, 53);
             picLootFilterEditColor.Name = "picLootFilterEditColor";
             picLootFilterEditColor.Size = new Size(47, 18);
             picLootFilterEditColor.TabIndex = 7;
@@ -1009,19 +1044,52 @@ namespace eft_dma_radar
             // 
             // grpLoot
             // 
+            grpLoot.Controls.Add(chkAutoLootRefresh);
+            grpLoot.Controls.Add(chkShowSubItems);
+            grpLoot.Controls.Add(chkShowCorpses);
             grpLoot.Controls.Add(grpLootValues);
             grpLoot.Controls.Add(btnRefreshLoot);
             grpLoot.Controls.Add(chkHideLootValue);
             grpLoot.Controls.Add(chkImportantLootOnly);
             grpLoot.Location = new Point(474, 22);
             grpLoot.Name = "grpLoot";
-            grpLoot.Size = new Size(408, 210);
+            grpLoot.Size = new Size(408, 246);
             grpLoot.TabIndex = 13;
             grpLoot.TabStop = false;
             grpLoot.Text = "Loot";
             // 
+            // chkShowSubItems
+            // 
+            chkShowSubItems.AutoSize = true;
+            chkShowSubItems.Location = new Point(112, 225);
+            chkShowSubItems.Name = "chkShowSubItems";
+            chkShowSubItems.Size = new Size(112, 19);
+            chkShowSubItems.TabIndex = 34;
+            chkShowSubItems.Text = "Show Sub-Items";
+            toolTip.SetToolTip(chkShowSubItems, "Hides item value");
+            chkShowSubItems.UseVisualStyleBackColor = true;
+            chkShowSubItems.CheckedChanged += chkShowSubItems_CheckedChanged;
+            // 
+            // chkShowCorpses
+            // 
+            chkShowCorpses.AutoSize = true;
+            chkShowCorpses.Location = new Point(6, 225);
+            chkShowCorpses.Name = "chkShowCorpses";
+            chkShowCorpses.Size = new Size(100, 19);
+            chkShowCorpses.TabIndex = 33;
+            chkShowCorpses.Text = "Show Corpses";
+            toolTip.SetToolTip(chkShowCorpses, "Hides item value");
+            chkShowCorpses.UseVisualStyleBackColor = true;
+            chkShowCorpses.CheckedChanged += chkShowCorpses_CheckedChanged;
+            // 
             // grpLootValues
             // 
+            grpLootValues.Controls.Add(lblSubItemDisplay);
+            grpLootValues.Controls.Add(lblSubItemValueSlider);
+            grpLootValues.Controls.Add(trkSubItemLootValue);
+            grpLootValues.Controls.Add(lblCorpseDisplay);
+            grpLootValues.Controls.Add(lblCorpsValueSlider);
+            grpLootValues.Controls.Add(trkCorpseLootValue);
             grpLootValues.Controls.Add(lblImportantLootDisplay);
             grpLootValues.Controls.Add(lblRegularLootDisplay);
             grpLootValues.Controls.Add(lblImportantLootSlider);
@@ -1030,15 +1098,83 @@ namespace eft_dma_radar
             grpLootValues.Controls.Add(trkRegularLootValue);
             grpLootValues.Location = new Point(6, 18);
             grpLootValues.Name = "grpLootValues";
-            grpLootValues.Size = new Size(306, 119);
+            grpLootValues.Size = new Size(306, 176);
             grpLootValues.TabIndex = 32;
             grpLootValues.TabStop = false;
             grpLootValues.Text = "Minimum Ruble Value";
             // 
+            // lblSubItemDisplay
+            // 
+            lblSubItemDisplay.AutoSize = true;
+            lblSubItemDisplay.Location = new Point(68, 133);
+            lblSubItemDisplay.Name = "lblSubItemDisplay";
+            lblSubItemDisplay.Size = new Size(25, 15);
+            lblSubItemDisplay.TabIndex = 40;
+            lblSubItemDisplay.Text = "xxx";
+            // 
+            // lblSubItemValueSlider
+            // 
+            lblSubItemValueSlider.AutoSize = true;
+            lblSubItemValueSlider.Location = new Point(32, 117);
+            lblSubItemValueSlider.Name = "lblSubItemValueSlider";
+            lblSubItemValueSlider.Size = new Size(61, 15);
+            lblSubItemValueSlider.TabIndex = 38;
+            lblSubItemValueSlider.Text = "Sub-items";
+            // 
+            // trkSubItemLootValue
+            // 
+            trkSubItemLootValue.BackColor = SystemColors.Control;
+            trkSubItemLootValue.LargeChange = 10;
+            trkSubItemLootValue.Location = new Point(99, 120);
+            trkSubItemLootValue.Maximum = 200;
+            trkSubItemLootValue.Minimum = 1;
+            trkSubItemLootValue.Name = "trkSubItemLootValue";
+            trkSubItemLootValue.Size = new Size(207, 45);
+            trkSubItemLootValue.SmallChange = 10;
+            trkSubItemLootValue.TabIndex = 39;
+            trkSubItemLootValue.TickStyle = TickStyle.None;
+            toolTip.SetToolTip(trkSubItemLootValue, "The minimum value for sub-items to be shown (eg mods on a weapon)");
+            trkSubItemLootValue.Value = 35;
+            trkSubItemLootValue.Scroll += trkSubItemLootValue_Scroll;
+            // 
+            // lblCorpseDisplay
+            // 
+            lblCorpseDisplay.AutoSize = true;
+            lblCorpseDisplay.Location = new Point(68, 99);
+            lblCorpseDisplay.Name = "lblCorpseDisplay";
+            lblCorpseDisplay.Size = new Size(25, 15);
+            lblCorpseDisplay.TabIndex = 37;
+            lblCorpseDisplay.Text = "xxx";
+            // 
+            // lblCorpsValueSlider
+            // 
+            lblCorpsValueSlider.AutoSize = true;
+            lblCorpsValueSlider.Location = new Point(44, 84);
+            lblCorpsValueSlider.Name = "lblCorpsValueSlider";
+            lblCorpsValueSlider.Size = new Size(49, 15);
+            lblCorpsValueSlider.TabIndex = 35;
+            lblCorpsValueSlider.Text = "Corpses";
+            // 
+            // trkCorpseLootValue
+            // 
+            trkCorpseLootValue.BackColor = SystemColors.Control;
+            trkCorpseLootValue.LargeChange = 10;
+            trkCorpseLootValue.Location = new Point(99, 85);
+            trkCorpseLootValue.Maximum = 800;
+            trkCorpseLootValue.Minimum = 10;
+            trkCorpseLootValue.Name = "trkCorpseLootValue";
+            trkCorpseLootValue.Size = new Size(207, 45);
+            trkCorpseLootValue.SmallChange = 10;
+            trkCorpseLootValue.TabIndex = 36;
+            trkCorpseLootValue.TickStyle = TickStyle.None;
+            toolTip.SetToolTip(trkCorpseLootValue, "The minimum value for a corpse to be shown");
+            trkCorpseLootValue.Value = 250;
+            trkCorpseLootValue.Scroll += trkCorpseLootValue_Scroll;
+            // 
             // lblImportantLootDisplay
             // 
             lblImportantLootDisplay.AutoSize = true;
-            lblImportantLootDisplay.Location = new Point(68, 81);
+            lblImportantLootDisplay.Location = new Point(68, 69);
             lblImportantLootDisplay.Name = "lblImportantLootDisplay";
             lblImportantLootDisplay.Size = new Size(25, 15);
             lblImportantLootDisplay.TabIndex = 34;
@@ -1056,7 +1192,7 @@ namespace eft_dma_radar
             // lblImportantLootSlider
             // 
             lblImportantLootSlider.AutoSize = true;
-            lblImportantLootSlider.Location = new Point(6, 66);
+            lblImportantLootSlider.Location = new Point(6, 54);
             lblImportantLootSlider.Name = "lblImportantLootSlider";
             lblImportantLootSlider.Size = new Size(87, 15);
             lblImportantLootSlider.TabIndex = 32;
@@ -1066,7 +1202,7 @@ namespace eft_dma_radar
             // 
             trkImportantLootValue.BackColor = SystemColors.Control;
             trkImportantLootValue.LargeChange = 10;
-            trkImportantLootValue.Location = new Point(99, 66);
+            trkImportantLootValue.Location = new Point(99, 50);
             trkImportantLootValue.Maximum = 500;
             trkImportantLootValue.Minimum = 250;
             trkImportantLootValue.Name = "trkImportantLootValue";
@@ -1117,7 +1253,7 @@ namespace eft_dma_radar
             // chkHideLootValue
             // 
             chkHideLootValue.AutoSize = true;
-            chkHideLootValue.Location = new Point(6, 143);
+            chkHideLootValue.Location = new Point(290, 201);
             chkHideLootValue.Name = "chkHideLootValue";
             chkHideLootValue.Size = new Size(82, 19);
             chkHideLootValue.TabIndex = 29;
@@ -1129,13 +1265,14 @@ namespace eft_dma_radar
             // chkImportantLootOnly
             // 
             chkImportantLootOnly.AutoSize = true;
-            chkImportantLootOnly.Location = new Point(6, 165);
+            chkImportantLootOnly.Location = new Point(133, 201);
             chkImportantLootOnly.Name = "chkImportantLootOnly";
             chkImportantLootOnly.Size = new Size(151, 19);
             chkImportantLootOnly.TabIndex = 22;
             chkImportantLootOnly.Text = "Important/Filtered Only";
             toolTip.SetToolTip(chkImportantLootOnly, "Only shows items considered 'important' or ones in a filter");
             chkImportantLootOnly.UseVisualStyleBackColor = true;
+            chkImportantLootOnly.CheckedChanged += chkImportantLootOnly_CheckedChanged;
             // 
             // grpUserInterface
             // 
@@ -1368,6 +1505,18 @@ namespace eft_dma_radar
             grpGlobalFeatures.TabIndex = 34;
             grpGlobalFeatures.TabStop = false;
             grpGlobalFeatures.Text = "Global Features";
+            // 
+            // chkExtendedReach
+            // 
+            chkExtendedReach.AutoSize = true;
+            chkExtendedReach.Location = new Point(143, 47);
+            chkExtendedReach.Name = "chkExtendedReach";
+            chkExtendedReach.Size = new Size(110, 19);
+            chkExtendedReach.TabIndex = 23;
+            chkExtendedReach.Text = "Extended Reach";
+            toolTip.SetToolTip(chkExtendedReach, "Increases maximum loot/door interaction distance");
+            chkExtendedReach.UseVisualStyleBackColor = true;
+            chkExtendedReach.CheckedChanged += chkExtendedReach_CheckedChanged;
             // 
             // chkChams
             // 
@@ -1775,17 +1924,16 @@ namespace eft_dma_radar
             // 
             colDialog.FullOpen = true;
             // 
-            // chkExtendedReach
+            // chkAutoLootRefresh
             // 
-            chkExtendedReach.AutoSize = true;
-            chkExtendedReach.Location = new Point(143, 47);
-            chkExtendedReach.Name = "chkExtendedReach";
-            chkExtendedReach.Size = new Size(110, 19);
-            chkExtendedReach.TabIndex = 23;
-            chkExtendedReach.Text = "Extended Reach";
-            toolTip.SetToolTip(chkExtendedReach, "Increases maximum loot/door interaction distance");
-            chkExtendedReach.UseVisualStyleBackColor = true;
-            chkExtendedReach.CheckedChanged += chkExtendedReach_CheckedChanged;
+            chkAutoLootRefresh.AutoSize = true;
+            chkAutoLootRefresh.Location = new Point(6, 200);
+            chkAutoLootRefresh.Name = "chkAutoLootRefresh";
+            chkAutoLootRefresh.Size = new Size(121, 19);
+            chkAutoLootRefresh.TabIndex = 35;
+            chkAutoLootRefresh.Text = "Auto Loot Refresh";
+            chkAutoLootRefresh.UseVisualStyleBackColor = true;
+            chkAutoLootRefresh.CheckedChanged += chkAutoLootRefresh_CheckedChanged;
             // 
             // frmMain
             // 
@@ -1804,6 +1952,7 @@ namespace eft_dma_radar
             grpConfig.ResumeLayout(false);
             grpColors.ResumeLayout(false);
             grpColors.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)picDeathMarkerColor).EndInit();
             ((System.ComponentModel.ISupportInitialize)picTextOutlineColor).EndInit();
             ((System.ComponentModel.ISupportInitialize)picExfilClosedIconColor).EndInit();
             ((System.ComponentModel.ISupportInitialize)picExfilPendingIconColor).EndInit();
@@ -1831,6 +1980,8 @@ namespace eft_dma_radar
             grpLoot.PerformLayout();
             grpLootValues.ResumeLayout(false);
             grpLootValues.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)trkSubItemLootValue).EndInit();
+            ((System.ComponentModel.ISupportInitialize)trkCorpseLootValue).EndInit();
             ((System.ComponentModel.ISupportInitialize)trkImportantLootValue).EndInit();
             ((System.ComponentModel.ISupportInitialize)trkRegularLootValue).EndInit();
             grpUserInterface.ResumeLayout(false);
@@ -2001,6 +2152,17 @@ namespace eft_dma_radar
         private CheckBox chkMasterSwitch;
         private CheckBox chkInfiniteStamina;
         private CheckBox chkExtendedReach;
+        private PictureBox picDeathMarkerColor;
+        private Label lblDeathMarkerColor;
+        private CheckBox chkShowCorpses;
+        private Label lblCorpseDisplay;
+        private Label lblCorpsValueSlider;
+        private TrackBar trkCorpseLootValue;
+        private Label lblSubItemDisplay;
+        private Label lblSubItemValueSlider;
+        private TrackBar trkSubItemLootValue;
+        private CheckBox chkShowSubItems;
+        private CheckBox chkAutoLootRefresh;
     }
 }
 
