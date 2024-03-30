@@ -17,6 +17,7 @@ using System.Security.Policy;
 using System.Text;
 using System.Xml.Linq;
 using eft_dma_radar.Source.Misc;
+using Microsoft.VisualBasic.Logging;
 using Offsets;
 using OpenTK.Graphics.OpenGL;
 using SkiaSharp;
@@ -52,21 +53,17 @@ namespace eft_dma_radar
         /// <summary>
         /// Filtered loot ready for display by GUI.
         /// </summary>
-        public ReadOnlyCollection<LootItem> Filter { get; private set; }
+        public ReadOnlyCollection<LootableObject> Filter { get; private set; }
         /// <summary>
         /// All tracked loot/corpses in Local Game World.
         /// </summary>
-        public ReadOnlyCollection<LootItem> Loot { get; set; }
+        public ReadOnlyCollection<LootableObject> Loot { get; set; }
         /// <summary>
         /// all quest items
         /// </summary>
         private Collection<QuestItem> QuestItems { get => Memory.QuestManager is not null ? Memory.QuestManager.QuestItems : null; }
 
         private string CurrentMapName { get => Memory.MapName; }
-        /// <summary>
-        /// key,value pair of filtered item ids (key) and their filtered color (value)
-        /// </summary>
-        public Dictionary<string, LootFilter.Colors> LootFilterColors { get; private set; }
         #region Constructor
         /// <summary>
         /// Initializes a new instance of the <see cref="LootManager"/> class.
@@ -352,7 +349,7 @@ namespace eft_dma_radar
                                     if (id == null)
                                         return;
 
-                                    this.savedLootItemsInfo.Add(new LootItemInfo(interactiveClass, questItem, position, id));
+                                    this.savedLootItemsInfo.Add(new LootItemInfo { InteractiveClass = interactiveClass, QuestItem = questItem, Position = position, ItemID = id });
                                 }
                             }
                         }
@@ -371,7 +368,7 @@ namespace eft_dma_radar
 
         public void FillLoot()
         {
-            var loot = new List<LootItem>();
+            var loot = new List<LootableObject>();
 
             foreach (var savedLootItem in this.savedLootItemsInfo)
             {
@@ -383,12 +380,12 @@ namespace eft_dma_radar
                         {
                             loot.Add(new LootItem
                             {
-                                Name = lootItem.Name,
                                 ID = savedLootItem.ItemID,
-                                AlwaysShow = lootItem.AlwaysShow,
-                                Important = lootItem.Important,
+                                Name = lootItem.Name,
                                 Position = savedLootItem.Position,
                                 Item = lootItem.Item,
+                                Important = lootItem.Important,
+                                AlwaysShow = lootItem.AlwaysShow,
                                 Value = TarkovDevManager.GetItemValue(lootItem.Item)
                             });
                         }
@@ -416,25 +413,26 @@ namespace eft_dma_radar
             foreach (var savedLootCorpse in this.savedLootCorpsesInfo)
             {
                 var gearItems = new List<GearItem>();
-                var name = "Corpse" + (savedLootCorpse.Player != null ? $" {savedLootCorpse.Player.Name}" : "");
 
-                var corpse = new LootCorpse(
-                    savedLootCorpse.InteractiveClass,
-                    savedLootCorpse.Slots,
-                    savedLootCorpse.Position,
-                    name
-                );
+                var corpse = new LootCorpse
+                {
+                    Name = "Corpse" + (savedLootCorpse.Player != null ? $" {savedLootCorpse.Player.Name}" : ""),
+                    Position = savedLootCorpse.Position,
+                    InteractiveClass = savedLootCorpse.InteractiveClass,
+                    Slots = savedLootCorpse.Slots,
+                    Items = gearItems
+                };
 
                 if (savedLootCorpse.Player is not null)
                 {
                     corpse.Player = savedLootCorpse.Player;
                 }
 
-                LootManager.GetItemsInSlots(savedLootCorpse.Slots, savedLootCorpse.Position, gearItems);
+                LootManager.GetItemsInSlots(savedLootCorpse.Slots, savedLootCorpse.Position, corpse.Items);
 
-                gearItems = gearItems.Where(item => item.TotalValue > 0).ToList();
+                corpse.Items = corpse.Items.Where(item => item.TotalValue > 0).ToList();
 
-                foreach (var gearItem in gearItems)
+                foreach (var gearItem in corpse.Items)
                 {
                     int index = gearItem.Loot.FindIndex(lootItem => lootItem.ID == gearItem.ID);
                     if (index != -1)
@@ -445,7 +443,7 @@ namespace eft_dma_radar
                     gearItem.Loot = MergeDupelicateLootItems(gearItem.Loot);
                 }
 
-                corpse.Items = gearItems.OrderBy(x => x.TotalValue).ToList();
+                corpse.Items = corpse.Items.OrderBy(x => x.TotalValue).ToList();
                 corpse.UpdateValue();
 
                 loot.Add(corpse);
@@ -456,21 +454,21 @@ namespace eft_dma_radar
             var groupedContainers = this.savedLootContainersInfo.GroupBy(container => (container.Position, container.Name)).ToList();
             foreach (var savedContainerItem in groupedContainers)
             {
+                var lootItems = new List<LootItem>();
                 var firstContainer = savedContainerItem.First();
 
-                var mergedContainer = new LootContainer(
-                    firstContainer.InteractiveClass,
-                    firstContainer.Position,
-                    firstContainer.Name,
-                    firstContainer.Grids
-                );
+                var mergedContainer = new LootContainer
+                {
+                    Name = firstContainer.Name,
+                    Position = firstContainer.Position,
+                    InteractiveClass = firstContainer.InteractiveClass,
+                    Grids = firstContainer.Grids,
+                    Items = lootItems
+                };
 
-                var tmpLootList = new List<LootItem>();
+                LootManager.GetItemsInGrid(mergedContainer.Grids, mergedContainer.Name, mergedContainer.Position, mergedContainer.Items);
 
-                LootManager.GetItemsInGrid(mergedContainer.Grids, mergedContainer.Name, mergedContainer.Position, tmpLootList);
-
-                mergedContainer.Items = MergeDupelicateLootItems(tmpLootList);
-
+                mergedContainer.Items = LootManager.MergeDupelicateLootItems(mergedContainer.Items);
                 mergedContainer.UpdateValue();
 
                 loot.Add(mergedContainer);
@@ -505,78 +503,82 @@ namespace eft_dma_radar
                     }
                 }
 
-                var filteredItems = loot
-                    .Where(item => !item.IsCorpse && !item.Container && (itemIdColorPairs.ContainsKey(item.ID) || item.Value > _config.MinLootValue))
-                    .Select(item =>
+                var filteredItems = new List<LootableObject>();
+
+                // add loose loot
+                foreach (var lootItem in loot.OfType<LootItem>())
+                {
+                    var isImportant = lootItem.Value > _config.MinImportantLootValue;
+                    var isFiltered = itemIdColorPairs.ContainsKey(lootItem.ID);
+
+                    if (isFiltered || isImportant)
                     {
-                        var copiedItem = new LootItem(item);
-
-                        var isImportant = item.Value > _config.MinImportantLootValue;
-                        var isFiltered = itemIdColorPairs.ContainsKey(copiedItem.ID);
-
-                        copiedItem.Important = (isImportant || isFiltered);
+                        lootItem.Important = (isImportant || isFiltered);
 
                         if (isFiltered)
                         {
-                            copiedItem.Color = itemIdColorPairs[copiedItem.ID];
+                            lootItem.Color = itemIdColorPairs[lootItem.ID];
                         }
+                    }
 
-                        return copiedItem;
-                    })
-                    .ToList();
+                    if (isFiltered || lootItem.Value > _config.MinLootValue) {
+                        filteredItems.Add(lootItem);
+                    }
+                }
 
+                // add containers
                 foreach (var container in loot.OfType<LootContainer>())
                 {
-                    if (container.Items.Any(item => item.Value > _config.MinLootValue) || container.AlwaysShow)
+                    var tempContainer = new LootContainer(container);
+
+                    foreach (var item in tempContainer.Items)
                     {
-                        var tempContainer = new LootContainer(container);
+                        var isImportant = item.Value > _config.MinImportantLootValue;
+                        var isFiltered = itemIdColorPairs.ContainsKey(item.ID);
 
-                        foreach (var item in tempContainer.Items)
+                        if (isFiltered || isImportant)
                         {
-                            var isImportant = item.Value > _config.MinImportantLootValue;
-                            var isFiltered = itemIdColorPairs.ContainsKey(item.ID);
-                            
-                            item.Important = isImportant;
+                            item.Important = (isImportant || isFiltered);
+                            tempContainer.Important = (isImportant || isFiltered);
 
-                            if (isFiltered || isImportant)
+                            if (isFiltered)
                             {
-                                tempContainer.Important = (isImportant || isFiltered);
-
-                                if (isFiltered)
-                                {
-                                    item.Color = itemIdColorPairs[item.ID];
-                                }
+                                item.Color = itemIdColorPairs[item.ID];
                             }
                         }
+                    }
 
-                        var itemsWithFilters = tempContainer.Items
-                            .Select(item => new { Item = item, Filter = orderedActiveFilters.FirstOrDefault(filter => filter.Items.Contains(item.ID)) })
-                            .Where(x => x.Filter != null);
+                    var itemsWithFilters = tempContainer.Items
+                        .Select(item => new { Item = item, Filter = orderedActiveFilters.FirstOrDefault(filter => filter.Items.Contains(item.ID)) })
+                        .Where(x => x.Filter != null);
 
-                        var firstMatchingItem = itemsWithFilters.Any()
-                            ? itemsWithFilters.Aggregate((a, b) => a.Filter.Order < b.Filter.Order ? a : b)?.Item
-                            : null;
+                    var firstMatchingItem = itemsWithFilters.Any()
+                        ? itemsWithFilters.Aggregate((a, b) => a.Filter.Order < b.Filter.Order ? a : b)?.Item
+                        : null;
 
-                        if (firstMatchingItem is not null)
-                        {
-                            tempContainer.Color = firstMatchingItem.Color;
-                        }
+                    if (firstMatchingItem is not null)
+                    {
+                        tempContainer.Color = firstMatchingItem.Color;
+                    }
 
+                    if (tempContainer.Items.Any(item => item.Value > _config.MinLootValue) || tempContainer.Important || tempContainer.AlwaysShow)
+                    {
                         filteredItems.Add(tempContainer);
                     }
                 }
 
+                // add corpses
                 foreach (var corpse in loot.OfType<LootCorpse>())
                 {
                     var tempCorpse = new LootCorpse(corpse);
-
+                    
                     LootItem lowestOrderLootItem = null;
                     GearItem lowestOrderGearItem = null;
-
                     var lowestFilterOrder = 999;
 
                     foreach (var gearItem in tempCorpse.Items)
                     {
+                        lowestOrderLootItem = null;
                         var isGearImportant = gearItem.TotalValue > _config.MinImportantLootValue;
                         var isGearFiltered = itemIdColorPairs.ContainsKey(gearItem.ID);
 
@@ -645,7 +647,7 @@ namespace eft_dma_radar
                     }
                 }
 
-                this.Filter = new ReadOnlyCollection<LootItem>(filteredItems.ToList());
+                this.Filter = new ReadOnlyCollection<LootableObject>(filteredItems.ToList());
             }
         }
 
@@ -658,7 +660,7 @@ namespace eft_dma_radar
             var filter = this.Filter.ToList();
             filter.Remove(itemToRemove);
 
-            this.Filter = new ReadOnlyCollection<LootItem>(new List<LootItem>(filter));
+            this.Filter = new ReadOnlyCollection<LootableObject>(new List<LootableObject>(filter));
             this.ApplyFilter();
         }
 
@@ -671,12 +673,12 @@ namespace eft_dma_radar
             {
                 containerLoot.Add(new LootItem
                 {
+                    ID = lootItem.Item.id,
                     Name = lootItem.Name,
-                    ID = id,
-                    AlwaysShow = lootItem.AlwaysShow,
-                    Important = lootItem.Important,
                     Position = position,
                     Item = lootItem.Item,
+                    Important = lootItem.Important,
+                    AlwaysShow = lootItem.AlwaysShow,
                     Value = TarkovDevManager.GetItemValue(lootItem.Item)
                 });
             }
@@ -746,20 +748,17 @@ namespace eft_dma_radar
                                 {
                                     containerLoot.Add(new LootItem
                                     {
-                                        Name = lootItem.Name,
                                         ID = lootItem.Item.id,
-                                        AlwaysShow = lootItem.AlwaysShow,
-                                        Important = lootItem.Important,
+                                        Name = lootItem.Name,
                                         Position = position,
                                         Item = lootItem.Item,
+                                        Important = lootItem.Important,
+                                        AlwaysShow = lootItem.AlwaysShow,
                                         Value = TarkovDevManager.GetItemValue(lootItem.Item)
-
                                     });
                                 }
                             }
-                            catch
-                            {
-                            }
+                            catch { }
                         }
                     }
                     return;
@@ -864,8 +863,8 @@ namespace eft_dma_radar
                                     Long = longName,
                                     Short = shortName,
                                     Value = value,
-                                    HasThermal = false,
                                     Loot = lootItems,
+                                    HasThermal = false
                                 });
                             }
                         }
@@ -935,9 +934,10 @@ namespace eft_dma_radar
                                 {
                                     ID = id,
                                     Name = lootItem.Name,
-                                    AlwaysShow = lootItem.AlwaysShow,
-                                    Important = lootItem.Important,
+                                    Position = position,
                                     Item = lootItem.Item,
+                                    Important = lootItem.Important,
+                                    AlwaysShow = lootItem.AlwaysShow,
                                     Value = TarkovDevManager.GetItemValue(lootItem.Item)
                                 });
                             }
@@ -965,9 +965,10 @@ namespace eft_dma_radar
                     Item = firstItem.Item,
                     Important = firstItem.Important,
                     AlwaysShow = firstItem.AlwaysShow,
-                    Color = firstItem.Color,
-                    Value = firstItem.Value * count
+                    Value = firstItem.Value * count,
+                    Color = firstItem.Color
                 };
+
                 return mergedItem;
             })
             .OrderBy(lootItem => lootItem.Value)
@@ -1073,176 +1074,130 @@ namespace eft_dma_radar
         }
     }
 
-    public class LootItem
+    public abstract class LootableObject
     {
-        public string Name { get; init; }
-        public string ID { get; init; }
-        public bool Important { get; set; } = false;
-        public bool AlwaysShow { get; set; } = false;
-        public Vector3 Position { get; init; }
-        public TarkovItem Item { get; init; } = new();
+        public string Name { get; set; }
+        public bool Important { get; set; }
+        public bool AlwaysShow { get; set; }
         public int Value { get; set; }
-        public bool Container { get; set; }
-        public string ContainerName { get; set; }
-        public bool IsCorpse { get; set; }
-        public LootFilter.Colors Color { get; set; }
-
-        /// <summary>
-        /// Cached 'Zoomed Position' on the Radar GUI. Used for mouseover events.
-        /// </summary>
+        public Vector3 Position { get; set; }
         public Vector2 ZoomedPosition { get; set; } = new();
+        public LootFilter.Colors Color { get; set; }
+    }
 
-        /// <summary>
-        /// Gets the formatted the items value
-        /// </summary>
-        public string GetFormattedValue()
-        {
-            return TarkovDevManager.FormatNumber(this.Value);
-        }
+    public class LootItem : LootableObject
+    {
+        public string ID { get; set; }
+        public TarkovItem Item { get; set; }
 
-        /// <summary>
-        /// Gets the formatted item value + name
-        /// </summary>
-        public string GetFormattedValueName()
-        {
-            return this.Value > 0 ? $"[{this.GetFormattedValue()}] {this.Name}" : this.Name;
-        }
-
-        /// <summary>
-        /// Gets the formatted item value + name
-        /// </summary>
-        public string GetFormattedValueShortName()
-        {
-            return this.Value > 0 ? $"[{this.GetFormattedValue()}] {this.Item.shortName}" : this.Item.shortName;
-        }
-
-        // ghetto way for deep copy
         public LootItem() { }
 
+        // for deep copying
         public LootItem(LootItem other)
         {
-            this.Name = other.Name;
-            this.ID = other.ID;
-            this.Important = other.Important;
-            this.AlwaysShow = other.AlwaysShow;
-            this.Position = other.Position;
+            base.Name = other.Name;
+            base.Important = other.Important;
+            base.AlwaysShow = other.AlwaysShow;
+            base.Position = other.Position;
+            base.Value = other.Value;
+
             this.Item = other.Item;
-            this.Value = other.Value;
+            this.ID = other.ID;
+
+            base.Value = other.Value;
         }
+
+        public string GetFormattedValue() => TarkovDevManager.FormatNumber(this.Value);
+        public string GetFormattedValueName() => this.Value > 0 ? $"[{this.GetFormattedValue()}] {base.Name}" : base.Name;
+        public string GetFormattedValueShortName() => this.Value > 0 ? $"[{this.GetFormattedValue()}] {this.Item.shortName}" : this.Item.shortName;
+
     }
 
-    public class LootContainer : LootItem
+    public class LootContainer : LootableObject
     {
-        public string Name;
-        public ulong InteractiveClass;
+        public ulong InteractiveClass { get; set; }
         public ulong Grids;
-        public List<LootItem> Items;
+        public List<LootItem> Items { get; set; }
 
-        public LootContainer(ulong InteractiveClass, Vector3 position, string containerName, ulong grids)
+        public LootContainer() { }
+
+        // for deep copying
+        public LootContainer(LootContainer other)
         {
-            this.InteractiveClass = InteractiveClass;
-            base.Position = position;
-            this.Name = containerName;
-            this.Items = new List<LootItem>();
+            base.Name = other.Name;
+            base.Important = other.Important;
+            base.AlwaysShow = other.AlwaysShow;
+            base.Position = other.Position;
 
-            base.Container = true;
-            base.ContainerName = containerName;
-            base.IsCorpse = false;
-            this.Grids = grids;
-        }
-
-        public LootContainer(LootContainer other) : base(other)
-        {
             this.InteractiveClass = other.InteractiveClass;
-            this.Position = other.Position;
-            this.Name = other.Name;
-            this.Items = other.Items.Select(item => new LootItem(item)).ToList();
-
-            base.Container = other.Container;
-            base.ContainerName = other.ContainerName;
-            base.IsCorpse = other.IsCorpse;
-
             this.Grids = other.Grids;
-
-            this.Value = other.Value;
+            this.Items = other.Items.Select(item => new LootItem(item)).ToList();
         }
 
-        public void UpdateValue()
-        {
-            this.Value = this.Items.Sum(item => item.Value);
-        }
+        public void UpdateValue() => this.Value = this.Items.Sum(item => item.Value);
+
     }
 
-    public class LootCorpse : LootItem
+    public class LootCorpse : LootableObject
     {
-        public string Name;
-        public ulong InteractiveClass;
-        public ulong Slots;
-        public new List<GearItem> Items;
-        public int Value;
-        public Player Player;
+        public ulong InteractiveClass { get; set; }
+        public ulong Slots { get; set; }
+        public List<GearItem> Items { get; set; }
+        public Player Player { get; set; }
 
-        public LootCorpse(ulong lootInteractiveClass, ulong slots, Vector3 position, string containerName)
+        public LootCorpse() {}
+
+        // for deep copying
+        public LootCorpse(LootCorpse other)
         {
-            this.InteractiveClass = lootInteractiveClass;
-            this.Slots = slots;
-            base.Position = position;
-            this.Name = containerName;
-            this.Items = new List<GearItem>();
+            base.Name = other.Name;
+            base.Important = other.Important;
+            base.AlwaysShow = other.AlwaysShow;
+            base.Position = other.Position;
+            base.Value = other.Value;
 
-            base.IsCorpse = true;
-            base.Container = true;
-            base.ContainerName = containerName;
-        }
-
-        public LootCorpse(LootCorpse other) : base(other)
-        {
             this.InteractiveClass = other.InteractiveClass;
             this.Slots = other.Slots;
-            base.Position = other.Position;
-            this.Name = other.Name;
-            this.Items = other.Items.Select(item => new GearItem
-            {
-                ID = item.ID,
-                Long = item.Long,
-                Short = item.Short,
-                Value = item.Value,
-                Important = item.Important,
-                Loot = item.Loot.Select(loot => new LootItem(loot)).ToList(),
-                HasThermal = item.HasThermal
-            }).ToList();
-
-            base.Container = other.Container;
-            base.ContainerName = other.ContainerName;
-            base.IsCorpse = other.IsCorpse;
-            this.Value = other.Value;
-
-            this.Player = other.Player;
+            this.Items = other.Items.Select(item => new GearItem(item)).ToList();
         }
 
-        public void UpdateValue()
-        {
-            this.Value = this.Items.Sum(item => item.TotalValue);
-        }
+        public void UpdateValue() => this.Value = this.Items.Sum(item => item.TotalValue);
     }
 
-    public class LootContainers
+    public class GearItem : LootableObject
     {
-        public string Name
+        public string ID { get; set; }
+        public string Long { get; set; }
+        public string Short { get; set; }
+        public int LootValue { get => this.Loot.Sum(x => x.Value); }
+        public int TotalValue { get => base.Value + this.LootValue; }
+        public List<LootItem> Loot { get; set; }
+        public bool HasThermal { get; set; }
+
+        public GearItem() { }
+
+        // for deep copying
+        public GearItem(GearItem other)
         {
-            get;
-            init;
+            base.Important = other.Important;
+            base.AlwaysShow = other.AlwaysShow;
+            base.Position = other.Position;
+            base.Value = other.Value;
+
+            this.ID = other.ID;
+            this.Long = other.Long;
+            this.Short = other.Short;
+            this.Loot = other.Loot.Select(item => new LootItem(item)).ToList();
+            this.HasThermal = other.HasThermal;
         }
-        public string ID
-        {
-            get;
-            init;
-        }
-        public string NormalizedName
-        {
-            get;
-            init;
-        }
+
+        public string GetFormattedValue() => TarkovDevManager.FormatNumber(base.Value);
+        public string GetFormattedLootValue() => TarkovDevManager.FormatNumber(this.LootValue);
+        public string GetFormattedTotalValue() => TarkovDevManager.FormatNumber(this.TotalValue);
+
+        public string GetFormattedValueName() => base.Value > 0 ? $"[{this.GetFormattedValue()}] {this.Long}" : this.Long;
+        public string GetFormattedValueShortName() => base.Value > 0 ? $"[{this.GetFormattedValue()}] {this.Short}" : this.Short;
+        public string GetFormattedTotalValueName() => this.TotalValue > 0 ? $"[{this.GetFormattedTotalValue()}] {this.Long}" : this.Long;
     }
 
     struct ContainerInfo
@@ -1253,16 +1208,6 @@ namespace eft_dma_radar
         public ulong Grids;
         public bool IsCorpse;
         public bool IsGear;
-
-        public ContainerInfo(ulong interactiveClass, Vector3 position, string containerName, ulong grids, bool isCorpse = false, bool isGear = false)
-        {
-            InteractiveClass = interactiveClass;
-            Position = position;
-            Name = containerName;
-            Grids = grids;
-            IsCorpse = isCorpse;
-            IsGear = isGear;
-        }
     }
 
     struct LootItemInfo
@@ -1271,14 +1216,6 @@ namespace eft_dma_radar
         public bool QuestItem;
         public Vector3 Position;
         public string ItemID;
-
-        public LootItemInfo(ulong interactiveClass, bool questItem, Vector3 position, string itemID)
-        {
-            InteractiveClass = interactiveClass;
-            QuestItem = questItem;
-            Position = position;
-            ItemID = itemID;
-        }
     }
 
     struct CorpseInfo
@@ -1287,14 +1224,6 @@ namespace eft_dma_radar
         public ulong Slots;
         public Vector3 Position;
         public Player Player;
-
-        public CorpseInfo(ulong interactiveClass, ulong slots, Vector3 position, Player player = null)
-        {
-            InteractiveClass = interactiveClass;
-            Slots = slots;
-            Position = position;
-            Player = player;
-        }
     }
 
     /// <summary>

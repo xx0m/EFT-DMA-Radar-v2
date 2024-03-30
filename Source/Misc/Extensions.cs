@@ -112,10 +112,9 @@ namespace eft_dma_radar
         /// <summary>
         /// Determines the items paint color.
         /// </summary>
-        public static SKPaint GetEntityPaint(LootItem item)
+        public static SKPaint GetEntityPaint(LootableObject item)
         {
             bool isFiltered = !item.Color.Equals(new LootFilter.Colors { R = 0, G = 0, B = 0, A = 0 });
-
             SKPaint paintToUse = SKPaints.PaintLoot.Clone();
 
             if (isFiltered)
@@ -138,17 +137,17 @@ namespace eft_dma_radar
         /// <summary>
         /// Determines the death marker paint color.
         /// </summary>
-        public static SKPaint GetDeathMarkerPaint(LootItem item)
+        public static SKPaint GetDeathMarkerPaint(LootCorpse corpse)
         {
-            bool isFiltered = !item.Color.Equals(new LootFilter.Colors { R = 0, G = 0, B = 0, A = 0 });
+            bool isFiltered = !corpse.Color.Equals(new LootFilter.Colors { R = 0, G = 0, B = 0, A = 0 });
             SKPaint paintToUse = SKPaints.PaintLoot.Clone();
 
             if (isFiltered)
             {
-                var col = item.Color;
+                var col = corpse.Color;
                 paintToUse.Color = new SKColor(col.R, col.G, col.B, col.A);
             }
-            else if (item.Important)
+            else if (corpse.Important)
             {
                 paintToUse.Color = Extensions.SKColorFromPaintColor("ImportantLoot");
             }
@@ -226,7 +225,7 @@ namespace eft_dma_radar
         /// <summary>
         /// Determines the loot items text color.
         /// </summary>
-        public static SKPaint GetTextPaint(LootItem item)
+        public static SKPaint GetTextPaint(LootableObject item)
         {
             bool isFiltered = !item.Color.Equals(new LootFilter.Colors { R = 0, G = 0, B = 0, A = 0 });
             SKPaint paintToUse = SKPaints.TextLoot.Clone();

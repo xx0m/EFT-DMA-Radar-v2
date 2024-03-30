@@ -109,6 +109,7 @@ namespace eft_dma_radar
             txtLootFilterEditName = new TextBox();
             picLootFilterEditColor = new PictureBox();
             grpLoot = new GroupBox();
+            chkAutoLootRefresh = new CheckBox();
             chkShowSubItems = new CheckBox();
             chkShowCorpses = new CheckBox();
             grpLootValues = new GroupBox();
@@ -182,7 +183,6 @@ namespace eft_dma_radar
             tabControl = new TabControl();
             colDialog = new ColorDialog();
             toolTip = new ToolTip(components);
-            chkAutoLootRefresh = new CheckBox();
             tabLootFilter.SuspendLayout();
             tabPlayerHistory.SuspendLayout();
             tabPlayerLoadouts.SuspendLayout();
@@ -494,7 +494,7 @@ namespace eft_dma_radar
             grpColors.Controls.Add(lblAIScavColor);
             grpColors.Location = new Point(888, 22);
             grpColors.Name = "grpColors";
-            grpColors.Size = new Size(162, 522);
+            grpColors.Size = new Size(162, 604);
             grpColors.TabIndex = 28;
             grpColors.TabStop = false;
             grpColors.Text = "Colors";
@@ -1058,15 +1058,27 @@ namespace eft_dma_radar
             grpLoot.TabStop = false;
             grpLoot.Text = "Loot";
             // 
+            // chkAutoLootRefresh
+            // 
+            chkAutoLootRefresh.AutoSize = true;
+            chkAutoLootRefresh.Location = new Point(6, 200);
+            chkAutoLootRefresh.Name = "chkAutoLootRefresh";
+            chkAutoLootRefresh.Size = new Size(121, 19);
+            chkAutoLootRefresh.TabIndex = 35;
+            chkAutoLootRefresh.Text = "Auto Loot Refresh";
+            toolTip.SetToolTip(chkAutoLootRefresh, "Automatically refreshes loot on the map");
+            chkAutoLootRefresh.UseVisualStyleBackColor = true;
+            chkAutoLootRefresh.CheckedChanged += chkAutoLootRefresh_CheckedChanged;
+            // 
             // chkShowSubItems
             // 
             chkShowSubItems.AutoSize = true;
-            chkShowSubItems.Location = new Point(112, 225);
+            chkShowSubItems.Location = new Point(133, 224);
             chkShowSubItems.Name = "chkShowSubItems";
             chkShowSubItems.Size = new Size(112, 19);
             chkShowSubItems.TabIndex = 34;
             chkShowSubItems.Text = "Show Sub-Items";
-            toolTip.SetToolTip(chkShowSubItems, "Hides item value");
+            toolTip.SetToolTip(chkShowSubItems, "Shows sub-items within a container/corpse");
             chkShowSubItems.UseVisualStyleBackColor = true;
             chkShowSubItems.CheckedChanged += chkShowSubItems_CheckedChanged;
             // 
@@ -1078,7 +1090,7 @@ namespace eft_dma_radar
             chkShowCorpses.Size = new Size(100, 19);
             chkShowCorpses.TabIndex = 33;
             chkShowCorpses.Text = "Show Corpses";
-            toolTip.SetToolTip(chkShowCorpses, "Hides item value");
+            toolTip.SetToolTip(chkShowCorpses, "Shows player/scav/boss etc corpses");
             chkShowCorpses.UseVisualStyleBackColor = true;
             chkShowCorpses.CheckedChanged += chkShowCorpses_CheckedChanged;
             // 
@@ -1491,6 +1503,7 @@ namespace eft_dma_radar
             chkMasterSwitch.Size = new Size(100, 19);
             chkMasterSwitch.TabIndex = 35;
             chkMasterSwitch.Text = "Master Switch";
+            toolTip.SetToolTip(chkMasterSwitch, "Toggles the memory writing functionality");
             chkMasterSwitch.UseVisualStyleBackColor = true;
             chkMasterSwitch.CheckedChanged += chkMasterSwitch_CheckedChanged;
             // 
@@ -1796,7 +1809,7 @@ namespace eft_dma_radar
             // chkShowMapSetup
             // 
             chkShowMapSetup.AutoSize = true;
-            chkShowMapSetup.Location = new Point(6, 28);
+            chkShowMapSetup.Location = new Point(7, 22);
             chkShowMapSetup.Name = "chkShowMapSetup";
             chkShowMapSetup.Size = new Size(153, 19);
             chkShowMapSetup.TabIndex = 9;
@@ -1923,17 +1936,6 @@ namespace eft_dma_radar
             // colDialog
             // 
             colDialog.FullOpen = true;
-            // 
-            // chkAutoLootRefresh
-            // 
-            chkAutoLootRefresh.AutoSize = true;
-            chkAutoLootRefresh.Location = new Point(6, 200);
-            chkAutoLootRefresh.Name = "chkAutoLootRefresh";
-            chkAutoLootRefresh.Size = new Size(121, 19);
-            chkAutoLootRefresh.TabIndex = 35;
-            chkAutoLootRefresh.Text = "Auto Loot Refresh";
-            chkAutoLootRefresh.UseVisualStyleBackColor = true;
-            chkAutoLootRefresh.CheckedChanged += chkAutoLootRefresh_CheckedChanged;
             // 
             // frmMain
             // 

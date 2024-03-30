@@ -497,16 +497,6 @@ namespace eft_dma_radar
             return path;
         }
         /// <summary>
-        /// Draws a Death Marker on this location.
-        /// </summary>
-        public void DrawDeathMarker(SKCanvas canvas, LootItem item)
-        {
-            float length = 6 * UIScale;
-            var paint = Extensions.GetDeathMarkerPaint(item);
-            canvas.DrawLine(new SKPoint(this.X - length, this.Y + length), new SKPoint(this.X + length, this.Y - length), paint);
-            canvas.DrawLine(new SKPoint(this.X - length, this.Y - length), new SKPoint(this.X + length, this.Y + length), paint);
-        }
-        /// <summary>
         /// Draws an Exfil on this location.
         /// </summary>
         public void DrawExfil(SKCanvas canvas, Exfil exfil, float localPlayerHeight)
@@ -550,31 +540,45 @@ namespace eft_dma_radar
         {
             canvas.DrawCircle(this.GetPoint(), 5 * UIScale, SKPaints.PaintGrenades);
         }
+
+        /// <summary>
+        /// Draws a lootable object on this location.
+        /// </summary>
+        public void DrawLootableObject(SKCanvas canvas, LootableObject item, float heightDiff) {
+            if (item is LootItem lootItem)
+            {
+                this.DrawLootItem(canvas, lootItem, heightDiff);
+            }
+            else if (item is LootContainer container)
+            {
+                this.DrawLootContainer(canvas, container, heightDiff);
+            }
+            else if (item is LootCorpse corpse)
+            {
+                this.DrawLootCorpse(canvas, corpse);
+            }
+        }
+
         /// <summary>
         /// Draws a loot item on this location.
         /// </summary>
-        public void DrawLoot(SKCanvas canvas, LootItem item, float heightDiff) {
-            if (item.Container && item.IsCorpse)
-            {
-                this.DrawDeathMarker(canvas, item);
-                return;
-            }
-
+        public void DrawLootItem(SKCanvas canvas, LootItem item, float heightDiff)
+        {
             var paint = Extensions.GetEntityPaint(item);
             var text = Extensions.GetTextPaint(item);
-            var label = (item.Container) ? item.ContainerName : (_config.HideLootValue ? item.Item.shortName : item.GetFormattedValueShortName());
+            var label = _config.HideLootValue ? item.Item.shortName : item.GetFormattedValueShortName();
 
-            if (heightDiff > 1.45) // loot is above player
+            if (heightDiff > 1.45)
             {
                 using var path = this.GetUpArrow();
                 canvas.DrawPath(path, paint);
             }
-            else if (heightDiff < -1.45) // loot is below player
+            else if (heightDiff < -1.45)
             {
                 using var path = this.GetDownArrow();
                 canvas.DrawPath(path, paint);
             }
-            else // loot is level with player
+            else
             {
                 canvas.DrawCircle(this.GetPoint(), 5 * UIScale, paint);
             }
@@ -584,6 +588,48 @@ namespace eft_dma_radar
                 canvas.DrawText(label, coords, Extensions.GetTextOutlinePaint());
             canvas.DrawText(label, coords, text);
         }
+
+        /// <summary>
+        /// Draws a loot container on this location.
+        /// </summary>
+        public void DrawLootContainer(SKCanvas canvas, LootContainer container, float heightDiff)
+        {
+            var paint = Extensions.GetEntityPaint(container);
+            var text = Extensions.GetTextPaint(container);
+            var label = container.Name;
+
+            if (heightDiff > 1.45)
+            {
+                using var path = this.GetUpArrow();
+                canvas.DrawPath(path, paint);
+            }
+            else if (heightDiff < -1.45)
+            {
+                using var path = this.GetDownArrow();
+                canvas.DrawPath(path, paint);
+            }
+            else
+            {
+                canvas.DrawCircle(this.GetPoint(), 5 * UIScale, paint);
+            }
+
+            var coords = this.GetPoint(7 * UIScale, 3 * UIScale);
+            if (!_config.HideTextOutline)
+                canvas.DrawText(label, coords, Extensions.GetTextOutlinePaint());
+            canvas.DrawText(label, coords, text);
+        }
+
+        /// <summary>
+        /// Draws a loot corpse on this location.
+        /// </summary>
+        public void DrawLootCorpse(SKCanvas canvas, LootCorpse corpse)
+        {
+            float length = 6 * UIScale;
+            var paint = Extensions.GetDeathMarkerPaint(corpse);
+            canvas.DrawLine(new SKPoint(this.X - length, this.Y + length), new SKPoint(this.X + length, this.Y - length), paint);
+            canvas.DrawLine(new SKPoint(this.X - length, this.Y - length), new SKPoint(this.X + length, this.Y + length), paint);
+        }
+
         /// <summary>
         /// Draws a Quest Item on this location.
         /// </summary>
@@ -689,19 +735,19 @@ namespace eft_dma_radar
         /// <summary>
         /// Draws Loot information on this location
         /// </summary>
-        public void DrawContainerTooltip(SKCanvas canvas, LootItem item)
+        public void DrawLootableObjectToolTip(SKCanvas canvas, LootableObject item)
         {
             if (item is LootContainer container)
             {
-                DrawToolTip(canvas, container.Items);
+                DrawToolTip(canvas, container);
             }
             else if (item is LootCorpse corpse)
             {
                 DrawToolTip(canvas, corpse);
             }
-            else
+            else if (item is LootItem lootItem)
             {
-                DrawToolTip(canvas, new List<LootItem> { item });
+                DrawToolTip(canvas, lootItem);
             }
         }
         /// <summary>
@@ -798,13 +844,37 @@ namespace eft_dma_radar
             DrawHostileTooltip(canvas, player);
         }
         /// <summary>
-        /// Draws the tool tip for loot items/containers
+        /// Draws the tool tip for loot items
         /// </summary>
-        private void DrawToolTip(SKCanvas canvas, List<LootItem> items)
+        private void DrawToolTip(SKCanvas canvas, LootItem lootItem)
+        {
+            var width = SKPaints.TextBase.MeasureText(lootItem.GetFormattedValueName());
+
+            var textSpacing = 15 * UIScale;
+            var padding = 3 * UIScale;
+
+            var height = 1 * textSpacing;
+
+            var left = X + padding;
+            var top = Y - padding;
+            var right = left + width + padding * 2;
+            var bottom = top + height + padding * 2;
+
+            var backgroundRect = new SKRect(left, top, right, bottom);
+            canvas.DrawRect(backgroundRect, SKPaints.PaintTransparentBacker);
+
+            var y = bottom - (padding * 2.2f);
+
+            canvas.DrawText(lootItem.GetFormattedValueName(), left + padding, y, Extensions.GetTextPaint(lootItem));
+        }
+        /// <summary>
+        /// Draws the tool tip for loot containers
+        /// </summary>
+        private void DrawToolTip(SKCanvas canvas, LootContainer container)
         {
             var maxWidth = 0f;
 
-            foreach (var item in items)
+            foreach (var item in container.Items)
             {
                 var width = SKPaints.TextBase.MeasureText(item.GetFormattedValueName());
                 maxWidth = Math.Max(maxWidth, width);
@@ -813,7 +883,7 @@ namespace eft_dma_radar
             var textSpacing = 15 * UIScale;
             var padding = 3 * UIScale;
 
-            var height = items.Count * textSpacing;
+            var height = container.Items.Count * textSpacing;
 
             var left = X + padding;
             var top = Y - padding;
@@ -824,13 +894,15 @@ namespace eft_dma_radar
             canvas.DrawRect(backgroundRect, SKPaints.PaintTransparentBacker);
 
             var y = bottom - (padding * 2.2f);
-            foreach (var item in items)
+            foreach (var item in container.Items)
             {
                 canvas.DrawText(item.GetFormattedValueName(), left + padding, y, Extensions.GetTextPaint(item));
                 y -= textSpacing;
             }
         }
-
+        /// <summary>
+        /// Draws the tool tip for loot corpses
+        /// </summary>
         private void DrawToolTip(SKCanvas canvas, LootCorpse corpse)
         {
             var maxWidth = 0f;
@@ -842,8 +914,7 @@ namespace eft_dma_radar
                 var width = SKPaints.TextBase.MeasureText(gearItem.GetFormattedTotalValueName());
                 maxWidth = Math.Max(maxWidth, width);
 
-                //if (_config.ShowSubItemsEnabled && gearItem.Loot.Count > 0)
-                if (gearItem.Loot.Count > 0)
+                if (_config.ShowSubItemsEnabled && gearItem.Loot.Count > 0)
                 {
                     foreach (var lootItem in gearItem.Loot)
                     {
@@ -874,8 +945,7 @@ namespace eft_dma_radar
             var y = bottom - (padding * 2.2f);
             foreach (var gearItem in items)
             {
-                //if (_config.ShowSubItemsEnabled && gearItem.Loot.Count > 0)
-                if (gearItem.Loot.Count > 0)
+                if (_config.ShowSubItemsEnabled && gearItem.Loot.Count > 0)
                 {
                     foreach (var lootItem in gearItem.Loot)
                     {
@@ -1517,67 +1587,6 @@ namespace eft_dma_radar
     #endregion
 
     #region Custom EFT Classes
-    /// <summary>
-    /// Defines a piece of gear
-    /// </summary>
-    public class GearItem
-    {
-        public string ID { get; set; }
-        public string Long { get; set; }
-        public string Short { get; set; }
-        public int Value { get; set; }
-        public int LootValue {  get => Loot.Sum(x => x.Value); }
-        public int TotalValue { get => this.Value + this.LootValue; }
-        public List<LootItem> Loot { get; set; }
-        public bool HasThermal { get; set; }
-        public bool Important { get; set; }
-        public LootFilter.Colors Color { get; set; }
-
-        /// <summary>
-        /// Gets the formatted the items value
-        /// </summary>
-        public string GetFormattedValue()
-        {
-            return TarkovDevManager.FormatNumber(this.Value);
-        }
-
-        /// <summary>
-        /// Gets the formatted the loot value of the item
-        /// </summary>
-        public string GetFormattedLootValue()
-        {
-            return TarkovDevManager.FormatNumber(this.LootValue);
-        }
-
-        /// <summary>
-        /// Gets the formatted the total value of the item
-        /// </summary>
-        public string GetFormattedTotalValue()
-        {
-            return TarkovDevManager.FormatNumber(this.TotalValue);
-        }
-
-        /// <summary>
-        /// Gets the formatted item value + name
-        /// </summary>
-        public string GetFormattedValueName()
-        {
-            return this.Value > 0 ? $"[{this.GetFormattedValue()}] {this.Long}" : this.Long;
-        }
-
-        /// <summary>
-        /// Gets the formatted item value + name
-        /// </summary>
-        public string GetFormattedValueShortName()
-        {
-            return this.Value > 0 ? $"[{this.GetFormattedValue()}] {this.Short}" : this.Short;
-        }
-
-        public string GetFormattedTotalValueName()
-        {
-            return this.TotalValue > 0 ? $"[{this.GetFormattedTotalValue()}] {this.Long}" : this.Long;
-        }
-    }
     /// <summary>
     /// Contains weapon info for Primary Weapons.
     /// </summary>

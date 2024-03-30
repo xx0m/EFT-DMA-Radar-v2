@@ -22,7 +22,7 @@ namespace eft_dma_radar
         private float _uiScale = 1.0f;
         private float _aimviewWindowSize = 200;
         private Player _closestPlayerToMouse = null;
-        private LootItem _closestItemToMouse = null;
+        private LootableObject _closestItemToMouse = null;
         private QuestItem _closestTaskItemToMouse = null;
         private QuestZone _closestTaskZoneToMouse = null;
         private int? _mouseOverGroup = null;
@@ -2049,7 +2049,7 @@ namespace eft_dma_radar
                                                 Y = itemZoomedPos.Y
                                             };
 
-                                            itemZoomedPos.DrawLoot(
+                                            itemZoomedPos.DrawLootableObject(
                                                 canvas,
                                                 item,
                                                 position
@@ -2205,7 +2205,7 @@ namespace eft_dma_radar
                                 .Position
                                 .ToMapPos(_selectedMap)
                                 .ToZoomedPos(mapParams);
-                            itemZoomedPos.DrawContainerTooltip(canvas, closestItemToMouse);
+                            itemZoomedPos.DrawLootableObjectToolTip(canvas, closestItemToMouse);
                         }
 
                         if (closestTaskZoneToMouse is not null) // draw tooltip for player the mouse is closest to
