@@ -364,6 +364,9 @@ namespace eft_dma_radar
                         var gameVersionPtr = Memory.ReadPtr(Info + Offsets.PlayerInfo.GameVersion);
                         var gameVersion = Memory.ReadUnityString(gameVersionPtr);
 
+                        this.GroupID = this.GetGroupID();
+                        try { this._gearManager = new GearManager(this.InventorySlots); } catch { }
+
                         //If empty, then it's a scav
                         if (gameVersion == "")
                         {
