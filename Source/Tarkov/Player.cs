@@ -4,7 +4,6 @@ using System.Numerics;
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Text;
-using eft_dma_radar.Source.Misc;
 
 namespace eft_dma_radar
 {
@@ -371,21 +370,22 @@ namespace eft_dma_radar
                         if (gameVersion == "")
                         {
                             //Console.WriteLine("Scav Detected");
-                            Type = PlayerType.AIOfflineScav;
-                            IsLocalPlayer = false;
-                            IsPmc = false;
-                            Name = Helpers.TransliterateCyrillic(Name);
+                            this.Type = PlayerType.AIOfflineScav;
+                            this.IsLocalPlayer = false;
+                            this.IsPmc = false;
+                            this.Name = Helpers.TransliterateCyrillic(Name);
+                            this.PlayerBody = Memory.ReadPtr(playerBase + 0xA8);
 
                         }
                         else
                         {
-                            Type = PlayerType.LocalPlayer;
-                            IsLocalPlayer = true;
-                            IsPmc = true;
+                            this.Type = PlayerType.LocalPlayer;
+                            this.IsLocalPlayer = true;
+                            this.IsPmc = true;
                         }
                     } catch {}
                 } else if (baseClassName == "ObservedPlayerView") {
-                    IsLocalPlayer = false;
+                    this.IsLocalPlayer = false;
                     //Debug.WriteLine("Processing PMC Player.");
                     var ObservedPlayerView = playerBase;
                     this.MovementContext = Memory.ReadPtrChain(ObservedPlayerView, Offsets.ObservedPlayerView.To_MovementContext);
@@ -399,7 +399,7 @@ namespace eft_dma_radar
 
                     this.PlayerBody = Memory.ReadPtr(ObservedPlayerView + 0x60);
                     this.InventoryController = Memory.ReadPtrChain(ObservedPlayerView, new uint[] { 0x80, 0x118 });
-                    var inventory = Memory.ReadPtr(InventoryController + Offsets.InventoryController.Inventory);
+                    var inventory = Memory.ReadPtr(this.InventoryController + Offsets.InventoryController.Inventory);
                     var equipment = Memory.ReadPtr(inventory + Offsets.Inventory.Equipment);
                     this.InventorySlots = Memory.ReadPtr(equipment + Offsets.Equipment.Slots);
 
@@ -418,7 +418,7 @@ namespace eft_dma_radar
                     if ((playerSide == 1 || playerSide == 2) && !playerIsAI) {
                         this.IsPmc = true;
                         this.Type = (playerSide == 1 ? PlayerType.USEC : PlayerType.BEAR);
-                        this.KDA = KDManager.GetKD(this.AccountID).Result;
+                        //this.KDA = KDManager.GetKD(this.AccountID).Result;
                     } else if (playerSide == 4 && !playerIsAI) {
                         this.Type = PlayerType.PScav;
                     } else if (playerSide == 4 && playerIsAI) {
@@ -570,7 +570,7 @@ namespace eft_dma_radar
                     if (!this._kdRefreshSw.IsRunning || this._kdRefreshSw.ElapsedMilliseconds >= 20000)
                     {
                         this._kdRefreshSw.Restart();
-                        this.KDA = await KDManager.GetKD(this.AccountID).ConfigureAwait(true);
+                        //this.KDA = KDManager.GetKD(this.AccountID).ConfigureAwait(true);
                     }
                 }
             }

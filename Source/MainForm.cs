@@ -248,7 +248,10 @@ namespace eft_dma_radar
         /// </summary>
         private void chkThermalVision_CheckedChanged(object sender, EventArgs e)
         {
-            _config.ThermalVisionEnabled = chkThermalVision.Checked;
+            var enabled = chkThermalVision.Checked;
+
+            _config.ThermalVisionEnabled = enabled;
+            grpThermalSettings.Enabled = enabled;
         }
 
         /// <summary>
@@ -475,6 +478,49 @@ namespace eft_dma_radar
             }
         }
 
+        private ThermalSettings GetSelectedThermalSetting()
+        {
+            return cboThermalType.SelectedItem?.ToString() == "Main" ? _config.MainThermalSetting : _config.OpticThermalSetting;
+        }
+
+        private void trkThermalColorCoefficient_Scroll(object sender, EventArgs e)
+        {
+            var thermalSettings = this.GetSelectedThermalSetting();
+            thermalSettings.ColorCoefficient = (float)Math.Round(trkThermalColorCoefficient.Value / 100.0f, 4, MidpointRounding.AwayFromZero);
+        }
+
+        private void trkThermalMinTemperature_Scroll(object sender, EventArgs e)
+        {
+            var thermalSettings = this.GetSelectedThermalSetting();
+            thermalSettings.MinTemperature = (float)Math.Round((0.01f - 0.001f) * (trkThermalMinTemperature.Value / 100.0f) + 0.001f, 4, MidpointRounding.AwayFromZero);
+        }
+
+        private void trkThermalShift_Scroll(object sender, EventArgs e)
+        {
+            var thermalSettings = this.GetSelectedThermalSetting();
+            thermalSettings.RampShift = (float)Math.Round((trkThermalShift.Value / 100.0f) - 1.0f, 4, MidpointRounding.AwayFromZero);
+        }
+
+        private void cboThermalColorScheme_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            var thermalSettings = this.GetSelectedThermalSetting();
+            thermalSettings.ColorScheme = cboThermalColorScheme.SelectedIndex;
+        }
+
+        private void cboThermalType_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            var thermalSettings = this.GetSelectedThermalSetting();
+
+            var colorCoefficient = (int)(thermalSettings.ColorCoefficient * 100);
+            var minTemperature = (int)((thermalSettings.MinTemperature - 0.001f) / (0.01f - 0.001f) * 100.0f);
+            var rampShift = (int)((thermalSettings.RampShift + 1.0f) * 100.0f);
+
+            trkThermalColorCoefficient.Value = colorCoefficient;
+            trkThermalMinTemperature.Value = minTemperature;
+            trkThermalShift.Value = rampShift;
+            cboThermalColorScheme.SelectedIndex = thermalSettings.ColorScheme;
+        }
+
         /// <summary>
         /// Fired when Chams checkbox has been adjusted
         /// </summary>
@@ -489,29 +535,17 @@ namespace eft_dma_radar
             {
                 foreach (var player in allPlayers)
                 {
-                    if (player.Type == PlayerType.LocalPlayer)
-                    {
-                        continue;
-                    }
-                    if (player.Type == PlayerType.AIOfflineScav)
-                    {
-                        playerBody = player.PlayerBody;
-                    }
-                    if (player.Type == PlayerType.AIScav)
-                    {
-                        playerBody = player.PlayerBody;
-                    }
-                    if (playerBody == 0)
+                    if (player.Type != PlayerType.AIOfflineScav || player.Type != PlayerType.AIScav)
                     {
                         continue;
                     }
                     if (chkChams.Checked)
                     {
-                        Chams.ClothingChams(playerBody);
+                        //Chams.ClothingChams(playerBody);
                     }
                     else
                     {
-                        Chams.RestorePointers();
+                        //Chams.RestorePointers();
                     }
                 }
             }
@@ -1427,8 +1461,12 @@ namespace eft_dma_radar
             chkShowSubItems.Checked = _config.ShowSubItemsEnabled;
             chkAutoLootRefresh.Checked = _config.AutoLootRefreshEnabled;
 
+            grpThermalSettings.Enabled = _config.ThermalVisionEnabled || _config.OpticThermalVisionEnabled;
+
+            cboThermalType.SelectedIndex = 0;
+
             if (_config.Filters.Count == 0)
-            { // add a default, blank config
+            {
                 LootFilter newFilter = new LootFilter()
                 {
                     Order = 1,
@@ -1449,7 +1487,7 @@ namespace eft_dma_radar
             }
 
             if (cboLootItems.Items.Count == 0)
-            { // add loot items loot item combobox
+            {
                 List<LootItem> lootList = TarkovDevManager.AllItems.Select(x => x.Value).OrderBy(x => x.Name).Take(25).ToList();
 
                 cboLootItems.DataSource = lootList;

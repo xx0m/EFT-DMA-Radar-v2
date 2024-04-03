@@ -236,6 +236,7 @@ namespace eft_dma_radar.Source.Tarkov
         /// </summary>
         public void SetMovementState(bool on)
         {
+            this.baseMovementState = Memory.ReadPtr(this.movementContext + 0xD0);
             var animationState = Memory.ReadValue<byte>(this.baseMovementState + 0x21);
 
             if (on && animationState == 5)

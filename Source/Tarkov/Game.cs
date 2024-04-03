@@ -20,6 +20,7 @@ namespace eft_dma_radar
         private Config _config;
         private CameraManager _cameraManager;
         private QuestManager _questManager;
+        private Chams _chams;
         private Toolbox _toolbox;
         private ulong _localGameWorld;
         private readonly ulong _unityBase;
@@ -97,6 +98,10 @@ namespace eft_dma_radar
         public QuestManager QuestManager {
         
             get => _questManager;
+        }
+        public Chams Chams
+        {
+            get => _chams;
         }
         #endregion
 
@@ -440,6 +445,30 @@ namespace eft_dma_radar
                             Program.Log($"ERROR loading QuestManager: {ex}");
                         }
                     }
+
+                    if (this._toolbox is null)
+                    {
+                        try
+                        {
+                            this._toolbox = new Toolbox(this._localGameWorld);
+                        }
+                        catch (Exception ex)
+                        {
+                            Program.Log($"ERROR loading Toolbox: {ex}");
+                        }
+                    }
+
+                    if (this._chams is null)
+                    {
+                        try
+                        {
+                            this._chams = new Chams();
+                        }
+                        catch (Exception ex)
+                        {
+                            Program.Log($"ERROR loading Chams: {ex}");
+                        }
+                    }
                 }
 
                 if (this._grenadeManager is null)
@@ -467,18 +496,6 @@ namespace eft_dma_radar
                     }
                 }
                 else this._exfilManager.Refresh();
-
-                if (this._toolbox is null)
-                {
-                    try
-                    {
-                        this._toolbox = new Toolbox(this._localGameWorld);
-                    }
-                    catch (Exception ex)
-                    {
-                        Program.Log($"ERROR loading Toolbox: {ex}");
-                    }
-                }
             }
         }
 

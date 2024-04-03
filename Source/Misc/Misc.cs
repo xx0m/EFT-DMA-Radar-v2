@@ -306,6 +306,18 @@ namespace eft_dma_radar
         public List<LootFilter> Filters { get; set; }
 
         /// <summary>
+        /// Regular Thermal Vision Settings
+        /// </summary>
+        [JsonPropertyName("MainThermalSetting")]
+        public ThermalSettings MainThermalSetting { get; set; }
+
+        /// <summary>
+        /// Optical Thermal Vision Settings
+        /// </summary>
+        [JsonPropertyName("OpticThermalSetting")]
+        public ThermalSettings OpticThermalSetting { get; set; }
+
+        /// <summary>
         /// Allows storage of colors for ai scav, pscav etc.
         /// </summary>
         [JsonPropertyName("PaintColors")]
@@ -385,6 +397,9 @@ namespace eft_dma_radar
             MinCorpseValue = 100000;
             MinSubItemValue = 15000;
             AutoLootRefreshEnabled = false;
+
+            MainThermalSetting = new ThermalSettings(0.5f, 0.001f, -0.5f, 0);
+            OpticThermalSetting = new ThermalSettings(0.5f, 0.001f, -0.5f, 0);
         }
 
         /// <summary>
@@ -403,7 +418,7 @@ namespace eft_dma_radar
                     config = JsonSerializer.Deserialize<Config>(json);
                     return true;
                 }
-                catch
+                catch (Exception ex)
                 {
                     config = null;
                     return false;
@@ -540,7 +555,6 @@ namespace eft_dma_radar
         {
             canvas.DrawCircle(this.GetPoint(), 5 * UIScale, SKPaints.PaintGrenades);
         }
-
         /// <summary>
         /// Draws a lootable object on this location.
         /// </summary>
@@ -555,10 +569,9 @@ namespace eft_dma_radar
             }
             else if (item is LootCorpse corpse)
             {
-                this.DrawLootCorpse(canvas, corpse);
+                this.DrawLootCorpse(canvas, corpse, heightDiff);
             }
         }
-
         /// <summary>
         /// Draws a loot item on this location.
         /// </summary>
@@ -588,7 +601,6 @@ namespace eft_dma_radar
                 canvas.DrawText(label, coords, Extensions.GetTextOutlinePaint());
             canvas.DrawText(label, coords, text);
         }
-
         /// <summary>
         /// Draws a loot container on this location.
         /// </summary>
@@ -618,18 +630,35 @@ namespace eft_dma_radar
                 canvas.DrawText(label, coords, Extensions.GetTextOutlinePaint());
             canvas.DrawText(label, coords, text);
         }
-
         /// <summary>
         /// Draws a loot corpse on this location.
         /// </summary>
-        public void DrawLootCorpse(SKCanvas canvas, LootCorpse corpse)
+        public void DrawLootCorpse(SKCanvas canvas, LootCorpse corpse, float heightDiff)
         {
             float length = 6 * UIScale;
             var paint = Extensions.GetDeathMarkerPaint(corpse);
+            float offsetX = -15 * UIScale;
+
+            if (heightDiff > 1.45)
+            {
+                using var path = this.GetUpArrow();
+                path.Offset(offsetX, 0);
+                canvas.DrawPath(path, paint);
+            }
+            else if (heightDiff < -1.45)
+            {
+                using var path = this.GetDownArrow();
+                path.Offset(offsetX, 0);
+                canvas.DrawPath(path, paint);
+            }
+            else
+            {
+                canvas.DrawCircle(this.X + offsetX, this.Y, 5 * UIScale, paint);
+            }
+
             canvas.DrawLine(new SKPoint(this.X - length, this.Y + length), new SKPoint(this.X + length, this.Y - length), paint);
             canvas.DrawLine(new SKPoint(this.X - length, this.Y - length), new SKPoint(this.X + length, this.Y + length), paint);
         }
-
         /// <summary>
         /// Draws a Quest Item on this location.
         /// </summary>
@@ -1587,6 +1616,23 @@ namespace eft_dma_radar
     #endregion
 
     #region Custom EFT Classes
+    public class ThermalSettings
+    {
+        public float ColorCoefficient { get; set; }
+        public float MinTemperature { get; set; }
+        public float RampShift { get; set; }
+        public int ColorScheme { get; set; }
+
+        public ThermalSettings() { }
+
+        public ThermalSettings(float colorCoefficient, float minTemp, float rampShift, int colorScheme)
+        {
+            this.ColorCoefficient = colorCoefficient;
+            this.MinTemperature = minTemp;
+            this.RampShift = rampShift;
+            this.ColorScheme = colorScheme;
+        }
+    }
     /// <summary>
     /// Contains weapon info for Primary Weapons.
     /// </summary>

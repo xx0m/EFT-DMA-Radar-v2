@@ -4,27 +4,37 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using eft_dma_radar.Source.Tarkov;
 
-namespace eft_dma_radar.Source.Misc
+namespace eft_dma_radar
 {
 
-    internal class Chams
+    public class Chams
     {
 
-        public static void ClothingChams(ulong playerBody)
+        private CameraManager _cameraManager
         {
+            get => Memory.CameraManager;
+        }
+
+        public Chams()
+        {
+
+        }
+
+        public void ClothingChams(ulong playerBody)
+        {
+
             if (playerBody == 0)
             {
                 return;
             }
             var bodySkins = Memory.ReadPtr(playerBody + 0x40);
-            Console.WriteLine("bodySkins: " + bodySkins);
             if (bodySkins == 0)
             {
                 return;
             }
             var bodySkinsCount = Memory.ReadValue<int>(bodySkins + 0x40);
-            Console.WriteLine("bodySkinsCount: " + bodySkinsCount);
             var skinEntries = Memory.ReadPtr(bodySkins + 0x18);
             if (skinEntries == 0)
             {
@@ -33,19 +43,16 @@ namespace eft_dma_radar.Source.Misc
             for (int i = 0; i < bodySkinsCount; i++)
             {
                 var pBodySkins = Memory.ReadPtr(skinEntries + 0x30 + (0x18 * (uint)i));
-                Console.WriteLine("pBodySkins: " + pBodySkins);
                 if (pBodySkins == 0)
                 {
                     continue;
                 }
                 var pLodsArray = Memory.ReadPtr(pBodySkins + 0x18);
-                Console.WriteLine("pLodsArray: " + pLodsArray);
                 if (pLodsArray == 0)
                 {
                     continue;
                 }
                 var lodsCount = Memory.ReadValue<int>(pLodsArray + 0x18);
-                Console.WriteLine("lodsCount: " + lodsCount);
 
                 for (int j = 0; j < lodsCount; j++)
                 {
@@ -71,19 +78,23 @@ namespace eft_dma_radar.Source.Misc
                         var MaterialDictionaryBase = Memory.ReadPtr(pMaterialDictionary + 0x148);
                         for (int k = 0; k < MaterialCount; k++)
                         {
-                            var MaterialEntryPtr = Memory.ReadPtr(MaterialDictionaryBase + (0x50 * (uint)k));
-                            Console.WriteLine("MaterialEntryPtr: " + MaterialEntryPtr);
-                            SavePointer(MaterialDictionaryBase + (0x50 * (uint)k), MaterialEntryPtr);
-                            Memory.WriteValue<ulong>(MaterialDictionaryBase + (0x50 * (uint)k), 0);
+                            try
+                            {
+
+                                var MaterialEntryPtr = Memory.ReadPtr(MaterialDictionaryBase + (0x50 * (uint)k));
+                                //Console.WriteLine($"MaterialEntryPtr: {MaterialEntryPtr} {playerNick}");
+                                SavePointer(MaterialDictionaryBase + (0x50 * (uint)k), MaterialEntryPtr);
+                                //Memory.WriteValue<ulong>(MaterialDictionaryBase + (0x50 * (uint)k), 0);
+                            }
+                            catch { }
                         }
                     }
                 }
             }
         }
 
-        public static void GearChams(ulong playerBase)
+        public void GearChams(ulong playerBody)
         {
-            var playerBody = Memory.ReadPtr(playerBase + 0xA8);
             if (playerBody == 0)
             {
                 return;
@@ -145,8 +156,9 @@ namespace eft_dma_radar.Source.Misc
                             for (int l = 0; l < MaterialCount; l++)
                             {
                                 var MaterialEntryPtr = Memory.ReadPtr(MaterialDictionaryBase + (0x50 * (uint)k));
+                                //Console.WriteLine($"MaterialEntryPtr: {MaterialEntryPtr}");
                                 SavePointer(MaterialDictionaryBase + (0x50 * (uint)k), MaterialEntryPtr);
-                                Memory.WriteValue<ulong>(MaterialDictionaryBase + (0x50 * (uint)k), 0);
+                                //Memory.WriteValue<ulong>(MaterialDictionaryBase + (0x50 * (uint)k), 0);
                             }
                         }
                     }
@@ -165,7 +177,7 @@ namespace eft_dma_radar.Source.Misc
         {
             foreach (var backup in pointerBackups)
             {
-                Memory.WriteValue<ulong>(backup.Address, backup.OriginalValue);
+                //Memory.WriteValue<ulong>(backup.Address, backup.OriginalValue);
             }
             pointerBackups.Clear();
         }

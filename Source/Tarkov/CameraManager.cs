@@ -20,6 +20,11 @@ namespace eft_dma_radar.Source.Tarkov
             }
         }
 
+        private Config _config
+        {
+            get => Program.Config;
+        }
+
         public CameraManager(ulong unityBase)
         {
             this._unityBase = unityBase;
@@ -106,39 +111,13 @@ namespace eft_dma_radar.Source.Tarkov
         }
 
         /// <summary>
-        /// public function to turn thermalvision on and off
-        /// </summary>
-        public void ThermalVision(bool on)
-        {
-            if (this.IsReady)
-            {
-                var fpsThermalComponent = GetComponentFromGameObject(this._fpsCamera, "ThermalVision");
-                var thermalOn = Memory.ReadValue<bool>(fpsThermalComponent + 0xE0);
-
-                if (on != thermalOn)
-                {
-                    Memory.WriteValue(fpsThermalComponent + 0xE0, !thermalOn);
-                    Memory.WriteValue(fpsThermalComponent + 0xE1, thermalOn);
-                    Memory.WriteValue(fpsThermalComponent + 0xE2, thermalOn);
-                    Memory.WriteValue(fpsThermalComponent + 0xE3, thermalOn);
-                    Memory.WriteValue(fpsThermalComponent + 0xE4, thermalOn);
-                    Memory.WriteValue(fpsThermalComponent + 0xE5, thermalOn);
-
-                    Memory.WriteValue(fpsThermalComponent + 0xE8, thermalOn ? 0.013f : 0.1f);
-                    Memory.WriteValue(fpsThermalComponent + 0xEC, thermalOn ? 5.0f : 10.0f);
-                    Memory.WriteValue(fpsThermalComponent + 0xF0, thermalOn ? 2.0f : 6.0f);
-                }
-            }
-        }
-
-        /// <summary>
         /// public function to turn nightvision on and off
         /// </summary>
         public void NightVision(bool on)
         {
             if (this.IsReady)
             {
-                var nightVisionComponent = GetComponentFromGameObject(_fpsCamera, "NightVision");
+                var nightVisionComponent = this.GetComponentFromGameObject(this._fpsCamera, "NightVision");
                 var nightVisionOn = Memory.ReadValue<bool>(nightVisionComponent + 0xEC);
 
                 if (on != nightVisionOn)
@@ -155,12 +134,45 @@ namespace eft_dma_radar.Source.Tarkov
         {
             if (this.IsReady)
             {
-                var visorComponent = GetComponentFromGameObject(this._fpsCamera, "VisorEffect");
+                var visorComponent = this.GetComponentFromGameObject(this._fpsCamera, "VisorEffect");
                 bool visorDown = (Memory.ReadValue<float>(visorComponent + 0xC0) == 1.0f);
 
                 if (on == visorDown)
                 {
                     Memory.WriteValue(visorComponent + 0xC0, (on ? 0.0f : 1.0f));
+                }
+            }
+        }
+
+        /// <summary>
+        /// public function to turn thermalvision on and off
+        /// </summary>
+        public void ThermalVision(bool on)
+        {
+            if (this.IsReady)
+            {
+                var fpsThermalComponent = this.GetComponentFromGameObject(this._fpsCamera, "ThermalVision");
+                var thermalOn = Memory.ReadValue<bool>(fpsThermalComponent + 0xE0);
+
+                if (on != thermalOn)
+                {
+                    Memory.WriteValue(fpsThermalComponent + 0xE0, !thermalOn);
+                    Memory.WriteValue(fpsThermalComponent + 0xE1, thermalOn);
+                    Memory.WriteValue(fpsThermalComponent + 0xE2, thermalOn);
+                    Memory.WriteValue(fpsThermalComponent + 0xE3, thermalOn);
+                    Memory.WriteValue(fpsThermalComponent + 0xE4, thermalOn);
+                    Memory.WriteValue(fpsThermalComponent + 0xE5, thermalOn);
+
+                    try
+                    {
+                        var thermalVisionUtilities = Memory.ReadPtr(fpsThermalComponent + 0x18);
+                        var valuesCoefs = Memory.ReadPtr(thermalVisionUtilities + 0x18);
+                        Memory.WriteValue(valuesCoefs + 0x10, this._config.MainThermalSetting.ColorCoefficient);
+                        Memory.WriteValue(valuesCoefs + 0x14, this._config.MainThermalSetting.MinTemperature);
+                        Memory.WriteValue(valuesCoefs + 0x18, this._config.MainThermalSetting.RampShift);
+                        Memory.WriteValue(thermalVisionUtilities + 0x30, this._config.MainThermalSetting.ColorScheme);
+                    }
+                    catch { }
                 }
             }
         }
@@ -173,8 +185,8 @@ namespace eft_dma_radar.Source.Tarkov
             if (this.IsReady)
             {
                 ulong opticComponent = 0;
-                ulong opticThermalVision = 0;
                 var component = Memory.ReadPtr(this._opticCamera + 0x30);
+                var opticThermal = this.GetComponentFromGameObject(this._opticCamera, "ThermalVision");
                 for (int i = 0x8; i < 0x100; i += 0x10)
                 {
                     var fields = Memory.ReadPtr(component + (ulong)i);
@@ -186,13 +198,28 @@ namespace eft_dma_radar.Source.Tarkov
                     if (className == "ThermalVision")
                     {
                         opticComponent = fields;
-                        opticThermalVision = Memory.ReadPtr(fieldsPtr_ + 0x28);
                         break;
                     }
                 }
 
                 Memory.WriteValue(opticComponent + 0x38, on);
-                Memory.WriteValue(opticThermalVision + 0xE0, on);
+                Memory.WriteValue(opticThermal + 0xE1, !on);
+                Memory.WriteValue(opticThermal + 0xE2, !on);
+                Memory.WriteValue(opticThermal + 0xE3, !on);
+                Memory.WriteValue(opticThermal + 0xE4, !on);
+                Memory.WriteValue(opticThermal + 0xE5, !on);
+
+                try
+                {
+                    var thermalVisionUtilities = Memory.ReadPtr(opticThermal + 0x18);
+                    var valuesCoefs = Memory.ReadPtr(thermalVisionUtilities + 0x18);
+                    Memory.WriteValue(valuesCoefs + 0x10, this._config.OpticThermalSetting.ColorCoefficient);
+                    Memory.WriteValue(valuesCoefs + 0x14, this._config.OpticThermalSetting.MinTemperature);
+                    Memory.WriteValue(valuesCoefs + 0x18, this._config.OpticThermalSetting.RampShift);
+                    Memory.WriteValue(thermalVisionUtilities + 0x30, this._config.OpticThermalSetting.ColorScheme);
+                }
+                catch { }
+
             }
         }
     }

@@ -145,6 +145,17 @@ namespace eft_dma_radar
             chkShowAimview = new CheckBox();
             chkHideNames = new CheckBox();
             grpMemoryWriting = new GroupBox();
+            grpThermalSettings = new GroupBox();
+            trkThermalShift = new TrackBar();
+            lblThermalRampShift = new Label();
+            trkThermalMinTemperature = new TrackBar();
+            lblThermalMinTemperature = new Label();
+            trkThermalColorCoefficient = new TrackBar();
+            cboThermalColorScheme = new ComboBox();
+            lblThermalColorScheme = new Label();
+            cboThermalType = new ComboBox();
+            lblThermalSettingsType = new Label();
+            lblThermalColorCoefficient = new Label();
             chkMasterSwitch = new CheckBox();
             grpGlobalFeatures = new GroupBox();
             chkExtendedReach = new CheckBox();
@@ -223,6 +234,10 @@ namespace eft_dma_radar
             ((System.ComponentModel.ISupportInitialize)trkZoom).BeginInit();
             ((System.ComponentModel.ISupportInitialize)trkUIScale).BeginInit();
             grpMemoryWriting.SuspendLayout();
+            grpThermalSettings.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)trkThermalShift).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)trkThermalMinTemperature).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)trkThermalColorCoefficient).BeginInit();
             grpGlobalFeatures.SuspendLayout();
             grpGearFeatures.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)trkMagDrills).BeginInit();
@@ -248,7 +263,7 @@ namespace eft_dma_radar
             tabLootFilter.Location = new Point(4, 24);
             tabLootFilter.Name = "tabLootFilter";
             tabLootFilter.Padding = new Padding(3);
-            tabLootFilter.Size = new Size(1168, 638);
+            tabLootFilter.Size = new Size(1168, 742);
             tabLootFilter.TabIndex = 4;
             tabLootFilter.Text = "Loot Filter";
             tabLootFilter.UseVisualStyleBackColor = true;
@@ -366,7 +381,7 @@ namespace eft_dma_radar
             tabPlayerHistory.Controls.Add(lstViewPMCHistory);
             tabPlayerHistory.Location = new Point(4, 24);
             tabPlayerHistory.Name = "tabPlayerHistory";
-            tabPlayerHistory.Size = new Size(1168, 638);
+            tabPlayerHistory.Size = new Size(1168, 742);
             tabPlayerHistory.TabIndex = 3;
             tabPlayerHistory.Text = "Player History";
             tabPlayerHistory.UseVisualStyleBackColor = true;
@@ -383,7 +398,7 @@ namespace eft_dma_radar
             lstViewPMCHistory.Location = new Point(0, 0);
             lstViewPMCHistory.MultiSelect = false;
             lstViewPMCHistory.Name = "lstViewPMCHistory";
-            lstViewPMCHistory.Size = new Size(1168, 638);
+            lstViewPMCHistory.Size = new Size(1168, 742);
             lstViewPMCHistory.TabIndex = 0;
             lstViewPMCHistory.UseCompatibleStateImageBehavior = false;
             lstViewPMCHistory.View = View.Details;
@@ -403,7 +418,7 @@ namespace eft_dma_radar
             tabPlayerLoadouts.Controls.Add(rchTxtPlayerInfo);
             tabPlayerLoadouts.Location = new Point(4, 24);
             tabPlayerLoadouts.Name = "tabPlayerLoadouts";
-            tabPlayerLoadouts.Size = new Size(1168, 638);
+            tabPlayerLoadouts.Size = new Size(1168, 742);
             tabPlayerLoadouts.TabIndex = 2;
             tabPlayerLoadouts.Text = "Player Loadouts";
             tabPlayerLoadouts.UseVisualStyleBackColor = true;
@@ -415,7 +430,7 @@ namespace eft_dma_radar
             rchTxtPlayerInfo.Location = new Point(0, 0);
             rchTxtPlayerInfo.Name = "rchTxtPlayerInfo";
             rchTxtPlayerInfo.ReadOnly = true;
-            rchTxtPlayerInfo.Size = new Size(1168, 638);
+            rchTxtPlayerInfo.Size = new Size(1168, 742);
             rchTxtPlayerInfo.TabIndex = 0;
             rchTxtPlayerInfo.Text = "";
             // 
@@ -425,7 +440,7 @@ namespace eft_dma_radar
             tabSettings.Location = new Point(4, 24);
             tabSettings.Name = "tabSettings";
             tabSettings.Padding = new Padding(3);
-            tabSettings.Size = new Size(1168, 638);
+            tabSettings.Size = new Size(1168, 742);
             tabSettings.TabIndex = 1;
             tabSettings.Text = "Settings";
             tabSettings.UseVisualStyleBackColor = true;
@@ -443,7 +458,7 @@ namespace eft_dma_radar
             grpConfig.Margin = new Padding(4, 3, 4, 3);
             grpConfig.Name = "grpConfig";
             grpConfig.Padding = new Padding(4, 3, 4, 3);
-            grpConfig.Size = new Size(1162, 632);
+            grpConfig.Size = new Size(1162, 736);
             grpConfig.TabIndex = 8;
             grpConfig.TabStop = false;
             grpConfig.Text = "Radar Config";
@@ -1484,16 +1499,139 @@ namespace eft_dma_radar
             // 
             // grpMemoryWriting
             // 
+            grpMemoryWriting.Controls.Add(grpThermalSettings);
             grpMemoryWriting.Controls.Add(chkMasterSwitch);
             grpMemoryWriting.Controls.Add(grpGlobalFeatures);
             grpMemoryWriting.Controls.Add(grpGearFeatures);
             grpMemoryWriting.Controls.Add(grpPhysicalFeatures);
             grpMemoryWriting.Location = new Point(6, 330);
             grpMemoryWriting.Name = "grpMemoryWriting";
-            grpMemoryWriting.Size = new Size(462, 296);
+            grpMemoryWriting.Size = new Size(462, 406);
             grpMemoryWriting.TabIndex = 9;
             grpMemoryWriting.TabStop = false;
             grpMemoryWriting.Text = "Memory Writing [RISKY]";
+            // 
+            // grpThermalSettings
+            // 
+            grpThermalSettings.Controls.Add(trkThermalShift);
+            grpThermalSettings.Controls.Add(lblThermalRampShift);
+            grpThermalSettings.Controls.Add(trkThermalMinTemperature);
+            grpThermalSettings.Controls.Add(lblThermalMinTemperature);
+            grpThermalSettings.Controls.Add(trkThermalColorCoefficient);
+            grpThermalSettings.Controls.Add(cboThermalColorScheme);
+            grpThermalSettings.Controls.Add(lblThermalColorScheme);
+            grpThermalSettings.Controls.Add(cboThermalType);
+            grpThermalSettings.Controls.Add(lblThermalSettingsType);
+            grpThermalSettings.Controls.Add(lblThermalColorCoefficient);
+            grpThermalSettings.Location = new Point(6, 296);
+            grpThermalSettings.Name = "grpThermalSettings";
+            grpThermalSettings.Size = new Size(450, 107);
+            grpThermalSettings.TabIndex = 29;
+            grpThermalSettings.TabStop = false;
+            grpThermalSettings.Text = "Thermal Settings";
+            // 
+            // trkThermalShift
+            // 
+            trkThermalShift.Location = new Point(296, 73);
+            trkThermalShift.Maximum = 100;
+            trkThermalShift.Minimum = -50;
+            trkThermalShift.Name = "trkThermalShift";
+            trkThermalShift.Size = new Size(150, 45);
+            trkThermalShift.TabIndex = 30;
+            trkThermalShift.TickStyle = TickStyle.None;
+            trkThermalShift.Scroll += trkThermalShift_Scroll;
+            // 
+            // lblThermalRampShift
+            // 
+            lblThermalRampShift.AutoSize = true;
+            lblThermalRampShift.Location = new Point(222, 73);
+            lblThermalRampShift.Name = "lblThermalRampShift";
+            lblThermalRampShift.Size = new Size(68, 15);
+            lblThermalRampShift.TabIndex = 29;
+            lblThermalRampShift.Text = "Ramp Shift:";
+            // 
+            // trkThermalMinTemperature
+            // 
+            trkThermalMinTemperature.Location = new Point(296, 46);
+            trkThermalMinTemperature.Maximum = 100;
+            trkThermalMinTemperature.Name = "trkThermalMinTemperature";
+            trkThermalMinTemperature.Size = new Size(150, 45);
+            trkThermalMinTemperature.TabIndex = 9;
+            trkThermalMinTemperature.TickStyle = TickStyle.None;
+            trkThermalMinTemperature.Value = 1;
+            trkThermalMinTemperature.Scroll += trkThermalMinTemperature_Scroll;
+            // 
+            // lblThermalMinTemperature
+            // 
+            lblThermalMinTemperature.AutoSize = true;
+            lblThermalMinTemperature.Location = new Point(190, 46);
+            lblThermalMinTemperature.Name = "lblThermalMinTemperature";
+            lblThermalMinTemperature.Size = new Size(100, 15);
+            lblThermalMinTemperature.TabIndex = 8;
+            lblThermalMinTemperature.Text = "Min Temperature:";
+            // 
+            // trkThermalColorCoefficient
+            // 
+            trkThermalColorCoefficient.Location = new Point(296, 19);
+            trkThermalColorCoefficient.Maximum = 100;
+            trkThermalColorCoefficient.Minimum = 1;
+            trkThermalColorCoefficient.Name = "trkThermalColorCoefficient";
+            trkThermalColorCoefficient.Size = new Size(150, 45);
+            trkThermalColorCoefficient.TabIndex = 7;
+            trkThermalColorCoefficient.TickStyle = TickStyle.None;
+            trkThermalColorCoefficient.Value = 1;
+            trkThermalColorCoefficient.Scroll += trkThermalColorCoefficient_Scroll;
+            // 
+            // cboThermalColorScheme
+            // 
+            cboThermalColorScheme.DropDownStyle = ComboBoxStyle.DropDownList;
+            cboThermalColorScheme.FormattingEnabled = true;
+            cboThermalColorScheme.Items.AddRange(new object[] { "Fusion", "Rainbow", "White Hot", "Black Hot" });
+            cboThermalColorScheme.Location = new Point(93, 46);
+            cboThermalColorScheme.Name = "cboThermalColorScheme";
+            cboThermalColorScheme.Size = new Size(91, 23);
+            cboThermalColorScheme.TabIndex = 6;
+            toolTip.SetToolTip(cboThermalColorScheme, "The type of thermal to edit");
+            cboThermalColorScheme.SelectedIndexChanged += cboThermalColorScheme_SelectedIndexChanged;
+            // 
+            // lblThermalColorScheme
+            // 
+            lblThermalColorScheme.AutoSize = true;
+            lblThermalColorScheme.Location = new Point(7, 49);
+            lblThermalColorScheme.Name = "lblThermalColorScheme";
+            lblThermalColorScheme.Size = new Size(84, 15);
+            lblThermalColorScheme.TabIndex = 5;
+            lblThermalColorScheme.Text = "Color Scheme:";
+            // 
+            // cboThermalType
+            // 
+            cboThermalType.DropDownStyle = ComboBoxStyle.DropDownList;
+            cboThermalType.FormattingEnabled = true;
+            cboThermalType.Items.AddRange(new object[] { "Main", "Optic" });
+            cboThermalType.Location = new Point(93, 17);
+            cboThermalType.Name = "cboThermalType";
+            cboThermalType.Size = new Size(91, 23);
+            cboThermalType.TabIndex = 1;
+            toolTip.SetToolTip(cboThermalType, "The type of thermal to edit");
+            cboThermalType.SelectedIndexChanged += cboThermalType_SelectedIndexChanged;
+            // 
+            // lblThermalSettingsType
+            // 
+            lblThermalSettingsType.AutoSize = true;
+            lblThermalSettingsType.Location = new Point(53, 20);
+            lblThermalSettingsType.Name = "lblThermalSettingsType";
+            lblThermalSettingsType.Size = new Size(34, 15);
+            lblThermalSettingsType.TabIndex = 0;
+            lblThermalSettingsType.Text = "Type:";
+            // 
+            // lblThermalColorCoefficient
+            // 
+            lblThermalColorCoefficient.AutoSize = true;
+            lblThermalColorCoefficient.Location = new Point(190, 19);
+            lblThermalColorCoefficient.Name = "lblThermalColorCoefficient";
+            lblThermalColorCoefficient.Size = new Size(100, 15);
+            lblThermalColorCoefficient.TabIndex = 3;
+            lblThermalColorCoefficient.Text = "Color Coefficient:";
             // 
             // chkMasterSwitch
             // 
@@ -1836,7 +1974,7 @@ namespace eft_dma_radar
             tabRadar.Location = new Point(4, 24);
             tabRadar.Name = "tabRadar";
             tabRadar.Padding = new Padding(3);
-            tabRadar.Size = new Size(1168, 638);
+            tabRadar.Size = new Size(1168, 742);
             tabRadar.TabIndex = 0;
             tabRadar.Text = "Radar";
             tabRadar.UseVisualStyleBackColor = true;
@@ -1930,7 +2068,7 @@ namespace eft_dma_radar
             tabControl.Location = new Point(0, 0);
             tabControl.Name = "tabControl";
             tabControl.SelectedIndex = 0;
-            tabControl.Size = new Size(1176, 666);
+            tabControl.Size = new Size(1176, 770);
             tabControl.TabIndex = 8;
             // 
             // colDialog
@@ -1941,7 +2079,7 @@ namespace eft_dma_radar
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1176, 666);
+            ClientSize = new Size(1176, 770);
             Controls.Add(tabControl);
             Margin = new Padding(4, 3, 4, 3);
             Name = "frmMain";
@@ -1993,6 +2131,11 @@ namespace eft_dma_radar
             ((System.ComponentModel.ISupportInitialize)trkUIScale).EndInit();
             grpMemoryWriting.ResumeLayout(false);
             grpMemoryWriting.PerformLayout();
+            grpThermalSettings.ResumeLayout(false);
+            grpThermalSettings.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)trkThermalShift).EndInit();
+            ((System.ComponentModel.ISupportInitialize)trkThermalMinTemperature).EndInit();
+            ((System.ComponentModel.ISupportInitialize)trkThermalColorCoefficient).EndInit();
             grpGlobalFeatures.ResumeLayout(false);
             grpGlobalFeatures.PerformLayout();
             grpGearFeatures.ResumeLayout(false);
@@ -2165,6 +2308,17 @@ namespace eft_dma_radar
         private TrackBar trkSubItemLootValue;
         private CheckBox chkShowSubItems;
         private CheckBox chkAutoLootRefresh;
+        private GroupBox grpThermalSettings;
+        private Label lblThermalSettingsType;
+        private ComboBox cboThermalType;
+        private Label lblThermalColorCoefficient;
+        private ComboBox cboThermalColorScheme;
+        private Label lblThermalColorScheme;
+        private TrackBar trkThermalColorCoefficient;
+        private TrackBar trkThermalShift;
+        private Label lblThermalRampShift;
+        private TrackBar trkThermalMinTemperature;
+        private Label lblThermalMinTemperature;
     }
 }
 
