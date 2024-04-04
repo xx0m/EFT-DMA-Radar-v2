@@ -61,12 +61,12 @@ namespace eft_dma_radar.Source.Tarkov
         public PlayerManager(ulong localGameWorld)
         {
             this.playerBase = Memory.ReadPtr(localGameWorld + Offsets.LocalGameWorld.MainPlayer);
-            this.playerProfile = Memory.ReadPtr(playerBase + 0x588);
+            this.playerProfile = Memory.ReadPtr(playerBase + 0x5B8);
 
             this.movementContext = Memory.ReadPtr(playerBase + Offsets.Player.MovementContext);
             this.baseMovementState = Memory.ReadPtr(movementContext + 0xD0);
 
-            this.physical = Memory.ReadPtr(playerBase + 0x598);
+            this.physical = Memory.ReadPtr(playerBase + 0x5C8);
             this.stamina = Memory.ReadPtr(physical + 0x38);
             this.handsStamina = Memory.ReadPtr(this.physical + 0x40);
 
@@ -78,7 +78,7 @@ namespace eft_dma_radar.Source.Tarkov
             this.throwStrength = Memory.ReadPtr(skillsManager + 0x70);
             this.searchDouble = Memory.ReadPtr(skillsManager + 0x4C0);
 
-            this.proceduralWeaponAnimation = Memory.ReadPtr(playerBase + 0x1A0);
+            this.proceduralWeaponAnimation = Memory.ReadPtr(playerBase + 0x1C0);
             this.isADS = Memory.ReadValue<bool>(proceduralWeaponAnimation + 0x1BD);
             this.breathEffector = Memory.ReadPtr(this.proceduralWeaponAnimation + 0x28);
             this.walkEffector = Memory.ReadPtr(this.proceduralWeaponAnimation + 0x30);

@@ -77,6 +77,15 @@ namespace eft_dma_radar
             FilterQuality = SKFilterQuality.High
         };
 
+        public static readonly SKPaint DeathMarker = new SKPaint()
+        {
+            Color = SKColors.Black,
+            StrokeWidth = 2,
+            Style = SKPaintStyle.Fill,
+            IsAntialias = true,
+            FilterQuality = SKFilterQuality.High
+        };
+
         public static readonly SKPaint TextLoot = new SKPaint()
         {
             Color = SKColors.WhiteSmoke,

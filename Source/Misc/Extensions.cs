@@ -140,7 +140,7 @@ namespace eft_dma_radar
         public static SKPaint GetDeathMarkerPaint(LootCorpse corpse)
         {
             bool isFiltered = !corpse.Color.Equals(new LootFilter.Colors { R = 0, G = 0, B = 0, A = 0 });
-            SKPaint paintToUse = SKPaints.PaintLoot.Clone();
+            SKPaint paintToUse = SKPaints.DeathMarker.Clone();
 
             if (isFiltered)
             {

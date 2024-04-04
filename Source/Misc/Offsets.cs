@@ -30,11 +30,11 @@
     }
     public struct LocalGameWorld // [Class] -.ClientLocalGameWorld : ClientGameWorld
     {
-        public const uint MainPlayer = 0x150; // to EFT.Player
+        public const uint MainPlayer = 0x148; // to EFT.Player
         public const uint ExfilController = 0x18; // to ExfilController
-        public const uint LootList = 0xD0; // to UnityList
-        public const uint RegisteredPlayers = 0xF8; // to RegisteredPlayers
-        public const uint Grenades = 0x1A8; // to Grenades
+        public const uint LootList = 0xC8; // to UnityList
+        public const uint RegisteredPlayers = 0xF0; // to RegisteredPlayers
+        public const uint Grenades = 0x1A0; // to Grenades
     }
     public struct ExfilController // -.GClass0B67
     {
@@ -61,9 +61,9 @@
         //public static readonly uint[] To_TransformInternal = new uint[] { 0xA8, 0x28, 0x28, 0x10, 0x20, 0x10 }; // to TransformInternal
         public static readonly uint[] To_TransformInternal = new uint[] { 0xA8, 0x28, 0x28, 0x10, 0x20 + (0 * 0x8), 0x10 }; // to TransformInternal
         public const uint MovementContext = 0x40; // to MovementContext
-        public const uint Corpse = 0x390; // EFT.Interactive.Corpse
-        public const uint Profile = 0x588; // to Profile
-        public const uint InventoryController = 0x5E0; // to InventoryController
+        public const uint Corpse = 0x3C8; // EFT.Interactive.Corpse
+        public const uint Profile = 0x5B8; // to Profile
+        public const uint InventoryController = 0x610; // to InventoryController
     }
     public struct Profile // EFT.Profile
     {
