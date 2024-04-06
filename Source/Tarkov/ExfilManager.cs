@@ -2,42 +2,114 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Numerics;
+using System.Security.Cryptography;
 using eft_dma_radar.Source.Misc;
 using eft_dma_radar.Source.Tarkov;
 using Offsets;
+using OpenTK.Graphics.ES20;
 
 namespace eft_dma_radar
 {
     public class ExfilManager
     {
-
         private bool IsAtHideout
         {
             get => Memory.InHideout;
         }
 
-        private bool IsScav
-        {
-            get => Memory.IsScav;
-        }
-        private readonly Stopwatch _sw = new();
+        private bool IsScav { get => Memory.IsScav; }
+        private readonly Stopwatch _swStatus = new();
+        private readonly Stopwatch _swExfils = new();
+        private ulong localGameWorld { get; set; }
         /// <summary>
         /// List of PMC Exfils in Local Game World and their position/status.
         /// </summary>
-        public ReadOnlyCollection<Exfil> Exfils { get; }
+        public ReadOnlyCollection<Exfil> Exfils { get; set; }
 
         public ExfilManager(ulong localGameWorld)
         {
+            this.localGameWorld = localGameWorld;
+            this.Exfils = new ReadOnlyCollection<Exfil>(new Exfil[0]);
+
             //If we are in hideout, we don't need to do anything.
             if (this.IsAtHideout)
             {
                 Debug.WriteLine("In Hideout, not loading exfils.");
                 return;
             }
+
+            this.RefreshExfils();
+
+            this._swExfils.Start();
+            this._swStatus.Start();
+        }
+
+        /// <summary>
+        /// Checks if Exfils are due for a refresh, and then refreshes them.
+        /// </summary>
+        public void RefreshExfils()
+        {
+            bool shouldUpdateExfils = false;
+
+            if (this._swStatus.ElapsedMilliseconds >= 5000)
+            {
+                shouldUpdateExfils = true;
+                this._swStatus.Restart();
+            }
+
+            if (this._swExfils.ElapsedMilliseconds >= 250 && this.Exfils.Count < 1)
+            {
+                try
+                {
+                    this.GetExfils();
+                    shouldUpdateExfils = true;
+                    this._swExfils.Stop();
+                }
+                catch { }
+            }
+
+            if (shouldUpdateExfils)
+            {
+                this.UpdateExfils();
+
+                this._swExfils.Restart();
+            }
+        }
+
+        /// <summary>
+        /// Updates exfil statuses.
+        /// </summary>
+        private void UpdateExfils()
+        {
+            try {
+                var scatterMap = new ScatterReadMap(this.Exfils.Count);
+                var round1 = scatterMap.AddRound();
+                for (int i = 0; i < this.Exfils.Count; i++)
+                {
+                    round1.AddEntry<int>(i, 0, this.Exfils[i].BaseAddr + Offsets.Exfil.Status);
+                }
+                scatterMap.Execute();
+                for (int i = 0; i < this.Exfils.Count; i++)
+                {
+                    try {
+                        var status = scatterMap.Results[i][0].TryGetResult<int>(out var stat);
+                        this.Exfils[i].UpdateStatus(stat);
+                    }
+                    catch{}
+
+                }
+            }
+            catch{}
+            
+        }
+
+        public void GetExfils()
+        {
+
             try
             {
-                var exfilController = Memory.ReadPtr(localGameWorld + Offsets.LocalGameWorld.ExfilController);
-                var exfilPoints = (this.IsScav ? Memory.ReadPtr(exfilController + 0x28) : Memory.ReadPtr(exfilController + Offsets.ExfilController.ExfilList));
+                var exfilController = Memory.ReadPtr(this.localGameWorld + Offsets.LocalGameWorld.ExfilController);
+                var exfilPoints = this.IsScav ? Memory.ReadPtr(exfilController + Offsets.ExfilController.ScavExfilList) : Memory.ReadPtr(exfilController + Offsets.ExfilController.PMCExfilList);
                 var count = Memory.ReadValue<int>(exfilPoints + Offsets.ExfilController.ExfilCount);
 
                 if (count < 1 || count > 24)
@@ -52,29 +124,34 @@ namespace eft_dma_radar
                     var exfilAddr = Memory.ReadPtr(exfilPoints + Offsets.UnityListBase.Start + (i * 0x08));
 
                     Exfil exfil = new Exfil(exfilAddr);
-                    var exfilSettings = Memory.ReadPtr(exfilAddr + Offsets.Exfil.Settings);
-                    var exfilName = Memory.ReadPtr(exfilSettings + Offsets.Exfil.Name);
-                    var exfilUnityName = Memory.ReadUnityString(exfilName);
-                    exfil.UpdateName(exfilUnityName);
+                    exfil.UpdateName();
+
+                    var localPlayer = Memory.ReadPtr(localGameWorld + Offsets.LocalGameWorld.MainPlayer);
+                    var localPlayerProfile = Memory.ReadPtr(localPlayer + Offsets.Player.Profile); // to EFT.Profile
+                    var localPlayerInfo = Memory.ReadPtr(localPlayerProfile + Offsets.Profile.PlayerInfo); // to EFT.Profile.Info
 
                     if (this.IsScav)
                     {
-                        list.Add(exfil);
+                        var eligibleIds = Memory.ReadPtr(exfilAddr + 0xC0);
+                        var eligibleIdsCount = Memory.ReadValue<int>(eligibleIds + Offsets.UnityList.Count);
+                        if (eligibleIdsCount != 0)
+                        {
+                            list.Add(exfil);
+                            continue;
+                        }
                     }
                     else
                     {
-                        var localPlayer = Memory.ReadPtr(localGameWorld + Offsets.LocalGameWorld.MainPlayer);
-                        var localPlayerProfile = Memory.ReadPtr(localPlayer + Offsets.Player.Profile);
-                        var localPlayerInfo = Memory.ReadPtr(localPlayerProfile + Offsets.Profile.PlayerInfo);
-                        var localPlayerEntryPoint = Memory.ReadPtr(localPlayerInfo + 0x30); // causes low fps in raid wait
+                        var localPlayerEntryPoint = Memory.ReadPtr(localPlayerInfo + Offsets.PlayerInfo.EntryPoint);
                         var localPlayerEntryPointString = Memory.ReadUnityString(localPlayerEntryPoint);
 
-                        var eligibleEntryPoints = Memory.ReadPtr(exfilAddr + 0x80);
-                        var eligibleEntryPointsCount = Memory.ReadValue<int>(eligibleEntryPoints + 0x18);
+                        var eligibleEntryPoints = Memory.ReadPtr(exfilAddr + Offsets.ExfiltrationPoint.EligibleEntryPoints);
+                        var eligibleEntryPointsCount = Memory.ReadValue<int>(eligibleEntryPoints + Offsets.UnityList.Count);
                         for (uint j = 0; j < eligibleEntryPointsCount; j++)
                         {
                             var entryPoint = Memory.ReadPtr(eligibleEntryPoints + 0x20 + (j * 0x8));
                             var entryPointString = Memory.ReadUnityString(entryPoint);
+
                             if (entryPointString.ToLower() == localPlayerEntryPointString.ToLower())
                             {
                                 list.Add(exfil);
@@ -85,46 +162,8 @@ namespace eft_dma_radar
                 }
 
                 this.Exfils = new ReadOnlyCollection<Exfil>(list);
-                this.UpdateExfils();
-                this._sw.Start();
-            } catch {}
-        }
-
-        /// <summary>
-        /// Checks if Exfils are due for a refresh, and then refreshes them.
-        /// </summary>
-        public void Refresh()
-        {
-            if (_sw.ElapsedMilliseconds < 5000) return;
-            UpdateExfils();
-            _sw.Restart();
-        }
-
-        /// <summary>
-        /// Updates exfil statuses.
-        /// </summary>
-        private void UpdateExfils()
-        {
-            try {
-                var scatterMap = new ScatterReadMap(Exfils.Count);
-                var round1 = scatterMap.AddRound();
-                for (int i = 0; i < Exfils.Count; i++)
-                {
-                    round1.AddEntry<int>(i, 0, Exfils[i].BaseAddr + Offsets.Exfil.Status);
-                }
-                scatterMap.Execute();
-                for (int i = 0; i < Exfils.Count; i++)
-                {
-                    try {
-                        var status = scatterMap.Results[i][0].TryGetResult<int>(out var stat);
-                        Exfils[i].UpdateStatus(stat);
-                    }
-                    catch{}
-
-                }
             }
-            catch{}
-            
+            catch { }
         }
     }
 
@@ -135,31 +174,6 @@ namespace eft_dma_radar
         public Vector3 Position { get; }
         public ExfilStatus Status { get; private set; } = ExfilStatus.Closed;
         public string Name { get; private set; } = "?";
-
-        private Dictionary<string, string> streetsExfilNames = new Dictionary<string, string>
-        {
-            // pmc extracts
-            ["E1"] = "Stylobate Building Elevator",
-            ["E2"] = "Sewer River",
-            ["E3"] = "Damaged House",
-            ["E4"] = "Crash Site",
-            ["E5"] = "Collapsed Crane",
-            ["E7"] = "Expo Checkpoint",
-            ["E7-car"] = "Primorsky Ave Taxi",
-            ["E8-yard"] = "Courtyard",
-            ["E9-sniper"] = "Klimov Street",
-            ["Exit-E10-coop"] = "Pinewood Basement",
-
-            //scav extracts
-            ["scav-e1"] = "Basement Descent",
-            ["scav-e2"] = "Entrance to Catacombs",
-            ["scav-e3"] = "Ventilation Shaft",
-            ["scav-e4"] = "Sewer Manhole",
-            ["scav-e5"] = "Near Kamchatskaya Arch",
-            ["scav-e7"] = "Cardinal Apartment Complex Parking",
-            ["scav-e8"] = "Klimov Shopping Mall",
-            ["Exit-E10-coop"] = "Pinewood Basement"
-        };
 
         public Exfil(ulong baseAddr)
         {
@@ -198,13 +212,20 @@ namespace eft_dma_radar
             }
         }
 
-        public void UpdateName(string name)
+        public void UpdateName()
         {
-            this.Name = name.Replace("_", "-");
+            var name = TarkovDevManager.GetMapName(Memory.MapName);
 
-            if (Memory.MapName == "TarkovStreets")
+            if (TarkovDevManager.AllMaps.TryGetValue(name, out var map))
             {
-                this.Name = streetsExfilNames[this.Name];
+                foreach (var extract in map.extracts)
+                {
+                    if (this.Position == extract.position || Vector3.Distance(extract.position, this.Position) <= 10)
+                    {
+                        this.Name = extract.name;
+                        break;
+                    }
+                }
             }
         }
     }

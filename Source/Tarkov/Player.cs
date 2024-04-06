@@ -358,12 +358,15 @@ namespace eft_dma_radar
                     var inventory = Memory.ReadPtr(InventoryController + Offsets.InventoryController.Inventory);
                     var equipment = Memory.ReadPtr(inventory + Offsets.Inventory.Equipment);
                     this.InventorySlots = Memory.ReadPtr(equipment + Offsets.Equipment.Slots);
+                    this.PlayerBody = Memory.ReadPtr(playerBase + Offsets.Player.PlayerBody);
 
-                    try {
+                    try
+                    {
                         var gameVersionPtr = Memory.ReadPtr(Info + Offsets.PlayerInfo.GameVersion);
                         var gameVersion = Memory.ReadUnityString(gameVersionPtr);
 
                         this.GroupID = this.GetGroupID();
+                        this.PlayerBody = Memory.ReadPtr(playerBase + 0xA8);
                         try { this._gearManager = new GearManager(this.InventorySlots); } catch { }
 
                         //If empty, then it's a scav
@@ -374,7 +377,6 @@ namespace eft_dma_radar
                             this.IsLocalPlayer = false;
                             this.IsPmc = false;
                             this.Name = Helpers.TransliterateCyrillic(Name);
-                            this.PlayerBody = Memory.ReadPtr(playerBase + 0xA8);
 
                         }
                         else
@@ -397,13 +399,13 @@ namespace eft_dma_radar
                     var playerSide = GetNextObservedPlayerSide();
                     var playerIsAI = GetNextObservedPlayerIsAI();
 
-                    this.PlayerBody = Memory.ReadPtr(ObservedPlayerView + 0x60);
-                    this.InventoryController = Memory.ReadPtrChain(ObservedPlayerView, new uint[] { 0x80, 0x118 });
+                    this.PlayerBody = Memory.ReadPtr(ObservedPlayerView + Offsets.ObservedPlayerView.PlayerBody);
+                    this.InventoryController = Memory.ReadPtrChain(ObservedPlayerView, Offsets.ObservedPlayerView.To_InventoryController);
                     var inventory = Memory.ReadPtr(this.InventoryController + Offsets.InventoryController.Inventory);
                     var equipment = Memory.ReadPtr(inventory + Offsets.Inventory.Equipment);
                     this.InventorySlots = Memory.ReadPtr(equipment + Offsets.Equipment.Slots);
 
-                    this.AccountID = Memory.ReadUnityString(Memory.ReadPtr(ObservedPlayerView + 0x50));
+                    this.AccountID = Memory.ReadUnityString(Memory.ReadPtr(ObservedPlayerView + Offsets.ObservedPlayerView.AccountID));
 
 
                     if (Helpers.NameTranslations.ContainsKey(this.Name)) {
@@ -413,7 +415,7 @@ namespace eft_dma_radar
                     try { this._gearManager = new GearManager(this.InventorySlots); } catch { }
 
                     this.GroupID = this.GetObservedPlayerGroupID();
-                    this.HealthController = Memory.ReadPtrChain(playerBase, new uint[] { 0x80, 0xF0 });
+                    this.HealthController = Memory.ReadPtrChain(playerBase, Offsets.ObservedPlayerView.To_HealthController);
 
                     if ((playerSide == 1 || playerSide == 2) && !playerIsAI) {
                         this.IsPmc = true;
@@ -689,7 +691,7 @@ namespace eft_dma_radar
         {
             try
             {
-                var grpPtr = Memory.ReadPtr(this.Info + 0x18);
+                var grpPtr = Memory.ReadPtr(this.Info + Offsets.ObservedPlayerView.GroupID);
                 var grp = Memory.ReadUnityString(grpPtr);
                 _groups.TryAdd(grp, _groups.Count);
                 return _groups[grp];

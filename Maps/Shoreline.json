@@ -1,0 +1,28 @@
+{
+  "mapID": ["shoreline"],
+  "x": 4513,
+  "y": 2642,
+  "scale": 4.28,
+  "mapLayers": [
+    {
+      "minHeight": 0,
+      "filename": "Maps\\Shoreline3f.jpg"
+    },
+    {
+      "minHeight": -1,
+      "filename": "Maps\\Shoreline2f.jpg"
+    },
+    {
+      "minHeight": -5.3,
+      "filename": "Maps\\Shoreline1f.jpg"
+    },
+    {
+      "minHeight": -8.5,
+      "filename": "Maps\\Shoreline-1f.jpg"
+    },
+    {
+      "minHeight": -10,
+      "filename": "Maps\\Shoreline1f.jpg"
+    }
+  ]
+}

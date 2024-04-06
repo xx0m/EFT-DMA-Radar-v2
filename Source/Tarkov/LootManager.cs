@@ -231,22 +231,22 @@ namespace eft_dma_radar
 
                 var lootBaseObject = vRound3.AddEntry<ulong>(i, 2, interactiveClass, null, Offsets.LootInteractiveClass.LootBaseObject);
                 var entry7 = vRound3.AddEntry<ulong>(i, 3, interactiveClass, null, 0x0);
-                var item = vRound3.AddEntry<ulong>(i, 4, interactiveClass, null, 0xB0);
-                var containerIDPtr = vRound3.AddEntry<ulong>(i, 5, interactiveClass, null, 0x128);
-                var itemOwner = vRound3.AddEntry<ulong>(i, 6, interactiveClass, null, 0x40);
+                var item = vRound3.AddEntry<ulong>(i, 4, interactiveClass, null, Offsets.ObservedLootItem.Item);
+                var containerIDPtr = vRound3.AddEntry<ulong>(i, 5, interactiveClass, null, Offsets.LootableContainer.Template);
+                var itemOwner = vRound3.AddEntry<ulong>(i, 6, interactiveClass, null, Offsets.LootInteractiveClass.ItemOwner);
                 var containerItemOwner = vRound3.AddEntry<ulong>(i, 7, interactiveClass, null, Offsets.LootInteractiveClass.ContainerItemOwner);
 
                 var gameObject = vRound4.AddEntry<ulong>(i, 8, lootBaseObject, null, Offsets.LootBaseObject.GameObject);
                 var entry9 = vRound4.AddEntry<ulong>(i, 9, entry7, null, 0x0);
                 var itemTemplate = vRound4.AddEntry<ulong>(i, 10, item, null, Offsets.LootItemBase.ItemTemplate);
-                var containerItemBase = vRound4.AddEntry<ulong>(i, 11, containerItemOwner, null, 0xC0);
+                var containerItemBase = vRound4.AddEntry<ulong>(i, 11, containerItemOwner, null, Offsets.ContainerItemOwner.Item);
 
                 var objectName = vRound5.AddEntry<ulong>(i, 12, gameObject, null, Offsets.GameObject.ObjectName);
                 var objectClass = vRound5.AddEntry<ulong>(i, 13, gameObject, null, Offsets.GameObject.ObjectClass);
                 var entry10 = vRound5.AddEntry<ulong>(i, 14, entry9, null, 0x48);
                 var isQuestItem = vRound5.AddEntry<bool>(i, 15, itemTemplate, null, Offsets.ItemTemplate.IsQuestItem);
                 var BSGIdPtr = vRound5.AddEntry<ulong>(i, 16, itemTemplate, null, Offsets.ItemTemplate.BsgId);
-                var rootItem = vRound5.AddEntry<ulong>(i, 17, itemOwner, null, 0xC0);
+                var rootItem = vRound5.AddEntry<ulong>(i, 17, itemOwner, null, Offsets.ItemOwner.Item);
                 var containerGrids = vRound5.AddEntry<ulong>(i, 18, containerItemBase, null, Offsets.LootItemBase.Grids);
 
                 var className = vRound6.AddEntry<string>(i, 19, entry10, 64);
@@ -322,6 +322,7 @@ namespace eft_dma_radar
                                         return;
 
                                     TarkovDevManager.AllLootContainers.TryGetValue(containerID, out var container);
+
                                     this.savedLootContainersInfo.Add(new ContainerInfo { InteractiveClass = interactiveClass, Position = position, Name = container?.Name ?? containerName, Grids = grids });
                                 }
                             }
@@ -435,41 +436,48 @@ namespace eft_dma_radar
             // create Corpse objects
             foreach (var savedLootCorpse in this.savedLootCorpsesInfo)
             {
-                var gearItems = new List<GearItem>();
-
-                var corpse = new LootCorpse
+                if (this.validLootEntities.Any(x => x.Pointer == savedLootCorpse.InteractiveClass))
                 {
-                    Name = "Corpse" + (savedLootCorpse.Player != null ? $" {savedLootCorpse.Player.Name}" : ""),
-                    Position = savedLootCorpse.Position,
-                    InteractiveClass = savedLootCorpse.InteractiveClass,
-                    Slots = savedLootCorpse.Slots,
-                    Items = gearItems
-                };
+                    var gearItems = new List<GearItem>();
 
-                if (savedLootCorpse.Player is not null)
-                {
-                    corpse.Player = savedLootCorpse.Player;
-                }
-
-                LootManager.GetItemsInSlots(savedLootCorpse.Slots, savedLootCorpse.Position, corpse.Items);
-
-                corpse.Items = corpse.Items.Where(item => item.TotalValue > 0).ToList();
-
-                foreach (var gearItem in corpse.Items)
-                {
-                    int index = gearItem.Loot.FindIndex(lootItem => lootItem.ID == gearItem.ID);
-                    if (index != -1)
+                    var corpse = new LootCorpse
                     {
-                        gearItem.Loot.RemoveAt(index);
+                        Name = "Corpse" + (savedLootCorpse.Player != null ? $" {savedLootCorpse.Player.Name}" : ""),
+                        Position = savedLootCorpse.Position,
+                        InteractiveClass = savedLootCorpse.InteractiveClass,
+                        Slots = savedLootCorpse.Slots,
+                        Items = gearItems
+                    };
+
+                    if (savedLootCorpse.Player is not null)
+                    {
+                        corpse.Player = savedLootCorpse.Player;
                     }
 
-                    gearItem.Loot = MergeDupelicateLootItems(gearItem.Loot);
+                    LootManager.GetItemsInSlots(savedLootCorpse.Slots, savedLootCorpse.Position, corpse.Items);
+
+                    corpse.Items = corpse.Items.Where(item => item.TotalValue > 0).ToList();
+
+                    foreach (var gearItem in corpse.Items)
+                    {
+                        int index = gearItem.Loot.FindIndex(lootItem => lootItem.ID == gearItem.ID);
+                        if (index != -1)
+                        {
+                            gearItem.Loot.RemoveAt(index);
+                        }
+
+                        gearItem.Loot = MergeDupelicateLootItems(gearItem.Loot);
+                    }
+
+                    corpse.Items = corpse.Items.OrderBy(x => x.TotalValue).ToList();
+                    corpse.UpdateValue();
+
+                    loot.Add(corpse);
                 }
-
-                corpse.Items = corpse.Items.OrderBy(x => x.TotalValue).ToList();
-                corpse.UpdateValue();
-
-                loot.Add(corpse);
+                else
+                {
+                    this.savedLootCorpsesInfo = new ConcurrentBag<CorpseInfo>(this.savedLootCorpsesInfo.Where(x => x.InteractiveClass != savedLootCorpse.InteractiveClass));
+                }
             }
 
             // create Container objects, merge dupe entries based on position + name
@@ -489,11 +497,14 @@ namespace eft_dma_radar
                         Position = firstContainer.Position,
                         InteractiveClass = firstContainer.InteractiveClass,
                         Grids = firstContainer.Grids,
-                        Items = lootItems
+                        Items = lootItems,
                     };
 
-                    if (firstContainer.Name == "Mk 17")
-                        Console.WriteLine("test");
+                    if (mergedContainer.Name.Contains("COLLIDER(1)"))
+                    {
+                        mergedContainer.Name = "Airdrop";
+                        mergedContainer.AlwaysShow = true;
+                    }
 
                     if (firstContainer.Slots != 0)
                     {
@@ -732,7 +743,7 @@ namespace eft_dma_radar
                     foreach (var grid in gridsArray.Data)
                     {
                         var gridEnumerableClass = Memory.ReadPtr(grid + Offsets.Grids.GridsEnumerableClass);
-                        var itemListPtr = Memory.ReadPtr(gridEnumerableClass + 0x18);
+                        var itemListPtr = Memory.ReadPtr(gridEnumerableClass + Offsets.UnityList.Count);
                         var itemList = new MemList(itemListPtr);
 
                         foreach (var childItem in itemList.Data)
@@ -756,7 +767,7 @@ namespace eft_dma_radar
                     foreach (var grid in gridsArray.Data)
                     {
                         var gridEnumerableClass = Memory.ReadPtr(grid + Offsets.Grids.GridsEnumerableClass);
-                        var itemListPtr = Memory.ReadPtr(gridEnumerableClass + 0x18);
+                        var itemListPtr = Memory.ReadPtr(gridEnumerableClass + Offsets.UnityList.Count);
                         var itemList = new MemList(itemListPtr);
 
                         foreach (var childItem in itemList.Data)
@@ -794,7 +805,7 @@ namespace eft_dma_radar
                     foreach (var grid in gridsArray.Data)
                     {
                         var gridEnumerableClass = Memory.ReadPtr(grid + Offsets.Grids.GridsEnumerableClass);
-                        var itemListPtr = Memory.ReadPtr(gridEnumerableClass + 0x18);
+                        var itemListPtr = Memory.ReadPtr(gridEnumerableClass + Offsets.UnityList.Count);
                         var itemList = new MemList(itemListPtr);
 
                         foreach (var childItem in itemList.Data)
@@ -855,19 +866,19 @@ namespace eft_dma_radar
                             var value = isPocket ? 0 : TarkovDevManager.GetItemValue(lootItem.Item);
                             var lootItems = new List<LootItem>();
 
-                            try
-                            {
-                                var slotsPtr = Memory.ReadPtr(containedItem + 0x78);
-                                LootManager.GetItemsInSlots(slotsPtr, position, lootItems);
-                            }
-                            catch { }
+                            //try
+                            //{
+                            //    var slotsPtr = Memory.ReadPtr(containedItem + Offsets.Equipment.Slots);
+                            //    LootManager.GetItemsInSlots(slotsPtr, position, lootItems);
+                            //}
+                            //catch { }
 
-                            try
-                            {
-                                var grids = Memory.ReadPtr(containedItem + Offsets.LootItemBase.Grids);
-                                LootManager.GetItemsInGrid(grids, id, position, lootItems);
-                            }
-                            catch { }
+                            //try
+                            //{
+                            //    var grids = Memory.ReadPtr(containedItem + Offsets.LootItemBase.Grids);
+                            //    LootManager.GetItemsInGrid(grids, id, position, lootItems);
+                            //}
+                            //catch { }
 
                             gearItems.Add(new GearItem
                             {

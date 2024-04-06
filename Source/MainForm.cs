@@ -259,7 +259,9 @@ namespace eft_dma_radar
         /// </summary>
         private void chkOpticThermalVision_CheckedChanged(object sender, EventArgs e)
         {
-            _config.OpticThermalVisionEnabled = chkOpticThermalVision.Checked;
+            var enabled = chkOpticThermalVision.Checked;
+            _config.OpticThermalVisionEnabled = enabled;
+            grpThermalSettings.Enabled = enabled;
         }
 
         /// <summary>
@@ -273,17 +275,9 @@ namespace eft_dma_radar
         /// <summary>
         /// Fired when No Recoil checkbox has been adjusted
         /// </summary>
-        private void chkNoRecoil_CheckedChanged(object sender, EventArgs e)
+        private void chkNoRecoilSway_CheckedChanged(object sender, EventArgs e)
         {
-            _config.NoRecoilEnabled = chkNoRecoil.Checked;
-        }
-
-        /// <summary>
-        /// Fired when No /Sway checkbox has been adjusted
-        /// </summary>
-        private void chkNoSway_CheckedChanged(object sender, EventArgs e)
-        {
-            _config.NoSwayEnabled = chkNoSway.Checked;
+            _config.NoRecoilSwayEnabled = chkNoRecoilSway.Checked;
         }
 
         private void chkJumpPower_CheckedChanged(object sender, EventArgs e)
@@ -519,6 +513,28 @@ namespace eft_dma_radar
             trkThermalMinTemperature.Value = minTemperature;
             trkThermalShift.Value = rampShift;
             cboThermalColorScheme.SelectedIndex = thermalSettings.ColorScheme;
+        }
+
+        private void btnApplyMapScale_Click(object sender, EventArgs e)
+        {
+            if (
+                float.TryParse(txtMapSetupX.Text, out float x)
+                && float.TryParse(txtMapSetupY.Text, out float y)
+                && float.TryParse(txtMapSetupScale.Text, out float scale)
+            )
+            {
+                lock (_renderLock)
+                {
+                    _selectedMap.ConfigFile.X = x;
+                    _selectedMap.ConfigFile.Y = y;
+                    _selectedMap.ConfigFile.Scale = scale;
+                    _selectedMap.ConfigFile.Save(_selectedMap);
+                }
+            }
+            else
+            {
+                throw new Exception("INVALID float values in Map Setup.");
+            }
         }
 
         /// <summary>
@@ -1441,8 +1457,7 @@ namespace eft_dma_radar
             lblImportantLootDisplay.Text = TarkovDevManager.FormatNumber(_config.MinImportantLootValue);
             lblCorpseDisplay.Text = TarkovDevManager.FormatNumber(_config.MinCorpseValue);
             lblSubItemDisplay.Text = TarkovDevManager.FormatNumber(_config.MinSubItemValue);
-            chkNoRecoil.Checked = _config.NoRecoilEnabled;
-            chkNoSway.Checked = _config.NoSwayEnabled;
+            chkNoRecoilSway.Checked = _config.NoRecoilSwayEnabled;
             chkNightVision.Checked = _config.NightVisionEnabled;
             chkThermalVision.Checked = _config.ThermalVisionEnabled;
             chkOpticThermalVision.Checked = _config.OpticThermalVisionEnabled;
@@ -1808,14 +1823,20 @@ namespace eft_dma_radar
                     if (inGame && localPlayer is not null)
                     {
                         // Check if map changed
-                        if (currentMap.ToLower() != _selectedMap.MapID.ToLower())
+                        var mapNameToLower = currentMap.ToLower();
+                        if (!mapNameToLower.Contains(_selectedMap.MapID.ToLower()))
                         {
-                            _selectedMap = _maps.FirstOrDefault(x => x.MapID.ToLower() == currentMap.ToLower());
-
-                            if (currentMap.ToLower() == "factory4_night")
+                            if (mapNameToLower == "factory")
                             {
-                                _selectedMap = _maps.FirstOrDefault(x => x.MapID.ToLower() == "factory4_night");
-                                _selectedMap = _maps[1];
+                                _selectedMap = _maps.FirstOrDefault(x => x.MapID.ToLower() == "factory");
+                            }
+                            else if (mapNameToLower.Contains("sandbox"))
+                            {
+                                _selectedMap = _maps.FirstOrDefault(x => x.MapID.ToLower() == "sandbox");
+                            }
+                            else
+                            {
+                                _selectedMap = _maps.FirstOrDefault(x => x.MapID.ToLower() == mapNameToLower);
                             }
 
                             if (_selectedMap is null)
@@ -2175,11 +2196,6 @@ namespace eft_dma_radar
                             {
                                 foreach (var exfil in exfils)
                                 {
-                                    if (Memory.IsScav && exfil.Status == ExfilStatus.Pending)
-                                    {
-                                        continue;
-                                    }
-
                                     var exfilZoomedPos = exfil
                                         .Position
                                         .ToMapPos(_selectedMap)
@@ -2468,8 +2484,7 @@ namespace eft_dma_radar
             _config.DefaultZoom = trkZoom.Value;
             _config.UIScale = trkUIScale.Value;
             _config.PrimaryTeammateId = txtTeammateID.Text;
-            _config.NoRecoilEnabled = chkNoRecoil.Checked;
-            _config.NoSwayEnabled = chkNoSway.Checked;
+            _config.NoRecoilSwayEnabled = chkNoRecoilSway.Checked;
             _config.ThermalVisionEnabled = chkThermalVision.Checked;
             _config.NightVisionEnabled = chkNightVision.Checked;
             _config.NoVisorEnabled = chkNoVisor.Checked;

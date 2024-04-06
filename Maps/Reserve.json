@@ -1,0 +1,18 @@
+{
+  "mapID": [
+    "rezervbase"
+  ],
+  "x": 1829,
+  "y": 1640,
+  "scale": 6.025,
+  "mapLayers": [
+    {
+      "minHeight": -100,
+      "filename": "Maps\\Reserve-1f.png"
+    },
+    {
+      "minHeight": -8,
+      "filename": "Maps\\Reserve1f.png"
+    }
+  ]
+}

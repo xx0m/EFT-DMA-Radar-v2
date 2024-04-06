@@ -1,0 +1,32 @@
+{
+  "mapID": [ "tarkovstreets" ],
+  "x": 2965,
+  "y": 5610,
+  "scale": 10.555,
+  "mapLayers": [
+    {
+      "minHeight": -4,
+      "filename": "Maps\\Streets-1f.jpg"
+    },
+    {
+      "minHeight": -0.7,
+      "filename": "Maps\\Streets1f.jpg"
+    },
+    {
+      "minHeight": 4.5,
+      "filename": "Maps\\Streets2f.jpg"
+    },
+    {
+      "minHeight": 7,
+      "filename": "Maps\\Streets3f.jpg"
+    },
+    {
+      "minHeight": 9.7,
+      "filename": "Maps\\Streets4f.jpg"
+    },
+    {
+      "minHeight": 12.7,
+      "filename": "Maps\\Streets5f.jpg"
+    }
+  ]
+}

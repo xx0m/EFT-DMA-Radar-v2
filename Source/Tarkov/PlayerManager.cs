@@ -61,29 +61,29 @@ namespace eft_dma_radar.Source.Tarkov
         public PlayerManager(ulong localGameWorld)
         {
             this.playerBase = Memory.ReadPtr(localGameWorld + Offsets.LocalGameWorld.MainPlayer);
-            this.playerProfile = Memory.ReadPtr(playerBase + 0x5B8);
+            this.playerProfile = Memory.ReadPtr(playerBase + Offsets.Player.Profile);
 
             this.movementContext = Memory.ReadPtr(playerBase + Offsets.Player.MovementContext);
-            this.baseMovementState = Memory.ReadPtr(movementContext + 0xD0);
+            this.baseMovementState = Memory.ReadPtr(movementContext + Offsets.MovementContext.BaseMovementState);
 
-            this.physical = Memory.ReadPtr(playerBase + 0x5C8);
-            this.stamina = Memory.ReadPtr(physical + 0x38);
-            this.handsStamina = Memory.ReadPtr(this.physical + 0x40);
+            this.physical = Memory.ReadPtr(playerBase + Offsets.Player.Physical);
+            this.stamina = Memory.ReadPtr(physical + Offsets.Physical.Stamina);
+            this.handsStamina = Memory.ReadPtr(this.physical + Offsets.Physical.HandsStamina);
 
-            this.skillsManager = Memory.ReadPtr(playerProfile + 0x60);
-            this.magDrillsLoad = Memory.ReadPtr(skillsManager + 0x180);
-            this.magDrillsUnload = Memory.ReadPtr(skillsManager + 0x188);
-            this.jumpStrength = Memory.ReadPtr(skillsManager + 0x60);
-            this.weightStrength = Memory.ReadPtr(skillsManager + 0x50);
-            this.throwStrength = Memory.ReadPtr(skillsManager + 0x70);
-            this.searchDouble = Memory.ReadPtr(skillsManager + 0x4C0);
+            this.skillsManager = Memory.ReadPtr(playerProfile + Offsets.Profile.SkillManager);
+            this.magDrillsLoad = Memory.ReadPtr(skillsManager + Offsets.SkillManager.MagDrillsLoadSpeed);
+            this.magDrillsUnload = Memory.ReadPtr(skillsManager + Offsets.SkillManager.MagDrillsUnloadSpeed);
+            this.jumpStrength = Memory.ReadPtr(skillsManager + Offsets.SkillManager.JumpStrength);
+            this.weightStrength = Memory.ReadPtr(skillsManager + Offsets.SkillManager.WeightStrength);
+            this.throwStrength = Memory.ReadPtr(skillsManager + Offsets.SkillManager.ThrowStrength);
+            this.searchDouble = Memory.ReadPtr(skillsManager + Offsets.SkillManager.SearchDouble);
 
-            this.proceduralWeaponAnimation = Memory.ReadPtr(playerBase + 0x1C0);
-            this.isADS = Memory.ReadValue<bool>(proceduralWeaponAnimation + 0x1BD);
-            this.breathEffector = Memory.ReadPtr(this.proceduralWeaponAnimation + 0x28);
-            this.walkEffector = Memory.ReadPtr(this.proceduralWeaponAnimation + 0x30);
-            this.motionEffector = Memory.ReadPtr(this.proceduralWeaponAnimation + 0x38);
-            this.forceEffector = Memory.ReadPtr(this.proceduralWeaponAnimation + 0x40);
+            this.proceduralWeaponAnimation = Memory.ReadPtr(playerBase + Offsets.Player.ProceduralWeaponAnimation);
+            this.isADS = Memory.ReadValue<bool>(proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.IsAiming);
+            this.breathEffector = Memory.ReadPtr(this.proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.Breath);
+            this.walkEffector = Memory.ReadPtr(this.proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.Walk);
+            this.motionEffector = Memory.ReadPtr(this.proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.MotionReact);
+            this.forceEffector = Memory.ReadPtr(this.proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.ForceReact);
 
             this.OriginalValues = new Dictionary<string, float>()
             {
@@ -109,17 +109,17 @@ namespace eft_dma_radar.Source.Tarkov
         /// <summary>
         /// Enables / disables weapon recoil
         /// </summary>
-        public void SetNoRecoil(bool on)
+        public void SetNoRecoilSway(bool on)
         {
-            var mask = Memory.ReadValue<int>(this.proceduralWeaponAnimation + 0x138);
+            var mask = Memory.ReadValue<int>(this.proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.Mask);
 
-            if (on && mask != 1)
+            if (on && mask != 0)
             {
-                Memory.WriteValue(this.proceduralWeaponAnimation + 0x138, 1);
+                Memory.WriteValue(this.proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.Mask, 0);
             }
-            else if (!on && mask == 1)
+            else if (!on && mask == 0)
             {
-                Memory.WriteValue(this.proceduralWeaponAnimation + 0x138, (int)this.OriginalValues["Mask"]);
+                Memory.WriteValue(this.proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.Mask, (int)this.OriginalValues["Mask"]);
             }
         }
 
@@ -131,16 +131,16 @@ namespace eft_dma_radar.Source.Tarkov
 
             if (this.OriginalValues["BreathEffectorIntensity"] == -1)
             {
-                this.OriginalValues["BreathEffectorIntensity"] = Memory.ReadValue<float>(this.breathEffector + 0xA4);
-                this.OriginalValues["WalkEffectorIntensity"] = Memory.ReadValue<float>(this.walkEffector + 0x44);
-                this.OriginalValues["MotionEffectorIntensity"] = Memory.ReadValue<float>(this.motionEffector + 0xD0);
-                this.OriginalValues["ForceEffectorIntensity"] = Memory.ReadValue<float>(this.forceEffector + 0x30);
+                this.OriginalValues["BreathEffectorIntensity"] = Memory.ReadValue<float>(this.breathEffector + Offsets.BreathEffector.Intensity);
+                this.OriginalValues["WalkEffectorIntensity"] = Memory.ReadValue<float>(this.walkEffector + Offsets.WalkEffector.Intensity);
+                this.OriginalValues["MotionEffectorIntensity"] = Memory.ReadValue<float>(this.motionEffector + Offsets.MotionEffector.Intensity);
+                this.OriginalValues["ForceEffectorIntensity"] = Memory.ReadValue<float>(this.forceEffector + Offsets.ForceEffector.Intensity);
             }
 
-            Memory.WriteValue<float>(this.breathEffector + 0xA4, on ? 0f : this.OriginalValues["BreathEffectorIntensity"]);
-            Memory.WriteValue<float>(this.walkEffector + 0x44, on ? 0f : this.OriginalValues["WalkEffectorIntensity"]);
-            Memory.WriteValue<float>(this.motionEffector + 0xD0, on ? 0f : this.OriginalValues["MotionEffectorIntensity"]);
-            Memory.WriteValue<float>(this.forceEffector + 0x30, on ? 0f : this.OriginalValues["ForceEffectorIntensity"]);
+            Memory.WriteValue<float>(this.breathEffector + Offsets.BreathEffector.Intensity, on ? 0f : this.OriginalValues["BreathEffectorIntensity"]);
+            Memory.WriteValue<float>(this.walkEffector + Offsets.WalkEffector.Intensity, on ? 0f : this.OriginalValues["WalkEffectorIntensity"]);
+            Memory.WriteValue<float>(this.motionEffector + Offsets.MotionEffector.Intensity, on ? 0f : this.OriginalValues["MotionEffectorIntensity"]);
+            Memory.WriteValue<float>(this.forceEffector + Offsets.ForceEffector.Intensity, on ? 0f : this.OriginalValues["ForceEffectorIntensity"]);
         }
 
         /// <summary>
@@ -148,15 +148,15 @@ namespace eft_dma_radar.Source.Tarkov
         /// </summary>
         public void SetInstantADS(bool on)
         {
-            var aimingSpeed = Memory.ReadValue<float>(this.proceduralWeaponAnimation + 0x1DC);
+            var aimingSpeed = Memory.ReadValue<float>(this.proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.AimingSpeed);
 
             if (on && aimingSpeed != 7)
             {
-                Memory.WriteValue(this.proceduralWeaponAnimation + 0x1DC, 7f);
-                Memory.WriteValue(this.proceduralWeaponAnimation + 0x2A4, 0f);
+                Memory.WriteValue(this.proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.AimingSpeed, 7f);
+                Memory.WriteValue(this.proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.AimSwayStrength, 0f);
             } else if (!on && aimingSpeed != 1) {
-                Memory.WriteValue(this.proceduralWeaponAnimation + 0x1DC, (float)this.OriginalValues["AimingSpeed"]);
-                Memory.WriteValue(this.proceduralWeaponAnimation + 0x2A4, (float)this.OriginalValues["AimingSpeedSway"]);
+                Memory.WriteValue(this.proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.AimingSpeed, (float)this.OriginalValues["AimingSpeed"]);
+                Memory.WriteValue(this.proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.AimSwayStrength, (float)this.OriginalValues["AimingSpeedSway"]);
             }
         }
 
@@ -173,53 +173,53 @@ namespace eft_dma_radar.Source.Tarkov
                         {
                             if (this.OriginalValues["MagDrillsLoad"] == -1)
                             {
-                                this.OriginalValues["MagDrillsLoad"] = Memory.ReadValue<float>(this.magDrillsLoad + 0x30);
+                                this.OriginalValues["MagDrillsLoad"] = Memory.ReadValue<float>(this.magDrillsLoad + Offsets.SkillFloat.Value);
                             }
-                            Memory.WriteValue<float>(this.magDrillsLoad + 0x30, (revert ? this.OriginalValues["MagDrillsLoad"] : _config.MagDrillSpeed * 10));
+                            Memory.WriteValue<float>(this.magDrillsLoad + Offsets.SkillFloat.Value, (revert ? this.OriginalValues["MagDrillsLoad"] : this._config.MagDrillSpeed * 10));
                             break;
                         }
                     case Skills.MagDrillsUnload:
                         {
                             if (this.OriginalValues["MagDrillsUnload"] == -1)
                             {
-                                this.OriginalValues["MagDrillsUnload"] = Memory.ReadValue<float>(this.magDrillsUnload + 0x30);
+                                this.OriginalValues["MagDrillsUnload"] = Memory.ReadValue<float>(this.magDrillsUnload + Offsets.SkillFloat.Value);
                             }
-                            Memory.WriteValue<float>(this.magDrillsUnload + 0x30, (revert ? this.OriginalValues["MagDrillsUnload"] : _config.MagDrillSpeed * 10));
+                            Memory.WriteValue<float>(this.magDrillsUnload + Offsets.SkillFloat.Value, (revert ? this.OriginalValues["MagDrillsUnload"] : this._config.MagDrillSpeed * 10));
                             break;
                         }
                     case Skills.JumpStrength:
                         {
                             if (this.OriginalValues["JumpStrength"] == -1)
                             {
-                                this.OriginalValues["JumpStrength"] = Memory.ReadValue<float>(this.jumpStrength + 0x30);
+                                this.OriginalValues["JumpStrength"] = Memory.ReadValue<float>(this.jumpStrength + Offsets.SkillFloat.Value);
                             }
-                            Memory.WriteValue<float>(this.jumpStrength + 0x30, (revert ? this.OriginalValues["JumpStrength"] : _config.JumpPowerStrength / 10));
+                            Memory.WriteValue<float>(this.jumpStrength + Offsets.SkillFloat.Value, (revert ? this.OriginalValues["JumpStrength"] : this._config.JumpPowerStrength / 10));
                             break;
                         }
                     case Skills.WeightStrength:
                         {
                             if (this.OriginalValues["WeightStrength"] == -1)
                             {
-                                this.OriginalValues["WeightStrength"] = Memory.ReadValue<float>(this.weightStrength + 0x30);
+                                this.OriginalValues["WeightStrength"] = Memory.ReadValue<float>(this.weightStrength + Offsets.SkillFloat.Value);
                             }
 
-                            Memory.WriteValue<float>(this.weightStrength + 0x30, (revert ? this.OriginalValues["WeightStrength"] : 0.5f));
+                            Memory.WriteValue<float>(this.weightStrength + Offsets.SkillFloat.Value, (revert ? this.OriginalValues["WeightStrength"] : 0.5f));
                             break;
                         }
                     case Skills.ThrowStrength:
                         {
                             if (this.OriginalValues["ThrowStrength"] == -1)
                             {
-                                this.OriginalValues["ThrowStrength"] = Memory.ReadValue<float>(this.throwStrength + 0x30);
+                                this.OriginalValues["ThrowStrength"] = Memory.ReadValue<float>(this.throwStrength + Offsets.SkillFloat.Value);
                             }
 
                             // value between 0.035f & 1f
-                            Memory.WriteValue<float>(this.throwStrength + 0x30, (revert ? this.OriginalValues["ThrowStrength"] : _config.ThrowPowerStrength / 10));
+                            Memory.WriteValue<float>(this.throwStrength + Offsets.SkillFloat.Value, (revert ? this.OriginalValues["ThrowStrength"] : this._config.ThrowPowerStrength / 10));
                             break;
                         }
                     case Skills.SearchDouble:
                         {
-                            Memory.WriteValue<bool>(this.searchDouble + 0x30, _config.DoubleSearchEnabled);
+                            Memory.WriteValue<bool>(this.searchDouble + Offsets.SkillFloat.Value, this._config.DoubleSearchEnabled);
                             break;
                         }
 
@@ -236,16 +236,16 @@ namespace eft_dma_radar.Source.Tarkov
         /// </summary>
         public void SetMovementState(bool on)
         {
-            this.baseMovementState = Memory.ReadPtr(this.movementContext + 0xD0);
-            var animationState = Memory.ReadValue<byte>(this.baseMovementState + 0x21);
+            this.baseMovementState = Memory.ReadPtr(this.movementContext + Offsets.MovementContext.BaseMovementState);
+            var animationState = Memory.ReadValue<byte>(this.baseMovementState + Offsets.BaseMovementState.Name);
 
             if (on && animationState == 5)
             {
-                Memory.WriteValue<byte>(this.baseMovementState + 0x21, 6);
+                Memory.WriteValue<byte>(this.baseMovementState + Offsets.BaseMovementState.Name, 6);
             }
             else if (!on && animationState == 6)
             {
-                Memory.WriteValue<byte>(this.baseMovementState + 0x21, 5);
+                Memory.WriteValue<byte>(this.baseMovementState + Offsets.BaseMovementState.Name, 5);
             }
         }
 
@@ -256,12 +256,12 @@ namespace eft_dma_radar.Source.Tarkov
         {
             if (this.OriginalValues["StaminaCapacity"] == -1)
             {
-                this.OriginalValues["StaminaCapacity"] = Memory.ReadValue<float>(this.physical + 0xC0);
-                this.OriginalValues["HandStaminaCapacity"] = Memory.ReadValue<float>(this.physical + 0xC8);
+                this.OriginalValues["StaminaCapacity"] = Memory.ReadValue<float>(this.physical + Offsets.Physical.StaminaCapacity);
+                this.OriginalValues["HandStaminaCapacity"] = Memory.ReadValue<float>(this.physical + Offsets.Physical.HandsCapacity);
             }
 
-            Memory.WriteValue<float>(this.stamina + 0x48, (float)this.OriginalValues["StaminaCapacity"]);
-            Memory.WriteValue<float>(this.handsStamina + 0x48, (float)this.OriginalValues["HandStaminaCapacity"]);
+            Memory.WriteValue<float>(this.stamina + Offsets.Stamina.Current, (float)this.OriginalValues["StaminaCapacity"]);
+            Memory.WriteValue<float>(this.handsStamina + Offsets.Stamina.Current, (float)this.OriginalValues["HandStaminaCapacity"]);
         }
     }
 }

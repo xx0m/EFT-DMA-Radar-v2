@@ -162,10 +162,9 @@ namespace eft_dma_radar
             chkChams = new CheckBox();
             chkDoubleSearch = new CheckBox();
             grpGearFeatures = new GroupBox();
-            chkNoSway = new CheckBox();
             chkInstantADS = new CheckBox();
             trkMagDrills = new TrackBar();
-            chkNoRecoil = new CheckBox();
+            chkNoRecoilSway = new CheckBox();
             chkMagDrills = new CheckBox();
             chkNoVisor = new CheckBox();
             chkNightVision = new CheckBox();
@@ -184,6 +183,7 @@ namespace eft_dma_radar
             btnToggleMap = new Button();
             tabRadar = new TabPage();
             grpMapSetup = new GroupBox();
+            btnApplyMapScale = new Button();
             chkMapFree = new CheckBox();
             txtMapSetupScale = new TextBox();
             lblMapScale = new Label();
@@ -1696,10 +1696,9 @@ namespace eft_dma_radar
             // 
             // grpGearFeatures
             // 
-            grpGearFeatures.Controls.Add(chkNoSway);
             grpGearFeatures.Controls.Add(chkInstantADS);
             grpGearFeatures.Controls.Add(trkMagDrills);
-            grpGearFeatures.Controls.Add(chkNoRecoil);
+            grpGearFeatures.Controls.Add(chkNoRecoilSway);
             grpGearFeatures.Controls.Add(chkMagDrills);
             grpGearFeatures.Controls.Add(chkNoVisor);
             grpGearFeatures.Controls.Add(chkNightVision);
@@ -1712,23 +1711,11 @@ namespace eft_dma_radar
             grpGearFeatures.TabStop = false;
             grpGearFeatures.Text = "Gear Features";
             // 
-            // chkNoSway
-            // 
-            chkNoSway.AutoSize = true;
-            chkNoSway.Location = new Point(118, 22);
-            chkNoSway.Name = "chkNoSway";
-            chkNoSway.Size = new Size(72, 19);
-            chkNoSway.TabIndex = 35;
-            chkNoSway.Text = "No Sway";
-            toolTip.SetToolTip(chkNoSway, "Removes weapon sway");
-            chkNoSway.UseVisualStyleBackColor = true;
-            chkNoSway.CheckedChanged += chkNoSway_CheckedChanged;
-            // 
             // chkInstantADS
             // 
             chkInstantADS.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             chkInstantADS.AutoSize = true;
-            chkInstantADS.Location = new Point(118, 47);
+            chkInstantADS.Location = new Point(121, 22);
             chkInstantADS.Name = "chkInstantADS";
             chkInstantADS.Size = new Size(87, 19);
             chkInstantADS.TabIndex = 34;
@@ -1752,18 +1739,18 @@ namespace eft_dma_radar
             trkMagDrills.Visible = false;
             trkMagDrills.Scroll += trkMagDrills_Scroll;
             // 
-            // chkNoRecoil
+            // chkNoRecoilSway
             // 
-            chkNoRecoil.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            chkNoRecoil.AutoSize = true;
-            chkNoRecoil.Location = new Point(6, 22);
-            chkNoRecoil.Name = "chkNoRecoil";
-            chkNoRecoil.Size = new Size(77, 19);
-            chkNoRecoil.TabIndex = 25;
-            chkNoRecoil.Text = "No Recoil";
-            toolTip.SetToolTip(chkNoRecoil, "Removes weapon recoil");
-            chkNoRecoil.UseVisualStyleBackColor = true;
-            chkNoRecoil.CheckedChanged += chkNoRecoil_CheckedChanged;
+            chkNoRecoilSway.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            chkNoRecoilSway.AutoSize = true;
+            chkNoRecoilSway.Location = new Point(6, 22);
+            chkNoRecoilSway.Name = "chkNoRecoilSway";
+            chkNoRecoilSway.Size = new Size(109, 19);
+            chkNoRecoilSway.TabIndex = 25;
+            chkNoRecoilSway.Text = "No Recoil/Sway";
+            toolTip.SetToolTip(chkNoRecoilSway, "Removes weapon recoil");
+            chkNoRecoilSway.UseVisualStyleBackColor = true;
+            chkNoRecoilSway.CheckedChanged += chkNoRecoilSway_CheckedChanged;
             // 
             // chkMagDrills
             // 
@@ -1781,7 +1768,7 @@ namespace eft_dma_radar
             // 
             chkNoVisor.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             chkNoVisor.AutoSize = true;
-            chkNoVisor.Location = new Point(6, 122);
+            chkNoVisor.Location = new Point(6, 47);
             chkNoVisor.Name = "chkNoVisor";
             chkNoVisor.Size = new Size(71, 19);
             chkNoVisor.TabIndex = 21;
@@ -1794,7 +1781,7 @@ namespace eft_dma_radar
             // 
             chkNightVision.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             chkNightVision.AutoSize = true;
-            chkNightVision.Location = new Point(6, 72);
+            chkNightVision.Location = new Point(6, 122);
             chkNightVision.Name = "chkNightVision";
             chkNightVision.Size = new Size(144, 19);
             chkNightVision.TabIndex = 18;
@@ -1807,7 +1794,7 @@ namespace eft_dma_radar
             // 
             chkOpticThermalVision.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             chkOpticThermalVision.AutoSize = true;
-            chkOpticThermalVision.Location = new Point(6, 47);
+            chkOpticThermalVision.Location = new Point(6, 72);
             chkOpticThermalVision.Name = "chkOpticThermalVision";
             chkOpticThermalVision.Size = new Size(101, 19);
             chkOpticThermalVision.TabIndex = 20;
@@ -1981,6 +1968,7 @@ namespace eft_dma_radar
             // 
             // grpMapSetup
             // 
+            grpMapSetup.Controls.Add(btnApplyMapScale);
             grpMapSetup.Controls.Add(chkMapFree);
             grpMapSetup.Controls.Add(txtMapSetupScale);
             grpMapSetup.Controls.Add(lblMapScale);
@@ -1995,6 +1983,16 @@ namespace eft_dma_radar
             grpMapSetup.TabStop = false;
             grpMapSetup.Text = "Map Setup";
             grpMapSetup.Visible = false;
+            // 
+            // btnApplyMapScale
+            // 
+            btnApplyMapScale.Location = new Point(7, 130);
+            btnApplyMapScale.Name = "btnApplyMapScale";
+            btnApplyMapScale.Size = new Size(89, 30);
+            btnApplyMapScale.TabIndex = 18;
+            btnApplyMapScale.Text = "Apply";
+            btnApplyMapScale.UseVisualStyleBackColor = true;
+            btnApplyMapScale.Click += btnApplyMapScale_Click;
             // 
             // chkMapFree
             // 
@@ -2257,7 +2255,7 @@ namespace eft_dma_radar
         private PictureBox picImportantLootColor;
         private Label lblImportantLootColor;
         private CheckBox chkChams;
-        private CheckBox chkNoRecoil;
+        private CheckBox chkNoRecoilSway;
         private CheckBox chkShowHoverArmor;
         private GroupBox grpPhysicalFeatures;
         private CheckBox chkThrowPower;
@@ -2293,7 +2291,6 @@ namespace eft_dma_radar
         private PictureBox picTextOutlineColor;
         private Label lblTextOutlineColor;
         private CheckBox chkHideTextOutline;
-        private CheckBox chkNoSway;
         private CheckBox chkMasterSwitch;
         private CheckBox chkInfiniteStamina;
         private CheckBox chkExtendedReach;
@@ -2319,6 +2316,7 @@ namespace eft_dma_radar
         private Label lblThermalRampShift;
         private TrackBar trkThermalMinTemperature;
         private Label lblThermalMinTemperature;
+        private Button btnApplyMapScale;
     }
 }
 

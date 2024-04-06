@@ -1,0 +1,22 @@
+{
+  "mapID": [
+    "laboratory"
+  ],
+  "x": 7435,
+  "y": -5095,
+  "scale": 26.05,
+  "mapLayers": [
+    {
+      "minHeight": -100,
+      "filename": "Maps\\Labs-1f.png"
+    },
+    {
+      "minHeight": -1,
+      "filename": "Maps\\Labs1f.png"
+    },
+    {
+      "minHeight": 3,
+      "filename": "Maps\\Labs2f.png"
+    }
+  ]
+}

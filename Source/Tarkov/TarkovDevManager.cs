@@ -1,6 +1,9 @@
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Numerics;
 using System.Text;
 using System.Text.Json;
+using static eft_dma_radar.Maps;
 
 namespace eft_dma_radar
 {
@@ -14,6 +17,7 @@ namespace eft_dma_radar
         public static ReadOnlyDictionary<string, QuestItems> AllQuestItems { get; }
         public static ReadOnlyDictionary<string, Tasks> AllTasks { get; }
         public static ReadOnlyDictionary<string, LootContainerInfo> AllLootContainers { get; }
+        public static ReadOnlyDictionary<string, Maps> AllMaps { get; }
 
         #region Static_Constructor
 
@@ -26,6 +30,7 @@ namespace eft_dma_radar
             var allQuestItems = new Dictionary<string, QuestItems>(StringComparer.OrdinalIgnoreCase);
             var allTasks = new Dictionary<string, Tasks>(StringComparer.OrdinalIgnoreCase);
             var allLootContainers = new Dictionary<string, LootContainerInfo>(StringComparer.OrdinalIgnoreCase);
+            var allMaps = new Dictionary<string, Maps>(StringComparer.OrdinalIgnoreCase);
             if (!File.Exists("api_tarkov_dev_items.json") || File.GetLastWriteTime("api_tarkov_dev_items.json").AddHours(480) < DateTime.Now) // only update every 480h
             {
                 using (var client = new HttpClient())
@@ -217,6 +222,17 @@ namespace eft_dma_radar
                                         normalizedName
                                         name
                                     }
+                                    maps{
+                                        name
+                                        extracts{
+                                            name
+                                            position {
+                                                x
+                                                y
+                                                z
+                                            }
+                                        }
+                                    }
                                 }"
                     };
                     var jsonBody = JsonSerializer.Serialize(body);
@@ -375,11 +391,37 @@ namespace eft_dma_radar
                         );
                     }
                 }
+
+                if (item.data?.maps != null)
+                {
+                    foreach (var map in item.data.maps)
+                    {
+                        var newMap = new Maps()
+                        {
+                            name = map.name,
+                            extracts = new List<Extract>()
+                        };
+
+                        foreach (var extract in map.extracts)
+                        {
+                            var newExtract = new Extract()
+                            {
+                                name = extract.name,
+                                position = new Vector3(extract.position.x, extract.position.z, extract.position.y)
+                            };
+
+                            newMap.extracts.Add(newExtract);
+                        };
+
+                        allMaps.TryAdd(newMap.name, newMap);
+                    }
+                }
             }
             AllItems = new(allItems);
             AllTasks = new(allTasks);
             AllQuestItems = new(allQuestItems);
             AllLootContainers = new(allLootContainers);
+            AllMaps = new(allMaps);
         }
         #endregion
 
@@ -406,6 +448,29 @@ namespace eft_dma_radar
                 }
 
             return bestPrice;
+        }
+
+        public static string GetMapName(string name)
+        {
+            switch(name)
+            {
+                case "factory4_day":
+                case "factory4_night":
+                    return "Factory";
+                case "bigmap":
+                    return "Customs";
+                case "RezervBase":
+                    return "Reserve";
+                case "TarkovStreets":
+                    return "Streets of Tarkov";
+                case "laboratory":
+                    return "The Lab";
+                case "Sandbox":
+                case "Sandbox_high":
+                    return "Ground Zero";
+                default:
+                    return name;
+            }
         }
         #endregion
     }
@@ -537,6 +602,38 @@ namespace eft_dma_radar
         public string Description { get; set; }
     }
 
+    public class TarkovMap
+    {
+        public string name { get; set; }
+        public List<ExtractInfo> extracts { get; set; }
+
+        public class ExtractInfo
+        {
+            public string name { get; set; }
+            public Position position { get; set; }
+
+            public class Position
+            {
+                public float x { get; set; }
+                public float y { get; set; }
+                public float z { get; set; }
+            }
+        }
+    }
+
+    public class Maps
+    {
+        public string name { get; set; }
+        public List<Extract> extracts { get; set; }
+
+        public class Extract
+        {
+            public string name { get; set; }
+            public Vector3 position { get; set; }
+
+        }
+    }
+
     public class Tasks
     {
         public string Name { get; set; }
@@ -569,6 +666,7 @@ namespace eft_dma_radar
         public List<TarkovTasks> tasks { get; set; } 
         public List<TarkovQuestItems> questItems { get; set; }
         public List<TarkovLootContainerInfo> lootContainers { get; set; }
+        public List<TarkovMap> maps { get; set; }
     }
     #endregion
 }

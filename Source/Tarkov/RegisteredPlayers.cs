@@ -279,7 +279,7 @@ namespace eft_dma_radar
 
                 if (players.Length == 0)
                 {
-                    Console.WriteLine("No players found.");
+                    //Console.WriteLine("No players found.");
                     return;
                 }
 

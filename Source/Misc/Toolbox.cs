@@ -34,7 +34,7 @@ namespace eft_dma_radar.Source.Tarkov
             get => Memory.PlayerManager;
         }
 
-        public Toolbox(ulong localGameWorld)
+        public Toolbox()
         {
             this._workerThread = new Thread((ThreadStart)delegate
             {
@@ -53,10 +53,11 @@ namespace eft_dma_radar.Source.Tarkov
                 }
 
                 Program.Log("LocalPlayer found, initializing toolbox");
-            });
-
-            this._workerThread.Priority = ThreadPriority.BelowNormal;
-            this._workerThread.IsBackground = true;
+            })
+            {
+                Priority = ThreadPriority.BelowNormal,
+                IsBackground = true
+            };
             this._workerThread.Start();
         }
 
@@ -67,25 +68,13 @@ namespace eft_dma_radar.Source.Tarkov
 
         private void ToolboxWorker()
         {
-            this._playerManager.isADS = Memory.ReadValue<bool>(this._playerManager.proceduralWeaponAnimation + 0x1BD);
+            this._playerManager.isADS = Memory.ReadValue<bool>(this._playerManager.proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.IsAiming);
 
-            // No Recoil
-            this._playerManager.SetNoRecoil(this._config.NoRecoilEnabled);
+            // No Recoil / Sway
+            this._playerManager.SetNoRecoilSway(this._config.NoRecoilSwayEnabled);
 
             // Instant ADS
             this._playerManager.SetInstantADS(this._config.InstantADSEnabled);
-
-            // No Sway
-            if (this._config.NoSwayEnabled && !this.noSwayToggled)
-            {
-                this.noSwayToggled = true;
-                this._playerManager.SetNoSway(true);
-            }
-            else if (!this._config.NoSwayEnabled && this.noSwayToggled)
-            {
-                this.noSwayToggled = false;
-                this._playerManager.SetNoSway(false);
-            }
 
             // Double Search
             if (this._config.DoubleSearchEnabled && !this.doubleSearchToggled)
@@ -197,6 +186,10 @@ namespace eft_dma_radar.Source.Tarkov
                             }
 
                             this._cameraManager.OpticThermalVision(true);
+                        }
+                        else
+                        {
+                            this._cameraManager.OpticThermalVision(false);
                         }
                     }
                     else

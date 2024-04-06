@@ -1,12 +1,28 @@
 {
 	"mapID": ["bigmap"],
-	"x": 2255,
-	"y": 1916,
-	"scale": 3.731,
-	"mapLayers": [
-		{
-			"minHeight": -100,
-			"filename": "Maps\\Customs.png"
-		}
-	]
+  	"x": 2320,
+  	"y": 1458,
+  	"scale": 6.2,
+  	"mapLayers": [
+    {
+      "minHeight": -100,
+      "filename": "Maps\\Customs1f.jpg"
+    },
+    {
+      "minHeight": -2.9,
+      "filename": "Maps\\Customs-1f.jpg"
+    },
+    {
+      "minHeight": -1.8,
+      "filename": "Maps\\Customs1f.jpg"
+    },
+    {
+      "minHeight": 1.82,
+      "filename": "Maps\\Customs2f.jpg"
+    },
+    {
+      "minHeight": 4.7,
+      "filename": "Maps\\Customs3f.jpg"
+    }
+  ]
 }

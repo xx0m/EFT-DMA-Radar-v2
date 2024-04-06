@@ -1,0 +1,20 @@
+{
+  "mapID": ["interchange"],
+  "x": 3915,
+  "y": 3213,
+  "scale": 6.95,
+  "mapLayers": [
+    {
+      "minHeight": -100,
+      "filename": "Maps\\Interchange1f.png"
+    },
+    {
+      "minHeight": 26,
+      "filename": "Maps\\Interchange2f.png"
+    },
+    {
+      "minHeight": 31,
+      "filename": "Maps\\Interchange3f.png"
+    }
+  ]
+}

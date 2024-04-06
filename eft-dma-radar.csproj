@@ -1,89 +1,47 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net6.0-windows</TargetFramework>
-    <RootNamespace>eft_dma_radar</RootNamespace>
-    <Nullable>warnings</Nullable>
-    <UseWindowsForms>true</UseWindowsForms>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
-    <Platforms>x64</Platforms>
-    <DebugType>embedded</DebugType>
-  </PropertyGroup>
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net6.0-windows</TargetFramework>
+		<RootNamespace>eft_dma_radar</RootNamespace>
+		<Nullable>warnings</Nullable>
+		<UseWindowsForms>true</UseWindowsForms>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+		<Platforms>x64</Platforms>
+		<DebugType>embedded</DebugType>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <None Remove="dbghelp.dll" />
-    <None Remove="FTD3XX.dll" />
-    <None Remove="leechcore.dll" />
-    <None Remove="libSkiaSharp.dll" />
-    <None Remove="Maps\Customs.json" />
-    <None Remove="Maps\Customs.png" />
-    <None Remove="Maps\Factory.json" />
-    <None Remove="Maps\Factory_0f.png" />
-    <None Remove="Maps\Factory_base.png" />
-    <None Remove="Maps\GroundZero-1f.jpg" />
-    <None Remove="Maps\GroundZero.json" />
-    <None Remove="Maps\GroundZero1f.jpg" />
-    <None Remove="Maps\GroundZero2f.jpg" />
-    <None Remove="Maps\GroundZero3f.jpg" />
-    <None Remove="Maps\Interchange.json" />
-    <None Remove="Maps\Interchange_0f.png" />
-    <None Remove="Maps\Interchange_1f.png" />
-    <None Remove="Maps\Interchange_2f.png" />
-    <None Remove="Maps\Labs.json" />
-    <None Remove="Maps\Labs_0f.png" />
-    <None Remove="Maps\Labs_1f.png" />
-    <None Remove="Maps\Labs_2f.png" />
-    <None Remove="Maps\Lighthouse.json" />
-    <None Remove="Maps\Lighthouse.png" />
-    <None Remove="Maps\Reserve.json" />
-    <None Remove="Maps\Reserve_0f.png" />
-    <None Remove="Maps\Reserve_base.png" />
-    <None Remove="Maps\Shoreline.json" />
-    <None Remove="Maps\Shoreline.png" />
-    <None Remove="Maps\Streets.json" />
-    <None Remove="Maps\Streets.png" />
-    <None Remove="Maps\Woods.json" />
-    <None Remove="Maps\Woods.png" />
-    <None Remove="symsrv.dll" />
-    <None Remove="vcruntime140.dll" />
-    <None Remove="vmm.dll" />
-  </ItemGroup>
+	<ItemGroup>
+		<Content Include="dbghelp.dll">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Include="FTD3XX.dll">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Include="leechcore.dll">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Include="libSkiaSharp.dll">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Include="symsrv.dll">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Include="vcruntime140.dll">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Include="vmm.dll">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Include="Maps\*">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
 
-  <ItemGroup>
-    <Content Include="dbghelp.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="FTD3XX.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="leechcore.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="libSkiaSharp.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Maps\Customs.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Maps\Customs.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="symsrv.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="vcruntime140.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="vmm.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="SkiaSharp" Version="2.80.3" />
-    <PackageReference Include="SkiaSharp.Views.WindowsForms" Version="2.80.3" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="SkiaSharp" Version="2.80.3" />
+		<PackageReference Include="SkiaSharp.Views.WindowsForms" Version="2.80.3" />
+	</ItemGroup>
 
 </Project>

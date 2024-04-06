@@ -2,10 +2,8 @@
 using System.Collections.ObjectModel;
 using System.Text.RegularExpressions;
 using Offsets;
-using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Numerics;
-using System.Text.RegularExpressions;
 
 namespace eft_dma_radar
 {
@@ -28,9 +26,9 @@ namespace eft_dma_radar
             //@Keeegi fix this shit :D
             var mainPlayer = Memory.ReadPtr(localGameWorld + Offsets.LocalGameWorld.MainPlayer);
             var profile = Memory.ReadPtr(mainPlayer + Offsets.Player.Profile);
-            var questData = Memory.ReadPtr(profile + 0x78);
-            var questDataCount = Memory.ReadValue<int>(questData + 0x18);
-            var questDataBaseList = Memory.ReadPtr(questData + 0x10);
+            var questData = Memory.ReadPtr(profile + Offsets.Profile.QuestsData);
+            var questDataCount = Memory.ReadValue<int>(questData + Offsets.UnityList.Count);
+            var questDataBaseList = Memory.ReadPtr(questData + Offsets.UnityList.Base);
 
             var questItems = new List<QuestItem>(questDataCount);
             var questZones = new List<QuestZone>(questDataCount * 10);
@@ -46,12 +44,12 @@ namespace eft_dma_radar
                     {
                         continue;
                     }
-                    var questTemplate = Memory.ReadPtr(questEntry + 0x28); //[28] Template : -.GClass306D [Class] -.GClass306D : Object
+                    var questTemplate = Memory.ReadPtr(questEntry + Offsets.QuestData.Template); //[28] Template : -.GClass306D [Class] -.GClass306D : Object
                     if (questTemplate == 0x0)
                     {
                         continue;
                     }
-                    var questIDPtr = Memory.ReadPtr(questTemplate + 0x10);
+                    var questIDPtr = Memory.ReadPtr(questTemplate + Offsets.QuestData.ID);
                     questID = Memory.ReadUnityString(questIDPtr);
                 }
                 catch

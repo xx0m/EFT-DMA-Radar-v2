@@ -1,0 +1,27 @@
+{
+  "mapID": [
+    "sandbox",
+    "sandbox_high"
+  ],
+  "x": 1916,
+  "y": 6940,
+  "scale": 19,
+  "mapLayers": [
+    {
+      "minHeight": 29,
+      "filename": "Maps\\GroundZero3f.jpg"
+    },
+    {
+      "minHeight": 24,
+      "filename": "Maps\\GroundZero2f.jpg"
+    },
+    {
+      "minHeight": 17,
+      "filename": "Maps\\GroundZero1f.jpg"
+    },
+    {
+      "minHeight": 16,
+      "filename": "Maps\\GroundZero-1f.jpg"
+    }
+  ]
+}

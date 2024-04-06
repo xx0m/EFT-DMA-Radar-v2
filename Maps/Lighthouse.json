@@ -1,0 +1,14 @@
+{
+  "mapID": [
+    "lighthouse"
+  ],
+  "x": 3712,
+  "y": 4340,
+  "scale": 6.72,
+  "mapLayers": [
+    {
+      "minHeight": -100,
+      "filename": "Maps\\Lighthouse1f.png"
+    }
+  ]
+}
