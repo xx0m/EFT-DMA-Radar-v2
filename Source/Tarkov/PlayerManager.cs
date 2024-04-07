@@ -32,10 +32,6 @@ namespace eft_dma_radar.Source.Tarkov
         private ulong searchDouble { get; set; }
 
         public ulong proceduralWeaponAnimation { get; set; }
-        private ulong breathEffector { get; set; }
-        private ulong walkEffector { get; set; }
-        private ulong motionEffector { get; set; }
-        private ulong forceEffector { get; set; }
 
         public bool isADS { get; set; }
 
@@ -80,10 +76,6 @@ namespace eft_dma_radar.Source.Tarkov
 
             this.proceduralWeaponAnimation = Memory.ReadPtr(playerBase + Offsets.Player.ProceduralWeaponAnimation);
             this.isADS = Memory.ReadValue<bool>(proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.IsAiming);
-            this.breathEffector = Memory.ReadPtr(this.proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.Breath);
-            this.walkEffector = Memory.ReadPtr(this.proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.Walk);
-            this.motionEffector = Memory.ReadPtr(this.proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.MotionReact);
-            this.forceEffector = Memory.ReadPtr(this.proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.ForceReact);
 
             this.OriginalValues = new Dictionary<string, float>()
             {
@@ -124,26 +116,6 @@ namespace eft_dma_radar.Source.Tarkov
         }
 
         /// <summary>
-        /// Enables / disables weapon sway
-        /// </summary>
-        public void SetNoSway(bool on)
-        {
-
-            if (this.OriginalValues["BreathEffectorIntensity"] == -1)
-            {
-                this.OriginalValues["BreathEffectorIntensity"] = Memory.ReadValue<float>(this.breathEffector + Offsets.BreathEffector.Intensity);
-                this.OriginalValues["WalkEffectorIntensity"] = Memory.ReadValue<float>(this.walkEffector + Offsets.WalkEffector.Intensity);
-                this.OriginalValues["MotionEffectorIntensity"] = Memory.ReadValue<float>(this.motionEffector + Offsets.MotionEffector.Intensity);
-                this.OriginalValues["ForceEffectorIntensity"] = Memory.ReadValue<float>(this.forceEffector + Offsets.ForceEffector.Intensity);
-            }
-
-            Memory.WriteValue<float>(this.breathEffector + Offsets.BreathEffector.Intensity, on ? 0f : this.OriginalValues["BreathEffectorIntensity"]);
-            Memory.WriteValue<float>(this.walkEffector + Offsets.WalkEffector.Intensity, on ? 0f : this.OriginalValues["WalkEffectorIntensity"]);
-            Memory.WriteValue<float>(this.motionEffector + Offsets.MotionEffector.Intensity, on ? 0f : this.OriginalValues["MotionEffectorIntensity"]);
-            Memory.WriteValue<float>(this.forceEffector + Offsets.ForceEffector.Intensity, on ? 0f : this.OriginalValues["ForceEffectorIntensity"]);
-        }
-
-        /// <summary>
         /// Enables / disables instant ads, changes per weapon
         /// </summary>
         public void SetInstantADS(bool on)
@@ -170,65 +142,37 @@ namespace eft_dma_radar.Source.Tarkov
                 switch (skill)
                 {
                     case Skills.MagDrillsLoad:
-                        {
-                            if (this.OriginalValues["MagDrillsLoad"] == -1)
-                            {
-                                this.OriginalValues["MagDrillsLoad"] = Memory.ReadValue<float>(this.magDrillsLoad + Offsets.SkillFloat.Value);
-                            }
-                            Memory.WriteValue<float>(this.magDrillsLoad + Offsets.SkillFloat.Value, (revert ? this.OriginalValues["MagDrillsLoad"] : this._config.MagDrillSpeed * 10));
-                            break;
-                        }
+                        this.SetSkillValue("MagDrillsLoad", magDrillsLoad + Offsets.SkillFloat.Value, revert ? this.OriginalValues["MagDrillsLoad"] : this._config.MagDrillSpeed * 10);
+                        break;
                     case Skills.MagDrillsUnload:
-                        {
-                            if (this.OriginalValues["MagDrillsUnload"] == -1)
-                            {
-                                this.OriginalValues["MagDrillsUnload"] = Memory.ReadValue<float>(this.magDrillsUnload + Offsets.SkillFloat.Value);
-                            }
-                            Memory.WriteValue<float>(this.magDrillsUnload + Offsets.SkillFloat.Value, (revert ? this.OriginalValues["MagDrillsUnload"] : this._config.MagDrillSpeed * 10));
-                            break;
-                        }
+                        this.SetSkillValue("MagDrillsUnload", magDrillsUnload + Offsets.SkillFloat.Value, revert ? this.OriginalValues["MagDrillsUnload"] : this._config.MagDrillSpeed * 10);
+                        break;
                     case Skills.JumpStrength:
-                        {
-                            if (this.OriginalValues["JumpStrength"] == -1)
-                            {
-                                this.OriginalValues["JumpStrength"] = Memory.ReadValue<float>(this.jumpStrength + Offsets.SkillFloat.Value);
-                            }
-                            Memory.WriteValue<float>(this.jumpStrength + Offsets.SkillFloat.Value, (revert ? this.OriginalValues["JumpStrength"] : this._config.JumpPowerStrength / 10));
-                            break;
-                        }
+                        this.SetSkillValue("JumpStrength", jumpStrength + Offsets.SkillFloat.Value, revert ? this.OriginalValues["JumpStrength"] : this._config.JumpPowerStrength / 10);
+                        break;
                     case Skills.WeightStrength:
-                        {
-                            if (this.OriginalValues["WeightStrength"] == -1)
-                            {
-                                this.OriginalValues["WeightStrength"] = Memory.ReadValue<float>(this.weightStrength + Offsets.SkillFloat.Value);
-                            }
-
-                            Memory.WriteValue<float>(this.weightStrength + Offsets.SkillFloat.Value, (revert ? this.OriginalValues["WeightStrength"] : 0.5f));
-                            break;
-                        }
+                        this.SetSkillValue("WeightStrength", weightStrength + Offsets.SkillFloat.Value, revert ? this.OriginalValues["WeightStrength"] : 0.5f);
+                        break;
                     case Skills.ThrowStrength:
-                        {
-                            if (this.OriginalValues["ThrowStrength"] == -1)
-                            {
-                                this.OriginalValues["ThrowStrength"] = Memory.ReadValue<float>(this.throwStrength + Offsets.SkillFloat.Value);
-                            }
-
-                            // value between 0.035f & 1f
-                            Memory.WriteValue<float>(this.throwStrength + Offsets.SkillFloat.Value, (revert ? this.OriginalValues["ThrowStrength"] : this._config.ThrowPowerStrength / 10));
-                            break;
-                        }
+                        this.SetSkillValue("ThrowStrength", throwStrength + Offsets.SkillFloat.Value, revert ? this.OriginalValues["ThrowStrength"] : this._config.ThrowPowerStrength / 10);
+                        break;
                     case Skills.SearchDouble:
-                        {
-                            Memory.WriteValue<bool>(this.searchDouble + Offsets.SkillFloat.Value, this._config.DoubleSearchEnabled);
-                            break;
-                        }
-
+                        Memory.WriteValue(this.searchDouble + Offsets.SkillFloat.Value, this._config.DoubleSearchEnabled);
+                        break;
                 }
             }
             catch (Exception e)
             {
                 throw new Exception($"ERROR Setting Max Skill: #{skill}");
             }
+        }
+
+        private void SetSkillValue(string key, ulong address, float value)
+        {
+            if (this.OriginalValues[key] != -1)
+                this.OriginalValues[key] = Memory.ReadValue<float>(address);
+
+            Memory.WriteValue(address, value);
         }
 
         /// <summary>

@@ -1,9 +1,11 @@
 ﻿using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Linq;
 using System.Numerics;
 using System.Text;
 using eft_dma_radar.Source.Misc;
 using eft_dma_radar.Source.Tarkov;
+using Offsets;
 using SkiaSharp;
 using SkiaSharp.Views.Desktop;
 using static eft_dma_radar.LootFilter;
@@ -16,6 +18,7 @@ namespace eft_dma_radar
         private readonly SKGLControl _mapCanvas;
         private readonly Stopwatch _fpsWatch = new();
         private readonly object _renderLock = new();
+        private readonly object _loadMapBitmapsLock = new();
         private readonly System.Timers.Timer _mapChangeTimer = new(900);
         private readonly List<Map> _maps = new(); // Contains all maps from \\Maps folder
 
@@ -31,6 +34,7 @@ namespace eft_dma_radar
         private Map _selectedMap;
         private SKBitmap[] _loadedBitmaps;
         private MapPosition _mapPanPosition = new();
+        
 
         #region Getters
         /// <summary>
@@ -664,13 +668,13 @@ namespace eft_dma_radar
             #region UpdatePaints
             SKPaints.TextMouseoverGroup.TextSize = 12 * _uiScale;
             SKPaints.TextBase.TextSize = 12 * _uiScale;
-            SKPaints.TextLoot.TextSize = 13 * _uiScale;
+            SKPaints.LootText.TextSize = 13 * _uiScale;
             SKPaints.TextBaseOutline.TextSize = 13 * _uiScale;
             SKPaints.TextRadarStatus.TextSize = 48 * _uiScale;
             SKPaints.PaintBase.StrokeWidth = 3 * _uiScale;
             SKPaints.PaintMouseoverGroup.StrokeWidth = 3 * _uiScale;
             SKPaints.PaintDeathMarker.StrokeWidth = 3 * _uiScale;
-            SKPaints.PaintLoot.StrokeWidth = 3 * _uiScale;
+            SKPaints.LootPaint.StrokeWidth = 3 * _uiScale;
             SKPaints.PaintTransparentBacker.StrokeWidth = 1 * _uiScale;
             SKPaints.PaintAimviewCrosshair.StrokeWidth = 1 * _uiScale;
             SKPaints.PaintGrenades.StrokeWidth = 3 * _uiScale;
@@ -1545,30 +1549,6 @@ namespace eft_dma_radar
 
                 _maps.Add(map);
             }
-
-            try
-            {
-                _selectedMap = _maps[0];
-                _loadedBitmaps = new SKBitmap[_selectedMap.ConfigFile.MapLayers.Count];
-
-                for (int i = 0; i < _loadedBitmaps.Length; i++)
-                {
-                    using (
-                        var stream = File.Open(
-                            _selectedMap.ConfigFile.MapLayers[i].Filename,
-                            FileMode.Open,
-                            FileAccess.Read))
-                    {
-                        _loadedBitmaps[i] = SKBitmap.Decode(stream);
-                    }
-                }
-
-                tabRadar.Text = $"Radar ({_selectedMap.Name})";
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($"ERROR loading initial map: {ex}");
-            }
         }
 
         /// <summary>
@@ -1592,19 +1572,12 @@ namespace eft_dma_radar
         /// </summary>
         private MapParameters GetMapParameters(MapPosition localPlayerPos)
         {
-            int mapLayerIndex = 0;
+            int mapLayerIndex = GetMapLayerIndex(localPlayerPos.Height);
 
-            for (int i = _loadedBitmaps.Length; i > 0; i--)
-            {
-                if (localPlayerPos.Height > _selectedMap.ConfigFile.MapLayers[i - 1].MinHeight)
-                {
-                    mapLayerIndex = i - 1;
-                    break;
-                }
-            }
-
-            var zoomWidth = _loadedBitmaps[mapLayerIndex].Width * (.01f * trkZoom.Value);
-            var zoomHeight = _loadedBitmaps[mapLayerIndex].Height * (.01f * trkZoom.Value);
+            var bitmap = _loadedBitmaps[mapLayerIndex];
+            float zoomFactor = 0.01f * trkZoom.Value;
+            float zoomWidth = bitmap.Width * zoomFactor;
+            float zoomHeight = bitmap.Height * zoomFactor;
 
             var bounds = new SKRect(
                 localPlayerPos.X - zoomWidth / 2,
@@ -1613,14 +1586,27 @@ namespace eft_dma_radar
                 localPlayerPos.Y + zoomHeight / 2
             ).AspectFill(_mapCanvas.CanvasSize);
 
-            return new MapParameters()
+            return new MapParameters
             {
                 UIScale = _uiScale,
                 MapLayerIndex = mapLayerIndex,
                 Bounds = bounds,
-                XScale = (float)_mapCanvas.Width / (float)bounds.Width, // Set scale for this frame
-                YScale = (float)_mapCanvas.Height / (float)bounds.Height // Set scale for this frame
+                XScale = (float)_mapCanvas.Width / bounds.Width, // Set scale for this frame
+                YScale = (float)_mapCanvas.Height / bounds.Height // Set scale for this frame
             };
+        }
+
+        private int GetMapLayerIndex(float playerHeight)
+        {
+            for (int i = _loadedBitmaps.Length - 1; i >= 0; i--)
+            {
+                if (playerHeight > _selectedMap.ConfigFile.MapLayers[i].MinHeight)
+                {
+                    return i;
+                }
+            }
+
+            return 0; // Default to the first layer if no match is found
         }
 
         /// <summary>
@@ -1801,669 +1787,827 @@ namespace eft_dma_radar
         #endregion
 
         #region Render
-        /// <summary>
-        /// Main Render Event.
-        /// </summary>
         private void MapCanvas_PaintSurface(object sender, SKPaintGLSurfaceEventArgs e)
         {
-            //Debug.WriteLine("MapCanvas_PaintSurface: Method called");
-            //Debug.WriteLine("MapCanvas_PaintSurface: Method called");
-            lock (_renderLock) // Acquire lock on 'Render Resources'
+            SKCanvas canvas = e.Surface.Canvas;
+            canvas.Clear();
+
+            UpdateWindowTitle();
+
+            try
             {
-                bool isReady = this.Ready; // cache bool
-                bool inGame = this.InGame; // cache bool
-                bool isAtHideout = this.IsAtHideout; // cache bool
-                string currentMap = this.CurrentMapName; // cache string
-                var localPlayer = this.LocalPlayer; // cache ref to current player
+                if (IsReadyToRender())
+                {
+                    lock (_renderLock)
+                    {
+                        DrawMap(canvas);
+                        DrawPlayers(canvas);
+                        DrawLoot(canvas);
+                        DrawQuestItems(canvas);
+                        DrawGrenades(canvas);
+                        DrawExfils(canvas);
+                        DrawAimview(canvas);
+                        DrawToolTips(canvas);
+                    }
+                }
+                else
+                {
+                    DrawStatusText(canvas);
+                }
+            }
+            catch (Exception ex) { }
+
+            canvas.Flush();
+        }
+
+        private void UpdateWindowTitle()
+        {
+            bool inGame = this.InGame; // cache bool
+            var localPlayer = this.LocalPlayer; // cache ref to current player
+
+            if (inGame && localPlayer is not null)
+            {
+                // Check if map changed
+                UpdateSelectedMap();
 
                 if (_fpsWatch.ElapsedMilliseconds >= 1000)
                 {
                     _mapCanvas.GRContext.PurgeResources(); // Seems to fix mem leak issue on increasing resource cache
                     string title = "EFT Radar";
-                    if (inGame && localPlayer is not null)
-                    {
-                        // Check if map changed
-                        var mapNameToLower = currentMap.ToLower();
-                        if (!mapNameToLower.Contains(_selectedMap.MapID.ToLower()))
-                        {
-                            if (mapNameToLower == "factory")
-                            {
-                                _selectedMap = _maps.FirstOrDefault(x => x.MapID.ToLower() == "factory");
-                            }
-                            else if (mapNameToLower.Contains("sandbox"))
-                            {
-                                _selectedMap = _maps.FirstOrDefault(x => x.MapID.ToLower() == "sandbox");
-                            }
-                            else
-                            {
-                                _selectedMap = _maps.FirstOrDefault(x => x.MapID.ToLower() == mapNameToLower);
-                            }
 
-                            if (_selectedMap is null)
-                            {
-                                _selectedMap = _maps[0];
-                            }
-                            //init map
-                            if (_loadedBitmaps is not null)
-                            {
-                                foreach (var bitmap in _loadedBitmaps)
-                                    bitmap?.Dispose(); // Cleanup resources
-                            }
+                    title += $" ({_fps} fps) ({Memory.Ticks} mem/s)";
 
-                            _loadedBitmaps = new SKBitmap[_selectedMap.ConfigFile.MapLayers.Count];
-                            for (int i = 0; i < _loadedBitmaps.Length; i++)
-                            {
-                                using (
-                                    var stream = File.Open(
-                                        _selectedMap.ConfigFile.MapLayers[i].Filename,
-                                        FileMode.Open,
-                                        FileAccess.Read))
-                                {
-                                    _loadedBitmaps[i] = SKBitmap.Decode(stream); // Load new bitmap(s)
-                                }
-                            }
-                            tabRadar.Text = $"Radar ({_selectedMap.Name})";
-                        }
-                        else if (_selectedMap is null)
-                        {
-                            _selectedMap = _maps[0];
-                            //init map
-                            if (_loadedBitmaps is not null)
-                            {
-                                foreach (var bitmap in _loadedBitmaps)
-                                    bitmap?.Dispose(); // Cleanup resources
-                            }
-
-                            _loadedBitmaps = new SKBitmap[_selectedMap.ConfigFile.MapLayers.Count];
-                            for (int i = 0; i < _loadedBitmaps.Length; i++)
-                            {
-                                using (
-                                    var stream = File.Open(
-                                        _selectedMap.ConfigFile.MapLayers[i].Filename,
-                                        FileMode.Open,
-                                        FileAccess.Read))
-                                {
-                                    _loadedBitmaps[i] = SKBitmap.Decode(stream); // Load new bitmap(s)
-                                }
-                            }
-                            tabRadar.Text = $"Radar ({_selectedMap.Name})";
-                        }
-
-                        title += $" ({_fps} fps) ({Memory.Ticks} mem/s)";
-
-                        if (this.LoadingLoot)
-                            title += " - LOADING LOOT";
-                    }
+                    if (this.LoadingLoot)
+                        title += " - LOADING LOOT";
 
                     this.Text = title; // Set window title
                     _fpsWatch.Restart();
                     _fps = 0;
                 }
                 else
-                    _fps++;
-
-                SKSurface surface = e.Surface;
-                SKCanvas canvas = surface.Canvas;
-                canvas.Clear();
-
-                try
                 {
-                    if (inGame && localPlayer is not null)
+                    _fps++;
+                }
+            }
+        }
+
+        private void UpdateSelectedMap()
+        {
+            string currentMap = this.CurrentMapName; // cache string
+            string currentMapPrefix = currentMap.ToLower().Substring(0, Math.Min(4, currentMap.Length));
+
+            if (_selectedMap is null || !_selectedMap.MapID.ToLower().StartsWith(currentMapPrefix))
+            {
+                var selectedMapName = _maps.FirstOrDefault(x => x.MapID.ToLower().StartsWith(currentMapPrefix) || x.MapID.ToLower() == currentMap.ToLower());
+
+                if (selectedMapName != null)
+                {
+                    _selectedMap = selectedMapName;
+
+                    // Init map
+                    CleanupLoadedBitmaps();
+                    LoadMapBitmaps();
+                    tabRadar.Text = $"Radar ({_selectedMap.Name})";
+                }
+            }
+        }
+
+        private void CleanupLoadedBitmaps()
+        {
+            if (_loadedBitmaps is not null)
+            {
+                Parallel.ForEach(_loadedBitmaps, bitmap =>
+                {
+                    bitmap?.Dispose();
+                });
+
+                _loadedBitmaps = null;
+            }
+        }
+
+        private void LoadMapBitmaps()
+        {
+            var mapLayers = _selectedMap.ConfigFile.MapLayers;
+            _loadedBitmaps = new SKBitmap[mapLayers.Count];
+
+            Parallel.ForEach(mapLayers, (mapLayer, _, _) =>
+            {
+                lock (_loadMapBitmapsLock)
+                {
+                    using (var stream = File.Open(mapLayer.Filename, FileMode.Open, FileAccess.Read))
                     {
-                        var closestPlayerToMouse = _closestPlayerToMouse; // cache ref
-                        var closestItemToMouse = _closestItemToMouse; // cache ref
-                        var closestTaskItemToMouse = _closestTaskItemToMouse; // cache ref
-                        var closestTaskZoneToMouse = _closestTaskZoneToMouse; // cache ref
-                        var mouseOverGrp = _mouseOverGroup; // cache value for entire render
-                        // Get main player location
-                        var localPlayerPos = localPlayer.Position;
-                        var localPlayerMapPos = localPlayerPos.ToMapPos(_selectedMap);
+                        _loadedBitmaps[mapLayers.IndexOf(mapLayer)] = SKBitmap.Decode(stream);
+                    }
+                }
+            });
+        }
 
-                        if (grpMapSetup.Visible) // Print coordinates (to make it easy to setup JSON configs)
-                        {
-                            lblMapCoords.Text = $"Unity X,Y,Z: {localPlayerPos.X},{localPlayerPos.Y},{localPlayerPos.Z}";
-                        }
+        private bool IsReadyToRender()
+        {
+            bool isReady = this.Ready; // cache bool
+            bool inGame = this.InGame; // cache bool
+            bool isAtHideout = this.IsAtHideout; // cache bool
+            bool localPlayerExists = this.LocalPlayer != null; // cache ref to current player
+            bool selectedMapLoaded = this._selectedMap != null; // cache ref to selected map
 
-                        // Prepare to draw Game Map
-                        MapParameters mapParams; // Drawing Source
-                        if (chkMapFree.Checked) // Map fixed location, click to pan map
-                        {
-                            _mapPanPosition.Height = localPlayerMapPos.Height;
-                            mapParams = GetMapParameters(_mapPanPosition);
-                        }
-                        else
-                            mapParams = GetMapParameters(localPlayerMapPos); // Map auto follow LocalPlayer
+            if (!isReady)
+                return false; // Game process not running
 
-                        var mapCanvasBounds = new SKRect() // Drawing Destination
+            if (isAtHideout)
+                return false; // Main menu or hideout
+
+            if (!inGame)
+                return false; // Waiting for raid start
+
+            if (this.LoadingLoot)
+                return false; // Loading loot
+
+            if (!localPlayerExists)
+                return false; // Cannot find local player
+
+            if (!selectedMapLoaded)
+            {
+                return false; // Map not loaded
+            }
+
+            return true; // Ready to render
+        }
+
+        private void DrawMap(SKCanvas canvas)
+        {
+            var localPlayer = this.LocalPlayer; // cache ref to current player
+            var localPlayerPos = localPlayer.Position;
+            var localPlayerMapPos = localPlayerPos.ToMapPos(_selectedMap); // cache localPlayerMapPos
+
+            if (grpMapSetup.Visible) // Print coordinates (to make it easy to setup JSON configs)
+            {
+                lblMapCoords.Text = $"Unity X,Y,Z: {localPlayerPos.X},{localPlayerPos.Y},{localPlayerPos.Z}";
+            }
+
+            // Prepare to draw Game Map
+            MapParameters mapParams; // Drawing Source
+            if (chkMapFree.Checked) // Map fixed location, click to pan map
+            {
+                _mapPanPosition.Height = localPlayerMapPos.Height;
+                mapParams = GetMapParameters(_mapPanPosition);
+            }
+            else
+                mapParams = GetMapParameters(localPlayerMapPos); // Map auto follow LocalPlayer
+
+            var mapCanvasBounds = new SKRect() // Drawing Destination
+            {
+                Left = _mapCanvas.Left,
+                Right = _mapCanvas.Right,
+                Top = _mapCanvas.Top,
+                Bottom = _mapCanvas.Bottom
+            };
+
+            // Draw Game Map
+            canvas.DrawBitmap(
+                _loadedBitmaps[mapParams.MapLayerIndex],
+                mapParams.Bounds,
+                mapCanvasBounds,
+                SKPaints.PaintBitmap
+            );
+
+            // Draw LocalPlayer
+            {
+                var localPlayerZoomedPos = localPlayerMapPos.ToZoomedPos(mapParams); // always true
+                localPlayerZoomedPos.DrawPlayerMarker(
+                    canvas,
+                    localPlayer,
+                    trkAimLength.Value,
+                    null
+                );
+            }
+        }
+
+        private void DrawPlayers(SKCanvas canvas)
+        {
+            var localPlayer = this.LocalPlayer; // cache ref to current player
+            if (this.InGame && localPlayer != null)
+            {
+                var allPlayers = this.AllPlayers
+                    ?.Select(x => x.Value)
+                    .Where(x => x.IsActive && x.IsAlive && !x.HasExfild); // Skip exfil'd players
+
+                if (allPlayers is not null)
+                {
+                    var friendlies = allPlayers?.Where(x => x.IsFriendlyActive);
+                    var localPlayerPos = localPlayer.Position;
+                    var localPlayerMapPos = localPlayerPos.ToMapPos(_selectedMap);
+                    var mapParams = GetMapParameters(localPlayerMapPos); // Map auto follow LocalPlayer
+
+                    foreach (var player in allPlayers) // Draw PMCs
+                    {
+                        if (player.Type == PlayerType.LocalPlayer)
+                            continue; // Already drawn current player, move on
+
+                        var playerPos = player.Position;
+                        var playerMapPos = playerPos.ToMapPos(_selectedMap);
+                        var playerZoomedPos = playerMapPos.ToZoomedPos(mapParams);
+
+                        player.ZoomedPosition = new Vector2() // Cache Position as Vec2 for MouseMove event
                         {
-                            Left = _mapCanvas.Left,
-                            Right = _mapCanvas.Right,
-                            Top = _mapCanvas.Top,
-                            Bottom = _mapCanvas.Bottom
+                            X = playerZoomedPos.X,
+                            Y = playerZoomedPos.Y
                         };
 
-                        // Draw Game Map
-                        canvas.DrawBitmap(
-                            _loadedBitmaps[mapParams.MapLayerIndex],
-                            mapParams.Bounds,
-                            mapCanvasBounds,
-                            SKPaints.PaintBitmap
-                        );
+                        int aimlineLength = 15;
 
-                        // Draw LocalPlayer Scope
+                        if (!player.IsAlive)
                         {
-                            var localPlayerZoomedPos = localPlayerMapPos.ToZoomedPos(mapParams); // always true
-                            localPlayerZoomedPos.DrawPlayerMarker(
-                                canvas,
-                                localPlayer,
-                                trkAimLength.Value,
-                                null
-                            );
+                            // Draw 'X' death marker
+                            //playerZoomedPos.DrawDeathMarker(canvas);
+                            continue;
                         }
-
-                        // Draw other players
-                        var allPlayers = this.AllPlayers
-                            ?.Select(x => x.Value)
-                            .Where(x => !x.HasExfild); // Skip exfil'd players
-
-                        var friendlies = allPlayers?.Where(x => x.IsFriendlyActive);
-
-                        if (allPlayers is not null)
+                        else if (player.Type is not PlayerType.Teammate)
                         {
-                            foreach (var player in allPlayers) // Draw PMCs
-                            {
-                                if (player.Type == PlayerType.LocalPlayer)
-                                    continue; // Already drawn current player, move on
-
-                                var playerPos = player.Position;
-                                var playerMapPos = playerPos.ToMapPos(_selectedMap);
-                                var playerZoomedPos = playerMapPos.ToZoomedPos(mapParams);
-
-                                player.ZoomedPosition = new Vector2() // Cache Position as Vec2 for MouseMove event
+                            if (friendlies is not null)
+                                foreach (var friendly in friendlies)
                                 {
-                                    X = playerZoomedPos.X,
-                                    Y = playerZoomedPos.Y
-                                };
+                                    var friendlyPos = friendly.Position;
+                                    var friendlyDist = Vector3.Distance(playerPos, friendlyPos);
 
-                                int aimlineLength = 15;
+                                    if (friendlyDist > _config.MaxDistance)
+                                        continue; // max range, no lines across entire map
 
-                                if (!player.IsAlive)
-                                {
-                                    // Draw 'X' death marker
-                                    //playerZoomedPos.DrawDeathMarker(canvas);
-                                    continue;
+                                    var friendlyMapPos = friendlyPos.ToMapPos(_selectedMap);
 
-                                }
-                                else if (player.Type is not PlayerType.Teammate)
-                                {
-                                    if (friendlies is not null)
-                                        foreach (var friendly in friendlies)
-                                        {
-                                            var friendlyPos = friendly.Position;
-                                            var friendlyDist = Vector3.Distance(
-                                                playerPos,
-                                                friendlyPos
-                                            );
-
-                                            if (friendlyDist > _config.MaxDistance)
-                                                continue; // max range, no lines across entire map
-
-                                            var friendlyMapPos = friendlyPos.ToMapPos(_selectedMap);
-
-                                            if (IsAggressorFacingTarget(
-                                                    playerMapPos.GetPoint(),
-                                                    player.Rotation.X,
-                                                    friendlyMapPos.GetPoint(),
-                                                    friendlyDist))
-                                            {
-                                                aimlineLength = 1000; // Lengthen aimline
-                                                break;
-                                            }
-                                        }
-                                }
-                                else if (player.Type is PlayerType.Teammate)
-                                {
-                                    aimlineLength = trkAimLength.Value; // Allies use player's aim length
-                                }
-                                // Draw Player Scope
-                                {
-                                    string[] lines = null;
-                                    var height = playerMapPos.Height - localPlayerMapPos.Height;
-                                    var dist = Vector3.Distance(localPlayerPos, playerPos);
-
-                                    if (!chkHideNames.Checked) // show full names & info
+                                    if (IsAggressorFacingTarget(playerMapPos.GetPoint(), player.Rotation.X, friendlyMapPos.GetPoint(), friendlyDist))
                                     {
-                                        lines = new string[2]
-                                        {
-                                            string.Empty,
-                                            $"{(int)Math.Round(height)}, {(int)Math.Round(dist)}"
-                                        };
-
-                                        string name = player.Name;
-
-                                        if (player.ErrorCount > 10)
-                                            name = "ERROR"; // In case POS stops updating, let us know!
-
-                                        if (player.IsHuman || player.IsBossRaider)
-                                            lines[0] += $"{name} ({player.Health})";
-                                        else
-                                            lines[0] += $"{name}";
-                                    }
-                                    else // just height & hp (for humans)
-                                    {
-                                        lines = new string[1] { $"{(int)Math.Round(height)}, {(int)Math.Round(dist)}" };
-
-                                        if (player.IsHuman || player.IsBossRaider)
-                                            lines[0] += $" ({player.Health})";
-                                        if (player.ErrorCount > 10)
-                                            lines[0] = "ERROR"; // In case POS stops updating, let us know!
-                                    }
-
-                                    playerZoomedPos.DrawPlayerText(
-                                        canvas,
-                                        player,
-                                        lines,
-                                        mouseOverGrp
-                                    );
-
-                                    playerZoomedPos.DrawPlayerMarker(
-                                        canvas,
-                                        player,
-                                        aimlineLength,
-                                        mouseOverGrp
-                                    );
-                                }
-                            }
-
-                            if (chkShowLoot.Checked) // Draw loot (if enabled)
-                            {
-                                var loot = this.Loot; // cache ref
-                                //Debug.WriteLine($"Loot is null: {loot is null}");
-                                if (loot is not null)
-                                {
-                                    if (Loot.Filter is null)
-                                    {
-                                        Loot.ApplyFilter();
-                                    }
-
-                                    var filter = Loot.Filter; // Get ref to collection
-
-                                    if (filter is not null)
-                                        foreach (var item in filter)
-                                        {
-                                            if ((chkImportantLootOnly.Checked && !(item.Important || item.AlwaysShow)))
-                                            {
-                                                continue;
-                                            }
-
-                                            float position = item.Position.Z - localPlayerMapPos.Height;
-
-                                            var itemZoomedPos = item.Position
-                                                                    .ToMapPos(_selectedMap)
-                                                                    .ToZoomedPos(mapParams);
-
-                                            item.ZoomedPosition = new Vector2() // Cache Position as Vec2 for MouseMove event
-                                            {
-                                                X = itemZoomedPos.X,
-                                                Y = itemZoomedPos.Y
-                                            };
-
-                                            itemZoomedPos.DrawLootableObject(
-                                                canvas,
-                                                item,
-                                                position
-                                            );
-                                        }
-                                }
-                            }
-
-                            if (chkQuestHelper.Checked && !Memory.IsScav) // Draw quest items (if enabled)
-                            {
-                                if (this.QuestManager is not null)
-                                {
-                                    var questItems = this.QuestManager.QuestItems; // cache ref
-                                    if (questItems is not null)
-                                    {
-                                        foreach (var item in questItems)
-                                        {
-                                            if (item.Position.X != 0)
-                                            {
-                                                float position = item.Position.Z - localPlayerMapPos.Height;
-                                                var itemZoomedPos = item.Position
-                                                                        .ToMapPos(_selectedMap)
-                                                                        .ToZoomedPos(mapParams);
-
-                                                item.ZoomedPosition = new Vector2() // Cache Position as Vec2 for MouseMove event
-                                                {
-                                                    X = itemZoomedPos.X,
-                                                    Y = itemZoomedPos.Y
-                                                };
-
-                                                itemZoomedPos.DrawQuestItem(
-                                                    canvas,
-                                                    item,
-                                                    position
-                                                );
-                                            }
-                                        }
-                                    }
-
-                                    var questZones = this.QuestManager.QuestZones; // cache ref
-                                    if (questZones is not null)
-                                    {
-                                        foreach (var zone in questZones)
-                                        {
-                                            if (zone.MapName.ToLower() == _selectedMap.Name.ToLower())
-                                            {
-                                                float position = zone.Position.Z - localPlayerMapPos.Height;
-                                                ///Console.WriteLine("Position: " + position);
-                                                var questZoneZoomedPos = zone.Position
-                                                                        .ToMapPos(_selectedMap)
-                                                                        .ToZoomedPos(mapParams);
-
-                                                zone.ZoomedPosition = new Vector2() // Cache Position as Vec2 for MouseMove event
-                                                {
-                                                    X = questZoneZoomedPos.X,
-                                                    Y = questZoneZoomedPos.Y
-                                                };
-
-                                                questZoneZoomedPos.DrawTaskZone(
-                                                    canvas,
-                                                    zone,
-                                                    position
-                                                );
-                                            }
-                                        }
+                                        aimlineLength = 1000; // Lengthen aimline
+                                        break;
                                     }
                                 }
-                            }
-
-                            var grenades = this.Grenades; // cache ref
-                            if (grenades is not null) // Draw grenades
-                            {
-                                foreach (var grenade in grenades)
-                                {
-                                    var grenadeZoomedPos = grenade
-                                        .Position
-                                        .ToMapPos(_selectedMap)
-                                        .ToZoomedPos(mapParams);
-                                    grenadeZoomedPos.DrawGrenade(canvas);
-                                }
-                            }
-
-                            var exfils = this.Exfils; // cache ref
-                            if (exfils is not null)
-                            {
-                                foreach (var exfil in exfils)
-                                {
-                                    var exfilZoomedPos = exfil
-                                        .Position
-                                        .ToMapPos(_selectedMap)
-                                        .ToZoomedPos(mapParams);
-
-                                    exfilZoomedPos.DrawExfil(
-                                        canvas,
-                                        exfil,
-                                        localPlayerMapPos.Height
-                                    );
-                                }
-                            }
                         }
-
-                        if (chkShowAimview.Checked) // Aimview Drawing
+                        else if (player.Type is PlayerType.Teammate)
                         {
-                            var aimviewPlayers = allPlayers?.Where(x => x.IsActive && x.IsAlive); // get all alive & active players
-                            if (aimviewPlayers is not null)
-                            {
-                                var localPlayerAimviewBounds = new SKRect() // bottom left of screen
-                                {
-                                    Left = _mapCanvas.Left,
-                                    Right = _mapCanvas.Left + _aimviewWindowSize,
-                                    Bottom = _mapCanvas.Bottom,
-                                    Top = _mapCanvas.Bottom - _aimviewWindowSize
-                                };
-
-                                var primaryTeammateAimviewBounds = new SKRect() // bottom right of screen
-                                {
-                                    Left = _mapCanvas.Right - _aimviewWindowSize,
-                                    Right = _mapCanvas.Right,
-                                    Bottom = _mapCanvas.Bottom,
-                                    Top = _mapCanvas.Bottom - _aimviewWindowSize
-                                };
-
-                                var primaryTeammate = friendlies?.FirstOrDefault(
-                                    x => x.AccountID == txtTeammateID.Text
-                                ); // Find Primary Teammate
-
-                                // Draw LocalPlayer Aimview
-                                RenderAimview(
-                                    canvas,
-                                    localPlayerAimviewBounds,
-                                    localPlayer,
-                                    aimviewPlayers
-                                );
-
-                                // Draw Primary Teammate Aimview
-                                RenderAimview(
-                                    canvas,
-                                    primaryTeammateAimviewBounds,
-                                    primaryTeammate,
-                                    aimviewPlayers
-                                );
-                            }
+                            aimlineLength = trkAimLength.Value; // Allies use player's aim length
                         }
 
-                        if (closestItemToMouse is not null) // draw tooltip for item the mouse is closest to
-                        {
-                            var itemZoomedPos = closestItemToMouse
-                                .Position
-                                .ToMapPos(_selectedMap)
-                                .ToZoomedPos(mapParams);
-                            itemZoomedPos.DrawLootableObjectToolTip(canvas, closestItemToMouse);
-                        }
-
-                        if (closestTaskZoneToMouse is not null) // draw tooltip for player the mouse is closest to
-                        {
-                            var taskZoneZoomedPos = closestTaskZoneToMouse
-                                .Position
-                                .ToMapPos(_selectedMap)
-                                .ToZoomedPos(mapParams);
-                            taskZoneZoomedPos.DrawToolTip(canvas, closestTaskZoneToMouse);
-                        }
-
-                        if (closestTaskItemToMouse is not null) // draw tooltip for player the mouse is closest to
-                        {
-                            var taskItemZoomedPos = closestTaskItemToMouse
-                                .Position
-                                .ToMapPos(_selectedMap)
-                                .ToZoomedPos(mapParams);
-                            taskItemZoomedPos.DrawToolTip(canvas, closestTaskItemToMouse);
-                        }
-
-                        if (closestPlayerToMouse is not null) // draw tooltip for player the mouse is closest to
-                        {
-                            var playerZoomedPos = closestPlayerToMouse
-                                .Position
-                                .ToMapPos(_selectedMap)
-                                .ToZoomedPos(mapParams);
-                            playerZoomedPos.DrawToolTip(canvas, closestPlayerToMouse);
-                        }
-                    }
-                    else // Not rendering, display reason
-                    {
-                        if (!isReady)
-                            canvas.DrawText(
-                                "Game Process Not Running",
-                                _mapCanvas.Width / 2,
-                                _mapCanvas.Height / 2,
-                                SKPaints.TextRadarStatus
-                            );
-                        else if (IsAtHideout)
-                            canvas.DrawText(
-                                "Main Menu or Hideout...",
-                                _mapCanvas.Width / 2,
-                                _mapCanvas.Height / 2,
-                                SKPaints.TextRadarStatus
-                            );
-                        else if (!inGame)
-                            canvas.DrawText(
-                                "Waiting for Raid Start...",
-                                _mapCanvas.Width / 2,
-                                _mapCanvas.Height / 2,
-                                SKPaints.TextRadarStatus
-                            );
-                        //loading loot check
-                        else if (LoadingLoot)
-                            canvas.DrawText(
-                                "Loading Loot...",
-                                _mapCanvas.Width / 2,
-                                _mapCanvas.Height / 2,
-                                SKPaints.TextRadarStatus
-                            );
-                        else if (localPlayer is null)
-                            canvas.DrawText(
-                                "Cannot find LocalPlayer",
-                                _mapCanvas.Width / 2,
-                                _mapCanvas.Height / 2,
-                                SKPaints.TextRadarStatus
-                            );
+                        // Draw Player
+                        DrawPlayer(canvas, player, playerZoomedPos, aimlineLength, _mouseOverGroup, localPlayerMapPos);
                     }
                 }
-                catch { }
-                canvas.Flush(); // commit to GPU
             }
         }
 
-        /// <summary>
-        /// Renders an Aimview Window with the specified parameters.
-        /// </summary>
-        /// <param name="canvas">SKCanvas reference for drawing.</param>
-        /// <param name="drawingLocation">Rectangular (Square) location on the SKCanvas to draw.</param>
-        /// <param name="sourcePlayer">The player whom the Aimview will have 'point of view'.</param>
-        /// <param name="aimviewPlayers">Collection of players to render in the AimView window.</param>
-        private void RenderAimview(
-            SKCanvas canvas,
-            SKRect drawingLocation,
-            Player sourcePlayer,
-            IEnumerable<Player> aimviewPlayers)
+        private void DrawPlayer(SKCanvas canvas, Player player, MapPosition playerZoomedPos, int aimlineLength, int? mouseOverGrp, MapPosition localPlayerMapPos)
         {
-            try
+            if (this.InGame && this.LocalPlayer != null)
             {
-                if (sourcePlayer is not null && sourcePlayer.IsActive && sourcePlayer.IsAlive)
+                string[] lines = null;
+                var height = playerZoomedPos.Height - localPlayerMapPos.Height;
+
+                var dist = Vector3.Distance(this.LocalPlayer.Position, player.Position);
+
+                if (!chkHideNames.Checked) // show full names & info
                 {
-                    var myPosition = sourcePlayer.Position;
-                    var myRotation = sourcePlayer.Rotation;
-                    canvas.DrawRect(drawingLocation, SKPaints.PaintTransparentBacker); // draw backer
-
-                    // draw aimview players
-                    if (aimviewPlayers is not null)
+                    lines = new string[2]
                     {
-                        var normalizedDirection = -myRotation.X;
+            string.Empty,
+            $"{(int)Math.Round(height)}, {(int)Math.Round(dist)}"
+                    };
 
-                        if (normalizedDirection < 0)
-                            normalizedDirection += 360;
+                    string name = player.Name;
 
-                        var pitch = myRotation.Y;
-                        if (pitch >= 270)
+                    if (player.ErrorCount > 10)
+                        name = "ERROR"; // In case POS stops updating, let us know!
+
+                    if (player.IsHuman || player.IsBossRaider)
+                        lines[0] += $"{name} ({player.Health})";
+                    else
+                        lines[0] += $"{name}";
+                }
+                else // just height & hp (for humans)
+                {
+                    lines = new string[1] { $"{(int)Math.Round(height)}, {(int)Math.Round(dist)}" };
+
+                    if (player.IsHuman || player.IsBossRaider)
+                        lines[0] += $" ({player.Health})";
+                    if (player.ErrorCount > 10)
+                        lines[0] = "ERROR"; // In case POS stops updating, let us know!
+                }
+
+                playerZoomedPos.DrawPlayerText(
+                    canvas,
+                    player,
+                    lines,
+                    mouseOverGrp
+                );
+
+                playerZoomedPos.DrawPlayerMarker(
+                    canvas,
+                    player,
+                    aimlineLength,
+                    mouseOverGrp
+                );
+            }
+        }
+
+        private void DrawLoot(SKCanvas canvas)
+        {
+            var localPlayer = this.LocalPlayer; // cache ref to current player
+            if (this.InGame && localPlayer != null)
+            {
+                if (chkShowLoot.Checked) // Draw loot (if enabled)
+                {
+                    var loot = this.Loot; // cache ref
+                    if (loot is not null)
+                    {
+                        if (Loot.Filter is null)
                         {
-                            pitch = 360 - pitch;
+                            Loot.ApplyFilter();
                         }
-                        else
+
+                        var filter = Loot.Filter; // Get ref to collection
+
+                        if (filter is not null)
                         {
-                            pitch = -pitch;
-                        }
+                            var localPlayerMapPos = localPlayer.Position.ToMapPos(_selectedMap);
+                            var mapParams = GetMapParameters(localPlayerMapPos); // Map auto follow LocalPlayer
 
-                        foreach (var player in aimviewPlayers)
-                        {
-                            if (player == sourcePlayer)
-                                continue; // don't draw self
-
-                            var playerPos = player.Position;
-                            float dist = Vector3.Distance(myPosition, playerPos);
-
-                            if (dist > _config.MaxDistance)
-                                continue; // Only draw within range
-
-                            float heightDiff = playerPos.Z - myPosition.Z;
-                            float angleY =
-                                (float)(180 / Math.PI * Math.Atan(heightDiff / dist)) - pitch;
-                            float y =
-                                angleY / _config.AimViewFOV * _aimviewWindowSize
-                                + _aimviewWindowSize / 2;
-
-                            float opposite = playerPos.Y - myPosition.Y;
-                            float adjacent = playerPos.X - myPosition.X;
-                            float angleX = (float)(180 / Math.PI * Math.Atan(opposite / adjacent));
-
-                            if (adjacent < 0 && opposite > 0)
+                            //foreach (var item in filter.Where(x => !chkImportantLootOnly.Checked || x.Important || x.AlwaysShow))
+                            foreach (var item in filter)
                             {
-                                angleX += 180;
-                            }
-                            else if (adjacent < 0 && opposite < 0)
-                            {
-                                angleX += 180;
-                            }
-                            else if (adjacent > 0 && opposite < 0)
-                            {
-                                angleX += 360;
-                            }
-                            // Handle split planes (source/target each on a different side of 0 / 360 )
-                            if (angleX >= 360 - _config.AimViewFOV && normalizedDirection <= _config.AimViewFOV)
-                            {
-                                var diff = 360 + normalizedDirection;
-                                angleX -= diff;
-                            }
-                            else if (angleX <= _config.AimViewFOV && normalizedDirection >= 360 - _config.AimViewFOV)
-                            {
-                                var diff = 360 - normalizedDirection;
-                                angleX += diff;
-                            }
-                            else
-                                angleX -= normalizedDirection;
+                                float position = item.Position.Z - localPlayerMapPos.Height;
 
-                            float x = angleX / _config.AimViewFOV * _aimviewWindowSize + _aimviewWindowSize / 2;
-                            float drawX = drawingLocation.Right - x;
-                            float drawY = drawingLocation.Bottom - y;
-                            if (drawX > drawingLocation.Right
-                                || drawX < drawingLocation.Left
-                                || drawY < drawingLocation.Top
-                                || drawY > drawingLocation.Bottom
-                                )
-                                continue; // not in FOV
+                                var itemZoomedPos = item.Position
+                                                        .ToMapPos(_selectedMap)
+                                                        .ToZoomedPos(mapParams);
 
-                            float circleSize = (float)(
-                                31.6437 - 5.09664 * Math.Log(0.591394 * dist + 70.0756)
-                            );
+                                item.ZoomedPosition = new Vector2() // Cache Position as Vec2 for MouseMove event
+                                {
+                                    X = itemZoomedPos.X,
+                                    Y = itemZoomedPos.Y
+                                };
 
-                            canvas.DrawCircle(
-                                drawX,
-                                drawY,
-                                circleSize * _uiScale,
-                                player.GetAimviewPaint()
-                            );
+                                itemZoomedPos.DrawLootableObject(
+                                    canvas,
+                                    item,
+                                    position
+                                );
+                            }
                         }
                     }
+                }
+            }
+        }
 
-                    // draw crosshair at end
-                    canvas.DrawLine(
-                        drawingLocation.Left,
-                        drawingLocation.Bottom - (_aimviewWindowSize / 2),
-                        drawingLocation.Right,
-                        drawingLocation.Bottom - (_aimviewWindowSize / 2),
-                        SKPaints.PaintAimviewCrosshair
+        private void DrawQuestItems(SKCanvas canvas)
+        {
+            var localPlayer = this.LocalPlayer; // cache ref to current player
+            if (this.InGame && localPlayer != null)
+            {
+                if (chkQuestHelper.Checked && !Memory.IsScav) // Draw quest items (if enabled)
+                {
+                    if (this.QuestManager is not null)
+                    {
+                        var localPlayerMapPos = localPlayer.Position.ToMapPos(_selectedMap);
+                        var mapParams = GetMapParameters(localPlayerMapPos); // Map auto follow LocalPlayer
+
+                        var questItems = this.QuestManager.QuestItems; // cache ref
+                        if (questItems is not null)
+                        {
+                            foreach (var item in questItems.Where(x => x.Position.X != 0))
+                            {
+                                float position = item.Position.Z - localPlayerMapPos.Height;
+                                var itemZoomedPos = item.Position
+                                                        .ToMapPos(_selectedMap)
+                                                        .ToZoomedPos(mapParams);
+
+                                item.ZoomedPosition = new Vector2() // Cache Position as Vec2 for MouseMove event
+                                {
+                                    X = itemZoomedPos.X,
+                                    Y = itemZoomedPos.Y
+                                };
+
+                                itemZoomedPos.DrawQuestItem(
+                                    canvas,
+                                    item,
+                                    position
+                                );
+                            }
+                        }
+
+                        var questZones = this.QuestManager.QuestZones; // cache ref
+                        if (questZones is not null)
+                        {
+                            foreach (var zone in questZones.Where(x => x.MapName.ToLower() == _selectedMap.Name.ToLower()))
+                            {
+                                float position = zone.Position.Z - localPlayerMapPos.Height;
+                                var questZoneZoomedPos = zone.Position
+                                                        .ToMapPos(_selectedMap)
+                                                        .ToZoomedPos(mapParams);
+
+                                zone.ZoomedPosition = new Vector2() // Cache Position as Vec2 for MouseMove event
+                                {
+                                    X = questZoneZoomedPos.X,
+                                    Y = questZoneZoomedPos.Y
+                                };
+
+                                questZoneZoomedPos.DrawTaskZone(
+                                    canvas,
+                                    zone,
+                                    position
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        private void DrawGrenades(SKCanvas canvas)
+        {
+            var localPlayer = this.LocalPlayer; // cache ref to current player
+            if (this.InGame && localPlayer != null)
+            {
+                var grenades = this.Grenades; // cache ref
+                if (grenades is not null) // Draw grenades
+                {
+                    var localPlayerMapPos = this.LocalPlayer.Position.ToMapPos(_selectedMap);
+                    var mapParams = GetMapParameters(localPlayerMapPos); // Map auto follow LocalPlayer
+
+                    foreach (var grenade in grenades)
+                    {
+                        var grenadeZoomedPos = grenade
+                            .Position
+                            .ToMapPos(_selectedMap)
+                            .ToZoomedPos(mapParams);
+
+                        grenadeZoomedPos.DrawGrenade(canvas);
+                    }
+                }
+            }
+        }
+
+        private void DrawExfils(SKCanvas canvas)
+        {
+            var localPlayer = this.LocalPlayer; // cache ref to current player
+            if (this.InGame && localPlayer != null)
+            {
+                var exfils = this.Exfils; // cache ref
+                if (exfils is not null)
+                {
+                    var localPlayerMapPos = this.LocalPlayer.Position.ToMapPos(_selectedMap);
+                    var mapParams = GetMapParameters(localPlayerMapPos); // Map auto follow LocalPlayer
+
+                    foreach (var exfil in exfils)
+                    {
+                        var exfilZoomedPos = exfil
+                            .Position
+                            .ToMapPos(_selectedMap)
+                            .ToZoomedPos(mapParams);
+
+                        exfilZoomedPos.DrawExfil(
+                            canvas,
+                            exfil,
+                            localPlayerMapPos.Height
+                        );
+                    }
+                }
+            }
+        }
+
+        private void DrawAimview(SKCanvas canvas)
+        {
+            if (chkShowAimview.Checked) // Aimview Drawing
+            {
+                var aimviewPlayers = this.AllPlayers?
+                    .Select(x => x.Value)
+                    .Where(x => x.IsActive && x.IsAlive); // cache aimviewPlayers
+
+                if (aimviewPlayers is not null)
+                {
+                    var localPlayerAimviewBounds = new SKRect() // bottom left of screen
+                    {
+                        Left = _mapCanvas.Left,
+                        Right = _mapCanvas.Left + _aimviewWindowSize,
+                        Bottom = _mapCanvas.Bottom,
+                        Top = _mapCanvas.Bottom - _aimviewWindowSize
+                    };
+
+                    var primaryTeammateAimviewBounds = new SKRect() // bottom right of screen
+                    {
+                        Left = _mapCanvas.Right - _aimviewWindowSize,
+                        Right = _mapCanvas.Right,
+                        Bottom = _mapCanvas.Bottom,
+                        Top = _mapCanvas.Bottom - _aimviewWindowSize
+                    };
+
+                    var primaryTeammate = this.AllPlayers?
+                        .Select(x => x.Value)
+                        .FirstOrDefault(x => x.AccountID == txtTeammateID.Text); // Find Primary Teammate
+
+                    // Draw LocalPlayer Aimview
+                    RenderAimview(
+                        canvas,
+                        localPlayerAimviewBounds,
+                        this.LocalPlayer,
+                        aimviewPlayers
                     );
 
-                    canvas.DrawLine(
-                        drawingLocation.Right - (_aimviewWindowSize / 2),
-                        drawingLocation.Top,
-                        drawingLocation.Right - (_aimviewWindowSize / 2),
-                        drawingLocation.Bottom,
-                        SKPaints.PaintAimviewCrosshair
+                    // Draw Primary Teammate Aimview
+                    RenderAimview(
+                        canvas,
+                        primaryTeammateAimviewBounds,
+                        primaryTeammate,
+                        aimviewPlayers
                     );
                 }
             }
-            catch { }
         }
+
+        private void DrawToolTips(SKCanvas canvas)
+        {
+            var localPlayer = this.LocalPlayer; // cache ref to current player
+            if (localPlayer != null)
+            {
+                var mapParams = GetMapParameters(localPlayer.Position.ToMapPos(_selectedMap)); // cache mapParams
+
+                if (_closestItemToMouse is not null) // draw tooltip for item the mouse is closest to
+                {
+                    var itemZoomedPos = _closestItemToMouse
+                        .Position
+                        .ToMapPos(_selectedMap)
+                        .ToZoomedPos(mapParams);
+                    itemZoomedPos.DrawLootableObjectToolTip(canvas, _closestItemToMouse);
+                }
+
+                if (_closestTaskZoneToMouse is not null) // draw tooltip for task zone the mouse is closest to
+                {
+                    var taskZoneZoomedPos = _closestTaskZoneToMouse
+                        .Position
+                        .ToMapPos(_selectedMap)
+                        .ToZoomedPos(mapParams);
+                    taskZoneZoomedPos.DrawToolTip(canvas, _closestTaskZoneToMouse);
+                }
+
+                if (_closestTaskItemToMouse is not null) // draw tooltip for task item the mouse is closest to
+                {
+                    var taskItemZoomedPos = _closestTaskItemToMouse
+                        .Position
+                        .ToMapPos(_selectedMap)
+                        .ToZoomedPos(mapParams);
+                    taskItemZoomedPos.DrawToolTip(canvas, _closestTaskItemToMouse);
+                }
+
+                if (_closestPlayerToMouse is not null) // draw tooltip for player the mouse is closest to
+                {
+                    var playerZoomedPos = _closestPlayerToMouse
+                        .Position
+                        .ToMapPos(_selectedMap)
+                        .ToZoomedPos(mapParams);
+                    playerZoomedPos.DrawToolTip(canvas, _closestPlayerToMouse);
+                }
+            }
+        }
+
+        private void DrawStatusText(SKCanvas canvas)
+        {
+            bool isReady = this.Ready; // cache bool
+            bool inGame = this.InGame; // cache bool
+            bool isAtHideout = this.IsAtHideout; // cache bool
+            var localPlayer = this.LocalPlayer; // cache ref to current player
+            var selectedMap = this._selectedMap; // cache ref to selected map
+
+            string statusText;
+            if (!isReady)
+            {
+                statusText = "Game Process Not Running";
+            }
+            else if (isAtHideout)
+            {
+                statusText = "Main Menu or Hideout...";
+            }
+            else if (!inGame)
+            {
+                statusText = "Waiting for Raid Start...";
+
+                if (selectedMap != null)
+                {
+                    this._selectedMap = null;
+                    this.tabRadar.Text = "Radar";
+                }
+            }
+            else if (this.LoadingLoot)
+            {
+                statusText = "Loading Loot...";
+            }
+            else if (localPlayer == null)
+            {
+                statusText = "Cannot find LocalPlayer";
+            }
+            else if (selectedMap == null)
+            {
+                statusText = "Loading Map";
+            }
+            else
+            {
+                return; // No status text to draw
+            }
+
+            var centerX = _mapCanvas.Width / 2;
+            var centerY = _mapCanvas.Height / 2;
+
+            canvas.DrawText(statusText, centerX, centerY, SKPaints.TextRadarStatus);
+        }
+
+        private void RenderAimview(SKCanvas canvas, SKRect drawingLocation, Player sourcePlayer, IEnumerable<Player> aimviewPlayers)
+        {
+            if (sourcePlayer is null || !sourcePlayer.IsActive || !sourcePlayer.IsAlive)
+                return;
+
+            canvas.DrawRect(drawingLocation, SKPaints.PaintTransparentBacker); // draw backer
+
+            var myPosition = sourcePlayer.Position;
+            var myRotation = sourcePlayer.Rotation;
+            var normalizedDirection = NormalizeDirection(myRotation.X);
+            var pitch = CalculatePitch(myRotation.Y);
+
+            DrawCrosshair(canvas, drawingLocation);
+
+            if (aimviewPlayers is not null)
+            {
+                foreach (var player in aimviewPlayers)
+                {
+                    if (player == sourcePlayer)
+                        continue; // don't draw self
+
+                    if (ShouldDrawPlayer(myPosition, player.Position, _config.MaxDistance))
+                        DrawPlayer(canvas, drawingLocation, myPosition, player, normalizedDirection, pitch);
+                }
+            }
+
+            // Draw loot objects
+            // requires rework for height difference
+            //var loot = this.Loot; // cache ref
+            //if (loot is not null && loot.Filter is not null)
+            //{
+            //    foreach (var item in loot.Filter)
+            //    {
+            //        if (ShouldDrawLootObject(myPosition, item.Position, _config.MaxDistance))
+            //            DrawLootableObject(canvas, drawingLocation, myPosition, sourcePlayer.ZoomedPosition, item, normalizedDirection, pitch);
+            //    }
+            //}
+        }
+
+        private float NormalizeDirection(float direction)
+        {
+            var normalizedDirection = -direction;
+
+            if (normalizedDirection < 0)
+                normalizedDirection += 360;
+
+            return normalizedDirection;
+        }
+
+        private bool IsInFOV(float drawX, float drawY, SKRect drawingLocation)
+        {
+            return drawX < drawingLocation.Right
+                   && drawX > drawingLocation.Left
+                   && drawY > drawingLocation.Top
+                   && drawY < drawingLocation.Bottom;
+        }
+
+        private bool ShouldDrawPlayer(Vector3 myPosition, Vector3 playerPosition, float maxDistance)
+        {
+            var dist = Vector3.Distance(myPosition, playerPosition);
+            return dist <= maxDistance;
+        }
+
+        private bool ShouldDrawLootObject(Vector3 myPosition, Vector3 lootPosition, float maxDistance)
+        {
+            var dist = Vector3.Distance(myPosition, lootPosition);
+            return dist <= maxDistance;
+        }
+
+        private void HandleSplitPlanes(ref float angleX, float normalizedDirection)
+        {
+            if (angleX >= 360 - _config.AimViewFOV && normalizedDirection <= _config.AimViewFOV)
+            {
+                var diff = 360 + normalizedDirection;
+                angleX -= diff;
+            }
+            else if (angleX <= _config.AimViewFOV && normalizedDirection >= 360 - _config.AimViewFOV)
+            {
+                var diff = 360 - normalizedDirection;
+                angleX += diff;
+            }
+        }
+
+        private float CalculatePitch(float pitch)
+        {
+            if (pitch >= 270)
+                return 360 - pitch;
+            else
+                return -pitch;
+        }
+
+        private float CalculateAngleY(float heightDiff, float dist, float pitch)
+        {
+            return (float)(180 / Math.PI * Math.Atan(heightDiff / dist)) - pitch;
+        }
+
+        private float CalculateYPosition(float angleY, float windowSize)
+        {
+            return angleY / _config.AimViewFOV * windowSize + windowSize / 2;
+        }
+
+        private float CalculateAngleX(float opposite, float adjacent, float normalizedDirection)
+        {
+            float angleX = (float)(180 / Math.PI * Math.Atan(opposite / adjacent));
+
+            if (adjacent < 0 && opposite > 0)
+                angleX += 180;
+            else if (adjacent < 0 && opposite < 0)
+                angleX += 180;
+            else if (adjacent > 0 && opposite < 0)
+                angleX += 360;
+
+            HandleSplitPlanes(ref angleX, normalizedDirection);
+
+            angleX -= normalizedDirection;
+            return angleX;
+        }
+
+        private float CalculateXPosition(float angleX, float windowSize)
+        {
+            return angleX / _config.AimViewFOV * windowSize + windowSize / 2;
+        }
+
+        private float CalculateCircleSize(float dist)
+        {
+            return (float)(31.6437 - 5.09664 * Math.Log(0.591394 * dist + 70.0756));
+        }
+
+        private void DrawCrosshair(SKCanvas canvas, SKRect drawingLocation)
+        {
+            canvas.DrawLine(
+                drawingLocation.Left,
+                drawingLocation.Bottom - (_aimviewWindowSize / 2),
+                drawingLocation.Right,
+                drawingLocation.Bottom - (_aimviewWindowSize / 2),
+                SKPaints.PaintAimviewCrosshair
+            );
+
+            canvas.DrawLine(
+                drawingLocation.Right - (_aimviewWindowSize / 2),
+                drawingLocation.Top,
+                drawingLocation.Right - (_aimviewWindowSize / 2),
+                drawingLocation.Bottom,
+                SKPaints.PaintAimviewCrosshair
+            );
+        }
+
+        private void DrawPlayer(SKCanvas canvas, SKRect drawingLocation, Vector3 myPosition, Player player, float normalizedDirection, float pitch)
+        {
+            var playerPos = player.Position;
+            float dist = Vector3.Distance(myPosition, playerPos);
+            float heightDiff = playerPos.Z - myPosition.Z;
+            float angleY = CalculateAngleY(heightDiff, dist, pitch);
+            float y = CalculateYPosition(angleY, _aimviewWindowSize);
+
+            float opposite = playerPos.Y - myPosition.Y;
+            float adjacent = playerPos.X - myPosition.X;
+            float angleX = CalculateAngleX(opposite, adjacent, normalizedDirection);
+            float x = CalculateXPosition(angleX, _aimviewWindowSize);
+
+            float drawX = drawingLocation.Right - x;
+            float drawY = drawingLocation.Bottom - y;
+
+            if (IsInFOV(drawX, drawY, drawingLocation))
+            {
+                float circleSize = CalculateCircleSize(dist);
+                canvas.DrawCircle(drawX, drawY, circleSize * _uiScale, player.GetAimviewPaint());
+            }
+        }
+
+        private void DrawLootableObject(SKCanvas canvas, SKRect drawingLocation, Vector3 myPosition, Vector2 myZoomedPos, LootableObject lootableObject, float normalizedDirection, float pitch)
+        {
+            var lootableObjectPos = lootableObject.Position;
+            float dist = Vector3.Distance(myPosition, lootableObjectPos);
+            float heightDiff = lootableObjectPos.Z - myPosition.Z;
+            float angleY = CalculateAngleY(heightDiff, dist, pitch);
+            float y = CalculateYPosition(angleY, _aimviewWindowSize);
+
+            float opposite = lootableObjectPos.Y - myPosition.Y;
+            float adjacent = lootableObjectPos.X - myPosition.X;
+            float angleX = CalculateAngleX(opposite, adjacent, normalizedDirection);
+            float x = CalculateXPosition(angleX, _aimviewWindowSize);
+
+            float drawX = drawingLocation.Right - x;
+            float drawY = drawingLocation.Bottom - y;
+
+            if (IsInFOV(drawX, drawY, drawingLocation))
+            {
+                float circleSize = CalculateCircleSize(dist);
+                canvas.DrawCircle(drawX, drawY, circleSize * _uiScale, SKPaints.LootPaint);
+            }
+        }
+
         #endregion
 
         #region Overrides

@@ -387,19 +387,6 @@ namespace eft_dma_radar
             }
             else
             {
-                if (this._exfilManager is null)
-                {
-                    try
-                    {
-                        this._exfilManager = new ExfilManager(this._localGameWorld);
-                    }
-                    catch (Exception ex)
-                    {
-                        Program.Log($"ERROR loading ExfilController: {ex}");
-                    }
-                }
-                else this._exfilManager.RefreshExfils();
-
                 if (this._config.MasterSwitchEnabled)
                 {
                     if (this._cameraManager is null)
@@ -450,6 +437,19 @@ namespace eft_dma_radar
                         }
                     }
                 }
+
+                if (this._exfilManager is null)
+                {
+                    try
+                    {
+                        this._exfilManager = new ExfilManager(this._localGameWorld);
+                    }
+                    catch (Exception ex)
+                    {
+                        Program.Log($"ERROR loading ExfilController: {ex}");
+                    }
+                }
+                else this._exfilManager.RefreshExfils();
 
                 if (this._grenadeManager is null)
                 {

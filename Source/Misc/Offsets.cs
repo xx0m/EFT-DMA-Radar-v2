@@ -113,6 +113,7 @@
     {
         public const uint Name = 0x18; // string,unity
         public const uint ContainedItem = 0x40; // to LootItemBase
+        public const uint Size = 0x8;
     }
     public struct LootListItem
     {

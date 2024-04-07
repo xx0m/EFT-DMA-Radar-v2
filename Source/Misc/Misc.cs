@@ -5,9 +5,8 @@ using SkiaSharp;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
-using eft_dma_radar.Source.Misc;
 using System.Runtime.Intrinsics;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.Menu;
+using eft_dma_radar.Source.Misc;
 
 namespace eft_dma_radar
 {

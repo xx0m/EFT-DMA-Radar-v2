@@ -284,10 +284,7 @@ namespace eft_dma_radar
         public ulong NextObservedPlayerView { get; }
         public ulong Info { get; }
         public ulong TransformInternal { get; }
-        public ulong VerticesAddr
-        {
-            get => this._transform?.VerticesAddr ?? 0x0;
-        }
+        public ulong VerticesAddr { get => this._transform?.VerticesAddr ?? 0x0; }
         public ulong IndicesAddr
         {
             get => this._transform?.IndicesAddr ?? 0x0;

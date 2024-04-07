@@ -1,10 +1,9 @@
-﻿using System.Collections.Concurrent;
+﻿using eft_dma_radar.Source.Misc;
+using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.Intrinsics;
-using eft_dma_radar.Source.Misc;
-using eft_dma_radar.Source.Tarkov;
 
 namespace eft_dma_radar
 {

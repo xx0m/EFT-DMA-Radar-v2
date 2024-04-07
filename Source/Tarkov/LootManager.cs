@@ -260,7 +260,7 @@ namespace eft_dma_radar
             }
 
             validScatterMap.Execute();
-           
+
             List<Player> players = Memory.Players?
                 .Where(x => x.Value.CorpsePtr > 0x00)
                 .Select(x => x.Value)
@@ -1152,7 +1152,7 @@ namespace eft_dma_radar
         public List<GearItem> Items { get; set; }
         public Player Player { get; set; }
 
-        public LootCorpse() {}
+        public LootCorpse() { }
 
         // for deep copying
         public LootCorpse(LootCorpse other)

@@ -115,7 +115,7 @@ namespace eft_dma_radar
         public static SKPaint GetEntityPaint(LootableObject item)
         {
             bool isFiltered = !item.Color.Equals(new LootFilter.Colors { R = 0, G = 0, B = 0, A = 0 });
-            SKPaint paintToUse = SKPaints.PaintLoot.Clone();
+            SKPaint paintToUse = SKPaints.LootPaint.Clone();
 
             if (isFiltered)
             {
@@ -164,7 +164,7 @@ namespace eft_dma_radar
         /// </summary>
         public static SKPaint GetEntityPaint(QuestItem item)
         {
-            SKPaint paintToUse = SKPaints.PaintLoot.Clone();
+            SKPaint paintToUse = SKPaints.LootPaint.Clone();
             paintToUse.Color = Extensions.SKColorFromPaintColor("QuestItem");
             return paintToUse;
         }
@@ -174,7 +174,7 @@ namespace eft_dma_radar
         /// </summary>
         public static SKPaint GetEntityPaint(QuestZone zone)
         {
-            SKPaint paintToUse = SKPaints.PaintLoot.Clone();
+            SKPaint paintToUse = SKPaints.LootPaint.Clone();
             paintToUse.Color = Extensions.SKColorFromPaintColor("QuestZone");
             return paintToUse;
         }
@@ -184,7 +184,7 @@ namespace eft_dma_radar
         /// </summary>
         public static SKPaint GetEntityPaint(Exfil exfil)
         {
-            SKPaint paintToUse = SKPaints.PaintLoot.Clone();
+            SKPaint paintToUse = SKPaints.LootPaint.Clone();
             paintToUse.Color = exfil.Status switch
             {
                 ExfilStatus.Open => SKColorFromPaintColor("ExfilActiveIcon"),
@@ -228,7 +228,7 @@ namespace eft_dma_radar
         public static SKPaint GetTextPaint(LootableObject item)
         {
             bool isFiltered = !item.Color.Equals(new LootFilter.Colors { R = 0, G = 0, B = 0, A = 0 });
-            SKPaint paintToUse = SKPaints.TextLoot.Clone();
+            SKPaint paintToUse = SKPaints.LootText.Clone();
 
             if (isFiltered)
             {
@@ -250,7 +250,7 @@ namespace eft_dma_radar
         public static SKPaint GetTextPaint(GearItem item)
         {
             bool isFiltered = !item.Color.Equals(new LootFilter.Colors { R = 0, G = 0, B = 0, A = 0 });
-            SKPaint paintToUse = SKPaints.TextLoot.Clone();
+            SKPaint paintToUse = SKPaints.LootText.Clone();
 
             if (isFiltered)
             {
@@ -274,7 +274,7 @@ namespace eft_dma_radar
         /// </summary>
         public static SKPaint GetTextPaint(QuestItem item)
         {
-            SKPaint paintToUse = SKPaints.TextLoot.Clone();
+            SKPaint paintToUse = SKPaints.LootText.Clone();
             paintToUse.Color = Extensions.SKColorFromPaintColor("QuestItem");
             return paintToUse;
         }
@@ -284,7 +284,7 @@ namespace eft_dma_radar
         /// </summary>
         public static SKPaint GetTextPaint(QuestZone zone)
         {
-            SKPaint paintToUse = SKPaints.TextLoot.Clone();
+            SKPaint paintToUse = SKPaints.LootText.Clone();
             paintToUse.Color = Extensions.SKColorFromPaintColor("QuestZone");
             return paintToUse;
         }
@@ -294,7 +294,7 @@ namespace eft_dma_radar
         /// </summary>
         public static SKPaint GetTextPaint(Exfil exfil)
         {
-            SKPaint paintToUse = SKPaints.TextLoot.Clone();
+            SKPaint paintToUse = SKPaints.LootText.Clone();
             paintToUse.Color = exfil.Status switch
             {
                 ExfilStatus.Open => SKColorFromPaintColor("ExfilActiveText"),
