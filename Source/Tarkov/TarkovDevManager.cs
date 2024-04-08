@@ -31,7 +31,7 @@ namespace eft_dma_radar
             var allTasks = new Dictionary<string, Tasks>(StringComparer.OrdinalIgnoreCase);
             var allLootContainers = new Dictionary<string, LootContainerInfo>(StringComparer.OrdinalIgnoreCase);
             var allMaps = new Dictionary<string, Maps>(StringComparer.OrdinalIgnoreCase);
-            if (!File.Exists("api_tarkov_dev_items.json") || File.GetLastWriteTime("api_tarkov_dev_items.json").AddHours(480) < DateTime.Now) // only update every 480h
+            if (!File.Exists("api_tarkov_dev_items.json") || File.GetLastWriteTime("api_tarkov_dev_items.json").AddHours(1) < DateTime.Now) // only update every 1h
             {
                 using (var client = new HttpClient())
                 {

@@ -65,7 +65,7 @@ namespace eft_dma_radar.Source.Tarkov
 
         private bool IsSafeToWriteMemory()
         {
-            return Memory.InGame && Memory.LocalPlayer is not null;
+            return Memory.InGame && Memory.LocalPlayer is not null && this._playerManager is not null;
         }
 
         private void ToolboxWorker()

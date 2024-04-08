@@ -1933,6 +1933,21 @@ namespace eft_dma_radar
             return true; // Ready to render
         }
 
+        private MapParameters GetMapLocation()
+        {
+            var localPlayer = this.LocalPlayer; // cache ref to current player
+            var localPlayerPos = localPlayer.Position;
+            var localPlayerMapPos = localPlayerPos.ToMapPos(_selectedMap); // cache localPlayerMapPos
+
+            if (chkMapFree.Checked) // Map fixed location, click to pan map
+            {
+                _mapPanPosition.Height = localPlayerMapPos.Height;
+                return GetMapParameters(_mapPanPosition);
+            }
+            else
+                return GetMapParameters(localPlayerMapPos); // Map auto follow LocalPlayer
+        }   
+
         private void DrawMap(SKCanvas canvas)
         {
             var localPlayer = this.LocalPlayer; // cache ref to current player
@@ -1945,14 +1960,7 @@ namespace eft_dma_radar
             }
 
             // Prepare to draw Game Map
-            MapParameters mapParams; // Drawing Source
-            if (chkMapFree.Checked) // Map fixed location, click to pan map
-            {
-                _mapPanPosition.Height = localPlayerMapPos.Height;
-                mapParams = GetMapParameters(_mapPanPosition);
-            }
-            else
-                mapParams = GetMapParameters(localPlayerMapPos); // Map auto follow LocalPlayer
+            MapParameters mapParams = GetMapLocation();
 
             var mapCanvasBounds = new SKRect() // Drawing Destination
             {
@@ -1996,7 +2004,8 @@ namespace eft_dma_radar
                     var friendlies = allPlayers?.Where(x => x.IsFriendlyActive);
                     var localPlayerPos = localPlayer.Position;
                     var localPlayerMapPos = localPlayerPos.ToMapPos(_selectedMap);
-                    var mapParams = GetMapParameters(localPlayerMapPos); // Map auto follow LocalPlayer
+                    var mouseOverGroup = _mouseOverGroup;
+                    var mapParams = GetMapLocation();
 
                     foreach (var player in allPlayers) // Draw PMCs
                     {
@@ -2047,7 +2056,7 @@ namespace eft_dma_radar
                         }
 
                         // Draw Player
-                        DrawPlayer(canvas, player, playerZoomedPos, aimlineLength, _mouseOverGroup, localPlayerMapPos);
+                        DrawPlayer(canvas, player, playerZoomedPos, aimlineLength, mouseOverGroup, localPlayerMapPos);
                     }
                 }
             }
@@ -2126,11 +2135,13 @@ namespace eft_dma_radar
                         if (filter is not null)
                         {
                             var localPlayerMapPos = localPlayer.Position.ToMapPos(_selectedMap);
-                            var mapParams = GetMapParameters(localPlayerMapPos); // Map auto follow LocalPlayer
+                            var mapParams = GetMapLocation();
 
-                            //foreach (var item in filter.Where(x => !chkImportantLootOnly.Checked || x.Important || x.AlwaysShow))
                             foreach (var item in filter)
                             {
+                                if ((this._config.ImportantLootOnly && !item.Important && !item.AlwaysShow) || (item is LootCorpse && !this._config.ShowCorpsesEnabled))
+                                    continue;
+
                                 float position = item.Position.Z - localPlayerMapPos.Height;
 
                                 var itemZoomedPos = item.Position
@@ -2165,7 +2176,7 @@ namespace eft_dma_radar
                     if (this.QuestManager is not null)
                     {
                         var localPlayerMapPos = localPlayer.Position.ToMapPos(_selectedMap);
-                        var mapParams = GetMapParameters(localPlayerMapPos); // Map auto follow LocalPlayer
+                        var mapParams = GetMapLocation();
 
                         var questItems = this.QuestManager.QuestItems; // cache ref
                         if (questItems is not null)
@@ -2228,7 +2239,7 @@ namespace eft_dma_radar
                 if (grenades is not null) // Draw grenades
                 {
                     var localPlayerMapPos = this.LocalPlayer.Position.ToMapPos(_selectedMap);
-                    var mapParams = GetMapParameters(localPlayerMapPos); // Map auto follow LocalPlayer
+                    var mapParams = GetMapLocation();
 
                     foreach (var grenade in grenades)
                     {
@@ -2252,7 +2263,7 @@ namespace eft_dma_radar
                 if (exfils is not null)
                 {
                     var localPlayerMapPos = this.LocalPlayer.Position.ToMapPos(_selectedMap);
-                    var mapParams = GetMapParameters(localPlayerMapPos); // Map auto follow LocalPlayer
+                    var mapParams = GetMapLocation();
 
                     foreach (var exfil in exfils)
                     {
