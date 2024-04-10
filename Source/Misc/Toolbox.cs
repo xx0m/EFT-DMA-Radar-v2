@@ -57,7 +57,11 @@ namespace eft_dma_radar.Source.Tarkov
             {
                 if (this._config.MasterSwitchEnabled)
                 {
-                    this.ToolboxWorker();
+                    try
+                    {
+                        this.ToolboxWorker();
+                    }
+                    catch { }
                 }
                 Thread.Sleep(250);
             }

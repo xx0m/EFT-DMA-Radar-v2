@@ -435,6 +435,17 @@ namespace eft_dma_radar
         private void chkAutoLootRefresh_CheckedChanged(object sender, EventArgs e)
         {
             _config.AutoLootRefreshEnabled = chkAutoLootRefresh.Checked;
+            if (Memory.Loot != null && Memory.InGame)
+            {
+                if (chkAutoLootRefresh.Checked)
+                {
+                    Memory.Loot.StartAutoRefresh();
+                }
+                else
+                {
+                    Memory.Loot.StopAutoRefresh();
+                }
+            }
         }
 
         private void picDeathMarkerColor_Click(object sender, EventArgs e)
@@ -1919,8 +1930,8 @@ namespace eft_dma_radar
             if (!inGame)
                 return false; // Waiting for raid start
 
-            if (this.LoadingLoot)
-                return false; // Loading loot
+            //if (this.LoadingLoot)
+                //return false; // Loading loot
 
             if (!localPlayerExists)
                 return false; // Cannot find local player
@@ -2336,7 +2347,7 @@ namespace eft_dma_radar
             var localPlayer = this.LocalPlayer; // cache ref to current player
             if (localPlayer != null)
             {
-                var mapParams = GetMapParameters(localPlayer.Position.ToMapPos(_selectedMap)); // cache mapParams
+                var mapParams = GetMapLocation();
 
                 if (_closestItemToMouse is not null) // draw tooltip for item the mouse is closest to
                 {
@@ -2403,10 +2414,10 @@ namespace eft_dma_radar
                     this.tabRadar.Text = "Radar";
                 }
             }
-            else if (this.LoadingLoot)
-            {
-                statusText = "Loading Loot...";
-            }
+            //else if (this.LoadingLoot)
+            //{
+                //statusText = "Loading Loot...";
+            //}
             else if (localPlayer == null)
             {
                 statusText = "Cannot find LocalPlayer";

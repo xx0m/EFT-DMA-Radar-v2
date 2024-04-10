@@ -7,6 +7,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Runtime.Intrinsics;
 using eft_dma_radar.Source.Misc;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.Menu;
 
 namespace eft_dma_radar
 {
@@ -929,6 +930,12 @@ namespace eft_dma_radar
             var maxWidth = 0f;
             var items = corpse.Items;
             var height = items.Count;
+            var isEmptyCorpseName = corpse.Name.Contains("Clone");
+
+            if (!isEmptyCorpseName)
+            {
+                height += 1;
+            }
 
             foreach (var gearItem in items)
             {
@@ -979,6 +986,12 @@ namespace eft_dma_radar
                 }
 
                 canvas.DrawText(gearItem.GetFormattedTotalValueName(), left + padding, y, Extensions.GetTextPaint(gearItem));
+                y -= textSpacing;
+            }
+
+            if (!isEmptyCorpseName)
+            {
+                canvas.DrawText(corpse.Name, left + padding, y, SKPaints.TextBase);
                 y -= textSpacing;
             }
         }
@@ -2203,6 +2216,7 @@ namespace eft_dma_radar
             "Glavdur",
             "Kozyrek Desatnik",
             "Mayor",
+            "Serzhant",
             "Slonolyub",
             "Sluzhebka",
             "Starley Desatnik",
@@ -2211,6 +2225,8 @@ namespace eft_dma_radar
             "Starshiy brat",
             "Strelok brat",
             "Tatyanka Desatnik",
+            "Tatyanka",
+            "Vasya Desantnik",
             "Visyak",
             "Baba Yaga", // Follower of Morana
             "Buran",
