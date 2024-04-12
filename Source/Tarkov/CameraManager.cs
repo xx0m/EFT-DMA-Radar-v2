@@ -1,11 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Threading.Tasks.Dataflow;
-
-namespace eft_dma_radar.Source.Tarkov
+﻿namespace eft_dma_radar
 {
     public class CameraManager
     {
@@ -33,47 +26,59 @@ namespace eft_dma_radar.Source.Tarkov
 
         private bool GetCamera()
         {
-            try
+            var foundFPSCamera = false;
+            var foundOpticCamera = false;
+            var count = 100;
+            var addr = Memory.ReadPtr(this._unityBase + Offsets.ModuleBase.CameraObjectManager);
+
+            var scatterReadMap = new ScatterReadMap(count);
+            var round1 = scatterReadMap.AddRound();
+            var round2 = scatterReadMap.AddRound();
+            var round3 = scatterReadMap.AddRound();
+            var round4 = scatterReadMap.AddRound();
+
+            for (int i = 0; i < count; i++)
             {
-                var addr = Memory.ReadPtr(this._unityBase + Offsets.ModuleBase.CameraObjectManager);
-                for (int i = 0; i < 500; i++)
+                var allCameras = round1.AddEntry<ulong>(i, 0, addr, null, 0x0);
+                var camera = round2.AddEntry<ulong>(i, 1, allCameras, null, (uint)i * 0x8);
+                var cameraObject = round3.AddEntry<ulong>(i, 2, camera, null, Offsets.GameObject.ObjectClass);
+                var cameraNamePtr = round4.AddEntry<ulong>(i, 3, cameraObject, null, Offsets.GameObject.ObjectName);
+            }
+
+            scatterReadMap.Execute();
+
+            for (int i = 0; i < count; i++)
+            {
+                if (!scatterReadMap.Results[i][0].TryGetResult<ulong>(out var allCameras))
+                    continue;
+                if (!scatterReadMap.Results[i][1].TryGetResult<ulong>(out var camera))
+                    continue;
+                if (!scatterReadMap.Results[i][2].TryGetResult<ulong>(out var cameraObject))
+                    continue;
+                if (!scatterReadMap.Results[i][3].TryGetResult<ulong>(out var cameraNamePtr))
+                    continue;
+
+                var cameraName = Memory.ReadString(cameraNamePtr, 64).Replace("\0", string.Empty);
+
+                if (!foundFPSCamera && cameraName.Contains("BaseOpticCamera(Clone)", StringComparison.OrdinalIgnoreCase))
                 {
-                    var allCameras = Memory.ReadPtr(addr + 0x0);
-                    var camera = Memory.ReadPtr(allCameras + (ulong)i * 0x8);
+                    this._opticCamera = cameraObject;
+                    foundFPSCamera = true;
+                }
+                else if (!foundOpticCamera && cameraName.Contains("FPS Camera", StringComparison.OrdinalIgnoreCase))
+                {
+                    foundOpticCamera = true;
+                    this._fpsCamera = cameraObject;
+                }
 
-                    if (camera != 0)
-                    {
-                        var cameraObject = Memory.ReadPtr(camera + Offsets.GameObject.ObjectClass);
-                        var cameraNamePtr = Memory.ReadPtr(cameraObject + Offsets.GameObject.ObjectName);
-
-                        var cameraName = Memory
-                            .ReadString(cameraNamePtr, 64)
-                            .Replace("\0", string.Empty);
-                        if (
-                            cameraName.Contains(
-                                "BaseOpticCamera(Clone)",
-                                StringComparison.OrdinalIgnoreCase
-                            )
-                        )
-                        {
-                            this._opticCamera = cameraObject;
-                        }
-                        if (cameraName.Contains("FPS Camera", StringComparison.OrdinalIgnoreCase))
-                        {
-                            this._fpsCamera = cameraObject;
-                        }
-                        if (this._opticCamera != 0 && this._fpsCamera != 0)
-                        {
-                            return true;
-                        }
-                    }
+                if (foundFPSCamera && foundOpticCamera)
+                {
+                    Console.WriteLine(i);
+                    break;
                 }
             }
-            catch (DMAShutdown)
-            {
-                throw;
-            }
-            return false;
+
+            return foundFPSCamera && foundOpticCamera;
         }
 
         public async Task<bool> GetCameraAsync()
@@ -153,7 +158,7 @@ namespace eft_dma_radar.Source.Tarkov
                 float intensity = Memory.ReadValue<float>(visorComponent + Offsets.VisorEffect.Intensity);
                 bool visorDown = intensity == 1.0f;
 
-                if (on != visorDown)
+                if (on == visorDown)
                     Memory.WriteValue(visorComponent + Offsets.VisorEffect.Intensity, on ? 0.0f : 1.0f);
             }
             catch { }

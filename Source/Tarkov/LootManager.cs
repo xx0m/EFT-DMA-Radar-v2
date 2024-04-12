@@ -1,11 +1,9 @@
 ﻿using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using System.Drawing;
-using System.Net.Sockets;
+using System.Net;
 using System.Numerics;
 using System.Runtime.InteropServices;
-using System.Windows.Forms.Design;
 
 namespace eft_dma_radar
 {
@@ -80,7 +78,7 @@ namespace eft_dma_radar
                 return;
             }
 
-            this.autoRefreshThread = new Thread(AutoRefreshThreadMethod)
+            this.autoRefreshThread = new Thread(this.LootManagerWorkerThread)
             {
                 Priority = ThreadPriority.BelowNormal,
                 IsBackground = true
@@ -90,16 +88,15 @@ namespace eft_dma_radar
 
         public void StopAutoRefresh()
         {
-            this.autoRefreshThread?.Join(); // Wait for the thread to finish
+            this.autoRefreshThread?.Join();
             this.autoRefreshThread = null;
         }
 
-        private void AutoRefreshThreadMethod()
+        private void LootManagerWorkerThread()
         {
             while (Memory.GameStatus == Game.GameStatus.InGame && this._config.AutoLootRefreshEnabled && this._config.LootEnabled)
             {
                 this.RefreshLoot();
-                Console.WriteLine("Ran loot refresh!");
                 Thread.Sleep(this.CurrentMapName == "TarkovStreets" ? 30000 : 10000);
             }
             Console.WriteLine("[LootManager] Refresh thread stopped.");
@@ -107,10 +104,21 @@ namespace eft_dma_radar
 
         private void RefreshLoot()
         {
+            //Stopwatch stopwatch = new Stopwatch();
+            //stopwatch.Start(); // Start timing
+            //Console.WriteLine("[LootManager] Refreshing Loot...");
             this.GetLootList();
             this.GetLoot();
             this.FillLoot();
             this.ApplyFilter();
+        //    stopwatch.Stop(); // Stop timing
+        //    TimeSpan ts = stopwatch.Elapsed;
+        //    string elapsedTime = String.Format("RunTime {0:00}:{1:00}:{2:00}.{3:00}", ts.Hours, ts.Minutes, ts.Seconds, ts.Milliseconds / 10);
+        //    Console.WriteLine("[LootManager] RunTime " + elapsedTime);
+        //    Console.WriteLine($"[LootManager] Total loot items processed: {this.savedLootItemsInfo.Count + this.savedLootContainersInfo.Count + this.savedLootCorpsesInfo.Count}");
+        //    Console.WriteLine($"[LootManager] Found {this.savedLootItemsInfo.Count} loose loot items");
+        //    Console.WriteLine($"[LootManager] Found {this.savedLootContainersInfo.Count} lootable containers");
+        //    Console.WriteLine($"[LootManager] Found {this.savedLootCorpsesInfo.Count} lootable corpses");
         }
 
         /// <summary>
@@ -118,9 +126,34 @@ namespace eft_dma_radar
         /// </summary>
         private void RefreshLootListAddresses()
         {
-            this.lootlistPtr = Memory.ReadPtr(this.localGameWorld + Offsets.LocalGameWorld.LootList);
-            this.lootListEntity = Memory.ReadPtr(this.lootlistPtr + Offsets.UnityList.Base);
-            this.countLootListObjects = Memory.ReadValue<int>(this.lootListEntity + Offsets.UnityList.Count);
+            var count = 3;
+
+            var scatterReadMap = new ScatterReadMap(count);
+            var round1 = scatterReadMap.AddRound();
+            var round2 = scatterReadMap.AddRound();
+            var round3 = scatterReadMap.AddRound();
+
+            for (int i = 0; i < count; i++)
+            {
+                var lootlistPtr = round1.AddEntry<ulong>(i, 0, this.localGameWorld, null, Offsets.LocalGameWorld.LootList);
+                var lootListEntity = round2.AddEntry<ulong>(i, 1, lootlistPtr, null, Offsets.UnityList.Base);
+                var countLootListObjects = round3.AddEntry<int>(i, 2, lootListEntity, null, Offsets.UnityList.Count);
+            }
+
+            scatterReadMap.Execute();
+
+            for (int i = 0; i < count; i++)
+            {
+                if (scatterReadMap.Results[i][0].TryGetResult<ulong>(out var lootlistPtr))
+                    this.lootlistPtr = lootlistPtr;
+
+                if (scatterReadMap.Results[i][1].TryGetResult<ulong>(out var lootListEntity))
+                    this.lootListEntity = lootListEntity;
+
+                if (scatterReadMap.Results[i][2].TryGetResult<int>(out var countLootListObjects))
+                    this.countLootListObjects = countLootListObjects;
+
+            }
         }
         /// <summary>
         /// Gets the invalid & valid loot entities
@@ -253,6 +286,7 @@ namespace eft_dma_radar
             validScatterMap.Execute();
 
             for (int i = 0; i < this.validLootEntities.Count; i++)
+            //Parallel.For(0, this.validLootEntities.Count, i =>
             {
                 try
                 {
@@ -262,9 +296,10 @@ namespace eft_dma_radar
                         continue;
                     if (!validScatterMap.Results[i][24].TryGetResult<ulong>(out var posToTransform))
                         continue;
-
-                    validScatterMap.Results[i][20].TryGetResult<string>(out var containerName);
-                    validScatterMap.Results[i][19].TryGetResult<string>(out var className);
+                    if (!validScatterMap.Results[i][20].TryGetResult<string>(out var containerName))
+                        continue;
+                    if (!validScatterMap.Results[i][19].TryGetResult<string>(out var className))
+                        continue;
 
                     if (containerName.Contains("script", StringComparison.OrdinalIgnoreCase))
                     {
@@ -362,6 +397,7 @@ namespace eft_dma_radar
                     }
                 }
                 catch { continue; }
+            //});
             }
         }
         /// <summary>
@@ -480,7 +516,7 @@ namespace eft_dma_radar
 
                     if (mergedContainer.Name.Contains("COLLIDER(1)"))
                     {
-                        mergedContainer.Name = "Airdrop";
+                        mergedContainer.Name = "AIRDROP";
                         mergedContainer.AlwaysShow = true;
                     }
 
@@ -712,24 +748,71 @@ namespace eft_dma_radar
 
         private void ProcessGrid(ulong gridsArrayPtr, Vector3 position, List<LootItem> cachedLootItems, int recurseDepth)
         {
-            var gridsArray = new MemArray(gridsArrayPtr);
-            foreach (var grid in gridsArray.Data)
+            var gridsArrayCount = Memory.ReadValue<int>(gridsArrayPtr + Offsets.UnityList.Count);
+
+            if (gridsArrayCount < 0 || gridsArrayCount > 4096)
+                return;
+
+            var scatterReadMap = new ScatterReadMap(gridsArrayCount);
+            var round1 = scatterReadMap.AddRound();
+            var round2 = scatterReadMap.AddRound();
+            var round3 = scatterReadMap.AddRound();
+            var round4 = scatterReadMap.AddRound();
+
+            var gridItemBaseStart = gridsArrayPtr + Offsets.UnityListBase.Start;
+
+            for (int i = 0; i < gridsArrayCount; i++)
             {
-                var gridEnumerableClass = Memory.ReadPtr(grid + Offsets.Grids.GridsEnumerableClass);
-                var itemListPtr = Memory.ReadPtr(gridEnumerableClass + Offsets.UnityList.Count);
-                var itemList = new MemList(itemListPtr);
+                var grid = round1.AddEntry<ulong>(i, 0, gridItemBaseStart, null, (uint)i * Offsets.Slot.Size);
+                var gridEnumerableClass = round2.AddEntry<ulong>(i, 1, grid, null, Offsets.Grids.GridsEnumerableClass);
+                var itemListPtr = round3.AddEntry<ulong>(i, 2, gridEnumerableClass, null, Offsets.UnityList.Count);
+                var itemListCount = round4.AddEntry<int>(i, 3, itemListPtr, null, Offsets.UnityList.Count);
+                var arrayBase = round4.AddEntry<ulong>(i, 4, itemListPtr, null, Offsets.UnityList.Base);
+            }
 
-                foreach (var childItem in itemList.Data)
+            scatterReadMap.Execute();
+
+            //Parallel.For(0, gridsArrayCount, i =>
+            for (int i = 0; i < gridsArrayCount; i++)
+            {
+                if (!scatterReadMap.Results[i][0].TryGetResult<ulong>(out var grid))
+                    continue;
+                if (!scatterReadMap.Results[i][1].TryGetResult<ulong>(out var gridEnumerableClass))
+                    continue;
+                if (!scatterReadMap.Results[i][2].TryGetResult<ulong>(out var itemListPtr))
+                    continue;
+                if (!scatterReadMap.Results[i][3].TryGetResult<int>(out var itemListCount))
+                    continue;
+                if (!scatterReadMap.Results[i][4].TryGetResult<ulong>(out var arrayBase))
+                    continue;
+
+                var innerScatterReadMap = new ScatterReadMap(itemListCount);
+                var innerRound1 = innerScatterReadMap.AddRound();
+                var innerRound2 = innerScatterReadMap.AddRound();
+                var innerRound3 = innerScatterReadMap.AddRound();
+
+                for (int j = 0; j < itemListCount; j++)
                 {
-                    var childItemTemplate = Memory.ReadPtr(childItem + Offsets.LootItemBase.ItemTemplate);
-                    if (childItemTemplate == 0)
-                        continue;
+                    var childItem = innerRound1.AddEntry<ulong>(j, 0, arrayBase, null, Offsets.UnityListBase.Start + ((uint)j * 0x08));
+                    var childItemTemplate = innerRound2.AddEntry<ulong>(j, 1, childItem, null, Offsets.LootItemBase.ItemTemplate);
+                    var childGridsArrayPtr = innerRound2.AddEntry<ulong>(j, 2, childItem, null, Offsets.LootItemBase.Grids);
+                    var childItemIdPtr = innerRound3.AddEntry<ulong>(j, 3, childItemTemplate, null, Offsets.ItemTemplate.BsgId);
+                }
 
-                    var childItemIdPtr = Memory.ReadPtr(childItemTemplate + Offsets.ItemTemplate.BsgId);
-                    if (childItemIdPtr == 0)
+                innerScatterReadMap.Execute();
+
+                //Parallel.For(0, itemListCount, j =>
+                for (int j = 0; j < itemListCount; j++)
+                {
+                    if (!innerScatterReadMap.Results[j][0].TryGetResult<ulong>(out var childItem))
+                        continue;
+                    if (!innerScatterReadMap.Results[j][1].TryGetResult<ulong>(out var childItemTemplate))
+                        continue;
+                    if (!innerScatterReadMap.Results[j][3].TryGetResult<ulong>(out var childItemIdPtr))
                         continue;
 
                     var childItemId = Memory.ReadUnityString(childItemIdPtr).Replace("\\0", "");
+
                     if (TarkovDevManager.AllItems.TryGetValue(childItemId, out var childLootItem))
                     {
                         var newItem = new LootItem
@@ -746,12 +829,13 @@ namespace eft_dma_radar
                         cachedLootItems.Add(newItem);
                     }
 
-                    var childGridsArrayPtr = Memory.ReadPtrNullable(childItem + Offsets.LootItemBase.Grids);
-                    if (childGridsArrayPtr != 0)
-                    {
-                        this.GetItemsInGrid(childGridsArrayPtr, position, cachedLootItems, recurseDepth + 1);
-                    }
+                    if (!innerScatterReadMap.Results[j][2].TryGetResult<ulong>(out var childGridsArrayPtr))
+                        continue;
+
+                    this.GetItemsInGrid(childGridsArrayPtr, position, cachedLootItems, recurseDepth + 1);
+                //});
                 }
+            //});
             }
         }
 
@@ -765,31 +849,46 @@ namespace eft_dma_radar
             if (slotDict == null || slotDict.Count == 0)
                 return;
 
-            foreach (var kvp in slotDict)
+            var scatterReadMap = new ScatterReadMap(slotDict.Count);
+            var round1 = scatterReadMap.AddRound();
+            var round2 = scatterReadMap.AddRound();
+            var round3 = scatterReadMap.AddRound();
+
+            var slotNames = slotDict.Keys.ToList();
+            var slotPtrs = slotDict.Values.ToList();
+
+            for (int i = 0; i < slotDict.Count; i++)
             {
-                var slotName = kvp.Key;
-                var slot = kvp.Value;
-                var containedItem = Memory.ReadPtrNullable(slot + Offsets.Slot.ContainedItem);
+                var containedItem = round1.AddEntry<ulong>(i, 0, slotPtrs[i], null, Offsets.Slot.ContainedItem);
+                var inventorytemplate = round2.AddEntry<ulong>(i, 1, containedItem, null, Offsets.LootItemBase.ItemTemplate);
+                var idPtr = round3.AddEntry<ulong>(i, 2, inventorytemplate, null, Offsets.ItemTemplate.BsgId);
+            }
 
-                if (containedItem == 0x0)
-                {
+            scatterReadMap.Execute();
+
+            for (int i = 0; i < slotDict.Count; i++)
+            {
+                if (!scatterReadMap.Results[i][0].TryGetResult<ulong>(out var containedItem))
                     continue;
-                }
+                if (!scatterReadMap.Results[i][1].TryGetResult<ulong>(out var inventorytemplate))
+                    continue;
+                if (!scatterReadMap.Results[i][2].TryGetResult<ulong>(out var idPtr))
+                    continue;
 
-                var inventorytemplate = Memory.ReadPtr(containedItem + Offsets.LootItemBase.ItemTemplate);
-                var idPtr = Memory.ReadPtr(inventorytemplate + Offsets.ItemTemplate.BsgId);
                 var id = Memory.ReadUnityString(idPtr);
-                var isPocket = (slotName == "Pockets");
+                var slotName = slotNames[i];
 
-                if (TarkovDevManager.AllItems.TryGetValue(id, out LootItem lootItem) || isPocket)
+                SlotCacheEntry cacheEntry = this.slotCache.GetOrAdd(slotItemBase, _ => new SlotCacheEntry());
+
+                if (cacheEntry.CachedGearItems.TryGetValue(slotName, out var cachedGearItem))
                 {
-                    SlotCacheEntry cacheEntry = this.slotCache.GetOrAdd(slotItemBase, _ => new SlotCacheEntry());
+                    gearItems.Add(cachedGearItem);
+                }
+                else
+                {
+                    var isPocket = (slotName == "Pockets");
 
-                    if (cacheEntry.CachedGearItems.TryGetValue(slotName, out var cachedGearItem))
-                    {
-                        gearItems.Add(cachedGearItem);
-                    }
-                    else
+                    if (TarkovDevManager.AllItems.TryGetValue(id, out LootItem lootItem) || isPocket)
                     {
                         var longName = isPocket ? "Pocket" : lootItem?.Item.name ?? "Unknown";
                         var shortName = isPocket ? "Pocket" : lootItem?.Item.shortName ?? "Unknown";
@@ -824,32 +923,44 @@ namespace eft_dma_radar
             if (slotDict == null || slotDict.Count == 0)
                 return;
 
-            foreach (var kvp in slotDict)
+            var scatterReadMap = new ScatterReadMap(slotDict.Count);
+            var round1 = scatterReadMap.AddRound();
+            var round2 = scatterReadMap.AddRound();
+            var round3 = scatterReadMap.AddRound();
+
+            var slotNames = slotDict.Keys.ToList();
+            var slotPtrs = slotDict.Values.ToList();
+
+            for (int i = 0; i < slotDict.Count; i++)
             {
-                var slotName = kvp.Key;
-                var slot = kvp.Value;
-                var containedItem = Memory.ReadPtrNullable(slot + Offsets.Slot.ContainedItem);
+                var containedItem = round1.AddEntry<ulong>(i, 0, slotPtrs[i], null, Offsets.Slot.ContainedItem);
+                var inventorytemplate = round2.AddEntry<ulong>(i, 1, containedItem, null, Offsets.LootItemBase.ItemTemplate);
+                var idPtr = round3.AddEntry<ulong>(i, 2, inventorytemplate, null, Offsets.ItemTemplate.BsgId);
+            }
 
-                if (containedItem == 0x0)
-                {
+            scatterReadMap.Execute();
+
+            for (int i = 0; i < slotDict.Count; i++)
+            {
+                if (!scatterReadMap.Results[i][0].TryGetResult<ulong>(out var containedItem))
                     continue;
-                }
+                if (!scatterReadMap.Results[i][1].TryGetResult<ulong>(out var inventorytemplate))
+                    continue;
+                if (!scatterReadMap.Results[i][2].TryGetResult<ulong>(out var idPtr))
+                    continue;
 
-                var inventorytemplate = Memory.ReadPtr(containedItem + Offsets.LootItemBase.ItemTemplate);
-                var idPtr = Memory.ReadPtr(inventorytemplate + Offsets.ItemTemplate.BsgId);
                 var id = Memory.ReadUnityString(idPtr);
+                var slotName = slotNames[i];
 
-                var lootItems = new List<LootItem>();
+                SlotCacheEntry cacheEntry = this.slotCache.GetOrAdd(slotItemBase, _ => new SlotCacheEntry());
 
-                if (TarkovDevManager.AllItems.TryGetValue(id, out LootItem lootItem))
+                if (cacheEntry.CachedLootItems.TryGetValue(slotName, out var cachedLootItem))
                 {
-                    SlotCacheEntry cacheEntry = this.slotCache.GetOrAdd(slotItemBase, _ => new SlotCacheEntry());
-
-                    if (cacheEntry.CachedLootItems.TryGetValue(slotName, out var cachedLootItem))
-                    {
-                        loot.Add(cachedLootItem);
-                    }
-                    else
+                    loot.Add(cachedLootItem);
+                }
+                else
+                {
+                    if (TarkovDevManager.AllItems.TryGetValue(id, out LootItem lootItem))
                     {
                         var newLootItem = new LootItem
                         {
@@ -865,9 +976,9 @@ namespace eft_dma_radar
                         loot.Add(newLootItem);
                         cacheEntry.CachedLootItems[slotName] = newLootItem;
                     }
-
-                    this.ProcessNestedItems(loot, containedItem, position, recurseDepth + 1);
                 }
+
+                this.ProcessNestedItems(loot, containedItem, position, recurseDepth + 1);
             }
         }
 
@@ -889,14 +1000,45 @@ namespace eft_dma_radar
         private int CalculateChildrenCount(ulong gridsArrayPtr)
         {
             int totalChildrenCount = 0;
-            var gridsArray = new MemArray(gridsArrayPtr);
-            foreach (var grid in gridsArray.Data)
+            var gridsArrayCount = Memory.ReadValue<int>(gridsArrayPtr + Offsets.UnityList.Count);
+
+            if (gridsArrayCount < 0 || gridsArrayCount > 4096)
+                return 0;
+
+            var scatterReadMap = new ScatterReadMap(gridsArrayCount);
+            var round1 = scatterReadMap.AddRound();
+            var round2 = scatterReadMap.AddRound();
+            var round3 = scatterReadMap.AddRound();
+            var round4 = scatterReadMap.AddRound();
+
+            var gridItemBaseStart = gridsArrayPtr + Offsets.UnityListBase.Start;
+
+            for (int i = 0; i < gridsArrayCount; i++)
             {
-                var gridEnumerableClass = Memory.ReadPtr(grid + Offsets.Grids.GridsEnumerableClass);
-                var itemListPtr = Memory.ReadPtr(gridEnumerableClass + Offsets.UnityList.Count);
-                var itemList = new MemList(itemListPtr);
-                totalChildrenCount += itemList.Count; // Sum up the count of items in each grid
+                var grid = round1.AddEntry<ulong>(i, 0, gridItemBaseStart, null, (uint)i * Offsets.Slot.Size);
+                var gridEnumerableClass = round2.AddEntry<ulong>(i, 1, grid, null, Offsets.Grids.GridsEnumerableClass);
+                var itemListPtr = round3.AddEntry<ulong>(i, 2, gridEnumerableClass, null, Offsets.UnityList.Count);
+                var itemListCount = round4.AddEntry<int>(i, 3, itemListPtr, null, Offsets.UnityList.Count);
             }
+
+            scatterReadMap.Execute();
+
+            //Parallel.For(0, gridsArrayCount, i =>
+            for (int i = 0; i < gridsArrayCount; i++)
+            {
+                if (!scatterReadMap.Results[i][0].TryGetResult<ulong>(out var grid))
+                    continue;
+                if (!scatterReadMap.Results[i][1].TryGetResult<ulong>(out var gridEnumerableClass))
+                    continue;
+                if (!scatterReadMap.Results[i][2].TryGetResult<ulong>(out var itemListPtr))
+                    continue;
+                if (!scatterReadMap.Results[i][3].TryGetResult<int>(out var itemListCount))
+                    continue;
+
+                totalChildrenCount += itemListCount;
+            //});
+            }
+
             return totalChildrenCount;
         }
 
@@ -910,15 +1052,30 @@ namespace eft_dma_radar
 
                 if (size <= 0 || size > 25)
                 {
-                    size = Math.Min(Math.Max(size, 0), 25);
+                    size = Math.Clamp(size, 0, 25);
                 }
+
+                var scatterReadMap = new ScatterReadMap(size);
+                var round1 = scatterReadMap.AddRound();
+                var round2 = scatterReadMap.AddRound();
 
                 var slotItemBaseStart = slotItemBase + Offsets.UnityListBase.Start;
 
-                for (int slotID = 0; slotID < size; slotID++)
+                for (int i = 0; i < size; i++)
                 {
-                    var slotPtr = Memory.ReadPtr(slotItemBaseStart + (uint)slotID * Offsets.Slot.Size);
-                    var namePtr = Memory.ReadPtr(slotPtr + Offsets.Slot.Name);
+                    var slotPtr = round1.AddEntry<ulong>(i, 0, slotItemBaseStart, null, (uint)i * Offsets.Slot.Size);
+                    var namePtr = round2.AddEntry<ulong>(i, 1, slotPtr, null, Offsets.Slot.Name);
+                }
+
+                scatterReadMap.Execute();
+
+                for (int i = 0; i < size; i++)
+                {
+                    if (!scatterReadMap.Results[i][0].TryGetResult<ulong>(out var slotPtr))
+                        continue;
+                    if (!scatterReadMap.Results[i][1].TryGetResult<ulong>(out var namePtr))
+                        continue;
+
                     var name = Memory.ReadUnityString(namePtr);
 
                     if (!LootManager.slotsToSkip.Contains(name, StringComparer.OrdinalIgnoreCase))

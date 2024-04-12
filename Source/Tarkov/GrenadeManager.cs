@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Numerics;
 
@@ -15,9 +13,19 @@ namespace eft_dma_radar
         {
             get
             {
-                var count = Memory.ReadValue<int>(_grenadeList + Offsets.UnityList.Count);
-                if (count < 0 || count > 32) throw new ArgumentOutOfRangeException();
-                return count;
+                try
+                {
+                    var count = Memory.ReadValue<int>(this._grenadeList + Offsets.UnityList.Count);
+                    if (count < 0 || count > 32)
+                    {
+                        return 0;
+                    }
+                    return count;
+                }
+                catch
+                {
+                    return 0;
+                }
             }
         }
         /// <summary>
@@ -28,8 +36,8 @@ namespace eft_dma_radar
         public GrenadeManager(ulong localGameWorld)
         {
             var grenadesPtr = Memory.ReadPtr(localGameWorld + Offsets.LocalGameWorld.Grenades);
-            _grenadeList = Memory.ReadPtr(grenadesPtr + Offsets.Grenades.List);
-            _sw.Start();
+            this._grenadeList = Memory.ReadPtr(grenadesPtr + Offsets.Grenades.List);
+            this._sw.Start();
         }
 
         /// <summary>
@@ -37,28 +45,45 @@ namespace eft_dma_radar
         /// </summary>
         public void Refresh()
         {
+            if (this._sw.ElapsedMilliseconds < 150) return;
+            this._sw.Restart();
+
             try
             {
-                if (_sw.ElapsedMilliseconds < 150) return;
                 var count = this.GrenadeCount;
-                if (count > 0 && _listBase is null) // List addr becomes valid after first grenade(s) thrown
+                var grenades = new List<Grenade>();
+
+                if (count > 0)
                 {
-                    _listBase = Memory.ReadPtr(_grenadeList + Offsets.UnityList.Base);
-                }
-                if (_listBase is null) return;
-                var list = new List<Grenade>();
-                for (uint i = 0; i < count; i++)
-                {
-                    try
+                    if (this._listBase == null)
                     {
-                        var grenadeAddr = Memory.ReadPtr((ulong)_listBase + Offsets.UnityListBase.Start + (i * 0x08));
-                        var grenade = new Grenade(grenadeAddr);
-                        list.Add(grenade);
+                        this._listBase = Memory.ReadPtr(this._grenadeList + Offsets.UnityList.Base);
                     }
-                    catch { }
+
+                    var scatterReadMap = new ScatterReadMap(count);
+                    var round1 = scatterReadMap.AddRound();
+
+                    for (int i = 0; i < count; i++)
+                    {
+                        var grenadeAddr = round1.AddEntry<ulong>(i, 0, this._listBase, null, Offsets.UnityListBase.Start + ((uint)i * 0x08));
+                    }
+
+                    scatterReadMap.Execute();
+
+                    Parallel.For(0, count, i =>
+                    {
+                        if (!scatterReadMap.Results[i][0].TryGetResult<ulong>(out var grenadeAddr))
+                            return;
+
+                        grenades.Add(new Grenade(grenadeAddr));
+                    });
                 }
-                Grenades = new(list); // update readonly ref
-                _sw.Restart();
+                else
+                {
+                    this._listBase = null;
+                }
+
+                this.Grenades = new ReadOnlyCollection<Grenade>(grenades);
             }
             catch { }
         }
@@ -76,7 +101,7 @@ namespace eft_dma_radar
         public Grenade(ulong baseAddr)
         {
             var posAddr = Memory.ReadPtrChain(baseAddr, Offsets.GameObject.To_TransformInternal);
-            Position = new Transform(posAddr).GetPosition();
+            this.Position = new Transform(posAddr).GetPosition();
         }
     }
 }

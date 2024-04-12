@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Numerics;
 using System.Text;
@@ -12,33 +11,62 @@ namespace eft_dma_radar
         /// <summary>
         /// Contains all Tarkov Loot, Quests Items and Tasks mapped via BSGID String.
         /// </summary>
-        ///
-        public static ReadOnlyDictionary<string, LootItem> AllItems { get; }
-        public static ReadOnlyDictionary<string, QuestItems> AllQuestItems { get; }
-        public static ReadOnlyDictionary<string, Tasks> AllTasks { get; }
-        public static ReadOnlyDictionary<string, LootContainerInfo> AllLootContainers { get; }
-        public static ReadOnlyDictionary<string, Maps> AllMaps { get; }
+        private static readonly Dictionary<string, LootItem> _allItems = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<string, QuestItems> _allQuestItems = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<string, Tasks> _allTasks = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<string, Containers> _allLootContainers = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<string, Maps> _allMaps = new(StringComparer.OrdinalIgnoreCase);
+
+        public static ReadOnlyDictionary<string, LootItem> AllItems => new(_allItems);
+        public static ReadOnlyDictionary<string, QuestItems> AllQuestItems => new(_allQuestItems);
+        public static ReadOnlyDictionary<string, Tasks> AllTasks => new(_allTasks);
+        public static ReadOnlyDictionary<string, Containers> AllLootContainers => new(_allLootContainers);
+        public static ReadOnlyDictionary<string, Maps> AllMaps => new(_allMaps);
 
         #region Static_Constructor
-
         static TarkovDevManager()
+        {
+            LoadData();
+        }
+        #endregion
+
+        #region Private_Methods
+        private static void LoadData()
         {
             TarkovDevResponse jsonResponse;
 
-            var jsonItems = new List<TarkovDevResponse>();
-            var allItems = new Dictionary<string, LootItem>(StringComparer.OrdinalIgnoreCase);
-            var allQuestItems = new Dictionary<string, QuestItems>(StringComparer.OrdinalIgnoreCase);
-            var allTasks = new Dictionary<string, Tasks>(StringComparer.OrdinalIgnoreCase);
-            var allLootContainers = new Dictionary<string, LootContainerInfo>(StringComparer.OrdinalIgnoreCase);
-            var allMaps = new Dictionary<string, Maps>(StringComparer.OrdinalIgnoreCase);
-            if (!File.Exists("api_tarkov_dev_items.json") || File.GetLastWriteTime("api_tarkov_dev_items.json").AddHours(1) < DateTime.Now) // only update every 1h
+            if (ShouldFetchDataFromApi())
             {
-                using (var client = new HttpClient())
+                jsonResponse = FetchDataFromApi();
+            }
+            else
+            {
+                jsonResponse = LoadDataFromFile();
+            }
+
+            if (jsonResponse != null)
+            {
+                ProcessItems(jsonResponse.data.items);
+                ProcessTasks(jsonResponse.data.tasks);
+                ProcessQuestItems(jsonResponse.data.questItems);
+                ProcessLootContainers(jsonResponse.data.lootContainers);
+                ProcessMaps(jsonResponse.data.maps);
+            }
+        }
+
+        private static bool ShouldFetchDataFromApi()
+        {
+            return !File.Exists("api_tarkov_dev_items.json") || File.GetLastWriteTime("api_tarkov_dev_items.json").AddHours(1) < DateTime.Now;
+        }
+
+        private static TarkovDevResponse FetchDataFromApi()
+        {
+            using (var client = new HttpClient())
+            {
+                //Create body and content-type
+                var body = new
                 {
-                    //Create body and content-type
-                    var body = new
-                    {
-                        query = @"query {
+                    query = @"query {
                                     items {
                                         id
                                         name
@@ -234,198 +262,170 @@ namespace eft_dma_radar
                                         }
                                     }
                                 }"
-                    };
-                    var jsonBody = JsonSerializer.Serialize(body);
-                    var content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
-                    var response = client.PostAsync("https://api.tarkov.dev/graphql", content).Result;
-                    var responseString = response.Content.ReadAsStringAsync().Result;
-                    jsonResponse = JsonSerializer.Deserialize<TarkovDevResponse>(responseString);
-                    jsonItems.Add(jsonResponse);
-                    File.WriteAllText("api_tarkov_dev_items.json", responseString);
-                }
+                };
+                var jsonBody = JsonSerializer.Serialize(body);
+                var content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
+                var response = client.PostAsync("https://api.tarkov.dev/graphql", content).Result;
+                var responseString = response.Content.ReadAsStringAsync().Result;
+                File.WriteAllText("api_tarkov_dev_items.json", responseString);
+                return JsonSerializer.Deserialize<TarkovDevResponse>(responseString);
             }
-            else
-            {
-                var responseString = File.ReadAllText("api_tarkov_dev_items.json");
-                jsonResponse = JsonSerializer.Deserialize<TarkovDevResponse>(responseString);
-                jsonItems.Add(jsonResponse);
-            }
-
-            foreach (var item in jsonItems)
-            {
-                if (item.data?.items != null)
-                {
-                    foreach (var tarkovItem in item.data.items)
-                    {
-                        allItems.TryAdd(
-                            tarkovItem.id,
-                            new LootItem()
-                            {
-                                Name = tarkovItem.name,
-                                Item = tarkovItem,
-                            }
-                        );
-                    }
-                }
-
-                if (item.data?.tasks != null)
-                {
-                    foreach (var task in item.data.tasks)
-                    {
-                        var newTask = new Tasks()
-                        {
-                            Name = task.name,
-                            ID = task.id,
-                            Objectives = new List<Tasks.Objective>()
-                        };
-
-                        foreach (var objective in task.objectives)
-                        {
-                            var newObjective = new Tasks.Objective()
-                            {
-                                Description = objective.description,
-                                Type = objective.type,
-                                ID = objective.id,
-                                Maps = objective.maps?.Select(m => new ObjectiveMaps
-                                {
-                                    id = m.id,
-                                    name = m.name,
-                                    normalizedName = m.normalizedName
-                                }).ToList(),
-                                Zones = objective.zones?.Select(z => new ObjectiveZones
-                                {
-                                    id = z.id,
-                                    map = new ObjectiveZones.Map
-                                    {
-                                        id = z.map.id,
-                                        name = z.map.name,
-                                        normalizedName = z.map.normalizedName
-                                    },
-                                    position = new ObjectiveZones.Position
-                                    {
-                                        x = z.position.x,
-                                        y = z.position.z,
-                                        z = z.position.y
-                                    }
-                                }).ToList(),
-                                //how to add objectiveItem
-                                Count = objective.count,
-                                FoundInRaid = objective.foundInRaid
-                            };
-
-                            if (objective.questItem != null) // Check if questItem exists
-                            {
-                                newObjective.QuestItem = new ObjectiveItem
-                                {
-                                    Id = objective.questItem.id,
-                                    Name = objective.questItem.name,
-                                    ShortName = objective.questItem.shortName,
-                                    NormalizedName = objective.questItem.normalizedName,
-                                    Description = objective.questItem.description,
-                                };
-                            }
-                            //visit
-                            //extract
-                            //mark
-                            //shoot
-                            //findQuestItem
-                            //giveQuestItem
-                            //plantItem
-                            //giveItem
-                            //experience
-                            // Additional processing based on the objective.type
-                            switch (objective.type)
-                            {
-                                case "findQuestItem":
-                                    // Process findQuestItem type objectives here.
-                                    // You might want to add specific properties or actions.
-                                    break;
-                                case "visit":
-                                    // Process visit type objectives here.
-                                    // This could involve adding details about the maps and zones to visit.
-                                    break;
-                                case "mark":
-                                    // Process mark type objectives here.
-                                    // This might include details about the item to mark and its location.
-                                    break;
-                                // Add more cases for other types as necessary.
-                            }
-
-                            // Add the populated objective to the task's objectives list.
-                            newTask.Objectives.Add(newObjective);
-                        }
-
-                        // Finally, add the fully constructed task to the allTasks dictionary.
-                        allTasks.TryAdd(task.id, newTask);
-                    }
-                }
-
-                if (item.data?.questItems != null)
-                {
-                    foreach (var questItem in item.data.questItems)
-                    {
-                        allQuestItems.TryAdd(
-                            questItem.id,
-                            new QuestItems()
-                            {
-                                Name = questItem.name,
-                                ID = questItem.id,
-                                ShortName = questItem.shortName
-                            }
-                        );
-                    }
-                }
-
-                if (item.data?.lootContainers != null)
-                {
-                    foreach (var lootContainer in item.data.lootContainers)
-                    {
-                        allLootContainers.TryAdd(
-                            lootContainer.id,
-                            new LootContainerInfo()
-                            {
-                                Name = lootContainer.name,
-                                ID = lootContainer.id,
-                                NormalizedName = lootContainer.normalizedName
-                            }
-                        );
-                    }
-                }
-
-                if (item.data?.maps != null)
-                {
-                    foreach (var map in item.data.maps)
-                    {
-                        var newMap = new Maps()
-                        {
-                            name = map.name,
-                            extracts = new List<Extract>()
-                        };
-
-                        foreach (var extract in map.extracts)
-                        {
-                            var newExtract = new Extract()
-                            {
-                                name = extract.name,
-                                position = new Vector3(extract.position.x, extract.position.z, extract.position.y)
-                            };
-
-                            newMap.extracts.Add(newExtract);
-                        };
-
-                        allMaps.TryAdd(newMap.name, newMap);
-                    }
-                }
-            }
-            AllItems = new(allItems);
-            AllTasks = new(allTasks);
-            AllQuestItems = new(allQuestItems);
-            AllLootContainers = new(allLootContainers);
-            AllMaps = new(allMaps);
         }
-        #endregion
 
-        #region Private_Methods
+        private static TarkovDevResponse LoadDataFromFile()
+        {
+            var responseString = File.ReadAllText("api_tarkov_dev_items.json");
+            return JsonSerializer.Deserialize<TarkovDevResponse>(responseString);
+        }
+
+        private static void ProcessItems(List<TarkovItem> items)
+        {
+            foreach (var tarkovItem in items)
+            {
+                _allItems.TryAdd(
+                    tarkovItem.id,
+                    new LootItem()
+                    {
+                        Name = tarkovItem.name,
+                        Item = tarkovItem,
+                    }
+                );
+            }
+        }
+
+        private static void ProcessTasks(List<TarkovTasks> tasks)
+        {
+            foreach (var task in tasks)
+            {
+                var newTask = new Tasks()
+                {
+                    Name = task.name,
+                    ID = task.id,
+                    Objectives = new List<Tasks.Objective>()
+                };
+
+                foreach (var objective in task.objectives)
+                {
+                    var newObjective = new Tasks.Objective()
+                    {
+                        Description = objective.description,
+                        Type = objective.type,
+                        ID = objective.id,
+                        Maps = objective.maps?
+                        .Where(m => m != null)
+                        .Select(m => new ObjectiveMaps
+                        {
+                            id = m.id,
+                            name = m.name,
+                            normalizedName = m.normalizedName
+                        }).ToList(),
+                        Zones = objective.zones?.Select(z => new ObjectiveZones
+                        {
+                            id = z.id,
+                            map = new ObjectiveZones.Map
+                            {
+                                id = z.map.id,
+                                name = z.map.name,
+                                normalizedName = z.map.normalizedName
+                            },
+                            position = new ObjectiveZones.Position
+                            {
+                                x = z.position.x,
+                                y = z.position.z,
+                                z = z.position.y
+                            }
+                        }).ToList(),
+
+                        Count = objective.count,
+                        FoundInRaid = objective.foundInRaid
+                    };
+
+                    if (objective.questItem != null)
+                    {
+                        newObjective.QuestItem = new ObjectiveItem
+                        {
+                            Id = objective.questItem.id,
+                            Name = objective.questItem.name,
+                            ShortName = objective.questItem.shortName,
+                            NormalizedName = objective.questItem.normalizedName,
+                            Description = objective.questItem.description,
+                        };
+                    }
+
+                    switch (objective.type)
+                    {
+                        case "findQuestItem":
+                            break;
+                        case "visit":
+                            break;
+                        case "mark":
+                            break;
+                    }
+
+                    newTask.Objectives.Add(newObjective);
+                }
+
+                _allTasks.TryAdd(task.id, newTask);
+            }
+        }
+
+        private static void ProcessQuestItems(List<TarkovQuestItems> questItems)
+        {
+            foreach (var questItem in questItems)
+            {
+                _allQuestItems.TryAdd(
+                    questItem.id,
+                    new QuestItems()
+                    {
+                        Name = questItem.name,
+                        ID = questItem.id,
+                        ShortName = questItem.shortName
+                    }
+                );
+            }
+        }
+
+        private static void ProcessLootContainers(List<TarkovContainer> lootContainers)
+        {
+            foreach (var lootContainer in lootContainers)
+            {
+                _allLootContainers.TryAdd(
+                    lootContainer.id,
+                    new Containers()
+                    {
+                        Name = lootContainer.name,
+                        ID = lootContainer.id,
+                        NormalizedName = lootContainer.normalizedName
+                    }
+                );
+            }
+        }
+
+        private static void ProcessMaps(List<TarkovMap> maps)
+        {
+            foreach (var map in maps)
+            {
+                var newMap = new Maps()
+                {
+                    name = map.name,
+                    extracts = new List<Extract>()
+                };
+
+                foreach (var extract in map.extracts)
+                {
+                    var newExtract = new Extract()
+                    {
+                        name = extract.name,
+                        position = new Vector3(extract.position.x, extract.position.z, extract.position.y)
+                    };
+
+                    newMap.extracts.Add(newExtract);
+                };
+
+                _allMaps.TryAdd(newMap.name, newMap);
+            }
+        }
+
         public static string FormatNumber(int num)
         {
             if (num >= 1000000)
@@ -571,18 +571,18 @@ namespace eft_dma_radar
         public string normalizedName { get; set; }
     }
 
-    public class LootContainerInfo
-    {
-        public string ID { get; set; }
-        public string NormalizedName { get; set; }
-        public string Name { get; set; }
-    }
-
-    public class TarkovLootContainerInfo
+    public class TarkovContainer
     {
         public string id { get; set; }
         public string name { get; set; }
         public string normalizedName { get; set; }
+    }
+
+    public class Containers
+    {
+        public string ID { get; set; }
+        public string NormalizedName { get; set; }
+        public string Name { get; set; }
     }
 
     public class QuestItems
@@ -665,7 +665,7 @@ namespace eft_dma_radar
         public List<TarkovItem> items { get; set; }
         public List<TarkovTasks> tasks { get; set; } 
         public List<TarkovQuestItems> questItems { get; set; }
-        public List<TarkovLootContainerInfo> lootContainers { get; set; }
+        public List<TarkovContainer> lootContainers { get; set; }
         public List<TarkovMap> maps { get; set; }
     }
     #endregion

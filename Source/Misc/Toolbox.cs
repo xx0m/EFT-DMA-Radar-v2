@@ -9,7 +9,7 @@ namespace eft_dma_radar.Source.Tarkov
 {
     public class Toolbox
     {
-        private readonly Thread _workerThread;
+        private Thread _workerThread;
         private bool nightVisionToggled = false;
         private bool thermalVisionToggled = false;
         private bool doubleSearchToggled = false;
@@ -28,7 +28,6 @@ namespace eft_dma_radar.Source.Tarkov
         {
             get => Memory.CameraManager;
         }
-
         private PlayerManager _playerManager
         {
             get => Memory.PlayerManager;
@@ -36,6 +35,19 @@ namespace eft_dma_radar.Source.Tarkov
 
         public Toolbox()
         {
+            if (this._config.MasterSwitchEnabled)
+            {
+                this.StartToolbox();
+            }
+        }
+
+        public void StartToolbox()
+        {
+            if (this._workerThread != null && this._workerThread.IsAlive)
+            {
+                return;
+            }
+
             this._workerThread = new Thread(this.ToolboxWorkerThread)
             {
                 Priority = ThreadPriority.BelowNormal,
@@ -44,24 +56,19 @@ namespace eft_dma_radar.Source.Tarkov
             this._workerThread.Start();
         }
 
+        public void StopToolbox()
+        {
+            this._workerThread?.Join(); // Wait for the thread to finish
+            this._workerThread = null;
+        }
+
         private void ToolboxWorkerThread()
         {
-            while (Memory.LocalPlayer is null)
-            {
-                Thread.Sleep(100);
-            }
-
-            Program.Log("LocalPlayer found, initializing toolbox");
-
             while (this.IsSafeToWriteMemory())
             {
                 if (this._config.MasterSwitchEnabled)
                 {
-                    try
-                    {
-                        this.ToolboxWorker();
-                    }
-                    catch { }
+                    this.ToolboxWorker();
                 }
                 Thread.Sleep(250);
             }
@@ -69,7 +76,7 @@ namespace eft_dma_radar.Source.Tarkov
 
         private bool IsSafeToWriteMemory()
         {
-            return Memory.InGame && Memory.LocalPlayer is not null && this._playerManager is not null;
+            return Memory.InGame && Memory.LocalPlayer != null && this._playerManager != null;
         }
 
         private void ToolboxWorker()

@@ -1,25 +1,14 @@
-﻿using System;
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Numerics;
-using System.Security.Cryptography;
-using eft_dma_radar.Source.Misc;
-using eft_dma_radar.Source.Tarkov;
-using Offsets;
-using OpenTK.Graphics.ES20;
 
 namespace eft_dma_radar
 {
     public class ExfilManager
     {
-        private bool IsAtHideout
-        {
-            get => Memory.InHideout;
-        }
-
+        private bool IsAtHideout { get => Memory.InHideout; }
         private bool IsScav { get => Memory.IsScav; }
-        private readonly Stopwatch _swStatus = new();
-        private readonly Stopwatch _swExfils = new();
+        private readonly Stopwatch _swRefresh = new();
         private ulong localGameWorld { get; set; }
         /// <summary>
         /// List of PMC Exfils in Local Game World and their position/status.
@@ -39,9 +28,7 @@ namespace eft_dma_radar
             }
 
             this.RefreshExfils();
-
-            this._swExfils.Start();
-            this._swStatus.Start();
+            this._swRefresh.Start();
         }
 
         /// <summary>
@@ -49,30 +36,14 @@ namespace eft_dma_radar
         /// </summary>
         public void RefreshExfils()
         {
-            bool shouldUpdateExfils = false;
-
-            if (this._swStatus.ElapsedMilliseconds >= 5000)
-            {
-                shouldUpdateExfils = true;
-                this._swStatus.Restart();
-            }
-
-            if (this._swExfils.ElapsedMilliseconds >= 250 && this.Exfils.Count < 1)
-            {
-                try
-                {
-                    this.GetExfils();
-                    shouldUpdateExfils = true;
-                    this._swExfils.Stop();
-                }
-                catch { }
-            }
-
-            if (shouldUpdateExfils)
+             if (this._swRefresh.ElapsedMilliseconds >= 5000)
             {
                 this.UpdateExfils();
-
-                this._swExfils.Restart();
+                this._swRefresh.Restart();
+            }
+            else if (this.Exfils.Count < 1 && this._swRefresh.ElapsedMilliseconds >= 250)
+            {
+                this.GetExfils();
             }
         }
 
@@ -81,31 +52,27 @@ namespace eft_dma_radar
         /// </summary>
         private void UpdateExfils()
         {
-            try {
-                var scatterMap = new ScatterReadMap(this.Exfils.Count);
-                var round1 = scatterMap.AddRound();
-                for (int i = 0; i < this.Exfils.Count; i++)
-                {
-                    round1.AddEntry<int>(i, 0, this.Exfils[i].BaseAddr + Offsets.Exfil.Status);
-                }
-                scatterMap.Execute();
-                for (int i = 0; i < this.Exfils.Count; i++)
-                {
-                    try {
-                        var status = scatterMap.Results[i][0].TryGetResult<int>(out var stat);
-                        this.Exfils[i].UpdateStatus(stat);
-                    }
-                    catch{}
+            var scatterMap = new ScatterReadMap(this.Exfils.Count);
+            var round1 = scatterMap.AddRound();
 
-                }
+            for (int i = 0; i < this.Exfils.Count; i++)
+            {
+                round1.AddEntry<int>(i, 0, this.Exfils[i].BaseAddr + Offsets.Exfil.Status);
             }
-            catch{}
+
+            scatterMap.Execute();
+
+            Parallel.For(0, this.Exfils.Count, i =>
+            {
+                if (!scatterMap.Results[i][0].TryGetResult<int>(out var stat))
+                    return;
             
+                this.Exfils[i].UpdateStatus(stat);
+            });       
         }
 
         public void GetExfils()
         {
-
             try
             {
                 var exfilController = Memory.ReadPtr(this.localGameWorld + Offsets.LocalGameWorld.ExfilController);
@@ -117,36 +84,64 @@ namespace eft_dma_radar
                     throw new ArgumentOutOfRangeException();
                 }
 
+                var scatterReadMap = new ScatterReadMap(count);
+                var round1 = scatterReadMap.AddRound();
+                var round2 = scatterReadMap.AddRound();
+                var round3 = scatterReadMap.AddRound();
+                var round4 = scatterReadMap.AddRound();
+                var round5 = scatterReadMap.AddRound();
+                var round6 = scatterReadMap.AddRound();
+
+                for (int i = 0; i < count; i++)
+                {
+                    var exfilAddr = round1.AddEntry<ulong>(i, 0, exfilPoints, null, Offsets.UnityListBase.Start + ((uint)i * 0x08));
+                    var localPlayer = round1.AddEntry<ulong>(i, 1, this.localGameWorld, null, Offsets.LocalGameWorld.MainPlayer);
+
+                    var localPlayerProfile = round2.AddEntry<ulong>(i, 2, localPlayer, null, Offsets.Player.Profile);
+                    var eligibleIds = round2.AddEntry<ulong>(i, 3, localPlayer, null, Offsets.Profile.PlayerInfo);
+                    var eligibleEntryPoints = round2.AddEntry<ulong>(i, 4, exfilAddr, null, Offsets.ExfiltrationPoint.EligibleEntryPoints);
+
+                    var localPlayerInfo = round3.AddEntry<ulong>(i, 5, localPlayerProfile, null, Offsets.Profile.PlayerInfo);
+                    var eligibleIdsCount = round3.AddEntry<int>(i, 6, eligibleIds, null, Offsets.UnityList.Count);
+                    var eligibleEntryPointsCount = round3.AddEntry<int>(i, 7, eligibleEntryPoints, null, Offsets.UnityList.Count);
+
+                    var localPlayerEntryPoint = round4.AddEntry<ulong>(i, 8, localPlayerInfo, null, Offsets.PlayerInfo.EntryPoint);
+                }
+
+                scatterReadMap.Execute();
+
                 var list = new List<Exfil>();
 
-                for (uint i = 0; i < count; i++)
-                {
-                    var exfilAddr = Memory.ReadPtr(exfilPoints + Offsets.UnityListBase.Start + (i * 0x08));
+                Parallel.For(0, count, i => {
+                    if (!scatterReadMap.Results[i][0].TryGetResult<ulong>(out var exfilAddr))
+                        return;
+                    if (!scatterReadMap.Results[i][1].TryGetResult<ulong>(out var localPlayer))
+                        return;
 
-                    Exfil exfil = new Exfil(exfilAddr);
+                    var exfil = new Exfil(exfilAddr);
                     exfil.UpdateName();
-
-                    var localPlayer = Memory.ReadPtr(localGameWorld + Offsets.LocalGameWorld.MainPlayer);
-                    var localPlayerProfile = Memory.ReadPtr(localPlayer + Offsets.Player.Profile); // to EFT.Profile
-                    var localPlayerInfo = Memory.ReadPtr(localPlayerProfile + Offsets.Profile.PlayerInfo); // to EFT.Profile.Info
 
                     if (this.IsScav)
                     {
-                        var eligibleIds = Memory.ReadPtr(exfilAddr + 0xC0);
-                        var eligibleIdsCount = Memory.ReadValue<int>(eligibleIds + Offsets.UnityList.Count);
+                        scatterReadMap.Results[i][3].TryGetResult<ulong>(out var eligibleIds);
+                        scatterReadMap.Results[i][6].TryGetResult<int>(out var eligibleIdsCount);
+
                         if (eligibleIdsCount != 0)
                         {
                             list.Add(exfil);
-                            continue;
+                            return;
                         }
                     }
                     else
                     {
-                        var localPlayerEntryPoint = Memory.ReadPtr(localPlayerInfo + Offsets.PlayerInfo.EntryPoint);
+                        scatterReadMap.Results[i][2].TryGetResult<ulong>(out var localPlayerProfile);
+                        scatterReadMap.Results[i][5].TryGetResult<ulong>(out var localPlayerInfo);
+                        scatterReadMap.Results[i][8].TryGetResult<ulong>(out var localPlayerEntryPoint);
+                        scatterReadMap.Results[i][4].TryGetResult<ulong>(out var eligibleEntryPoints);
+                        scatterReadMap.Results[i][7].TryGetResult<int>(out var eligibleEntryPointsCount);
+
                         var localPlayerEntryPointString = Memory.ReadUnityString(localPlayerEntryPoint);
 
-                        var eligibleEntryPoints = Memory.ReadPtr(exfilAddr + Offsets.ExfiltrationPoint.EligibleEntryPoints);
-                        var eligibleEntryPointsCount = Memory.ReadValue<int>(eligibleEntryPoints + Offsets.UnityList.Count);
                         for (uint j = 0; j < eligibleEntryPointsCount; j++)
                         {
                             var entryPoint = Memory.ReadPtr(eligibleEntryPoints + 0x20 + (j * 0x8));
@@ -159,7 +154,7 @@ namespace eft_dma_radar
                             }
                         }
                     }
-                }
+                });
 
                 this.Exfils = new ReadOnlyCollection<Exfil>(list);
             }

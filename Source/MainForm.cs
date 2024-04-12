@@ -410,6 +410,18 @@ namespace eft_dma_radar
             grpGlobalFeatures.Enabled = isChecked;
             grpGearFeatures.Enabled = isChecked;
             grpPhysicalFeatures.Enabled = isChecked;
+
+            if (Memory.Toolbox != null && Memory.InGame)
+            {
+                if (chkAutoLootRefresh.Checked)
+                {
+                    Memory.Toolbox.StartToolbox();
+                }
+                else
+                {
+                    Memory.Toolbox.StopToolbox();
+                }
+            }
         }
 
         private void chkInfiniteStamina_CheckedChanged(object sender, EventArgs e)
@@ -1930,9 +1942,6 @@ namespace eft_dma_radar
             if (!inGame)
                 return false; // Waiting for raid start
 
-            //if (this.LoadingLoot)
-                //return false; // Loading loot
-
             if (!localPlayerExists)
                 return false; // Cannot find local player
 
@@ -2414,10 +2423,6 @@ namespace eft_dma_radar
                     this.tabRadar.Text = "Radar";
                 }
             }
-            //else if (this.LoadingLoot)
-            //{
-                //statusText = "Loading Loot...";
-            //}
             else if (localPlayer == null)
             {
                 statusText = "Cannot find LocalPlayer";
