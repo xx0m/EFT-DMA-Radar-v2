@@ -1,4 +1,5 @@
-﻿using System.Collections.ObjectModel;
+﻿using System.Collections.Concurrent;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Numerics;
 
@@ -62,7 +63,7 @@ namespace eft_dma_radar
 
             scatterMap.Execute();
 
-            Parallel.For(0, this.Exfils.Count, i =>
+            Parallel.For(0, this.Exfils.Count, Program.Config.ParallelOptions, i =>
             {
                 if (!scatterMap.Results[i][0].TryGetResult<int>(out var stat))
                     return;
@@ -76,7 +77,7 @@ namespace eft_dma_radar
             try
             {
                 var exfilController = Memory.ReadPtr(this.localGameWorld + Offsets.LocalGameWorld.ExfilController);
-                var exfilPoints = this.IsScav ? Memory.ReadPtr(exfilController + Offsets.ExfilController.ScavExfilList) : Memory.ReadPtr(exfilController + Offsets.ExfilController.PMCExfilList);
+                var exfilPoints = Memory.ReadPtr(exfilController + (this.IsScav ? Offsets.ExfilController.ScavExfilList : Offsets.ExfilController.PMCExfilList));
                 var count = Memory.ReadValue<int>(exfilPoints + Offsets.ExfilController.ExfilCount);
 
                 if (count < 1 || count > 24)
@@ -98,7 +99,7 @@ namespace eft_dma_radar
                     var localPlayer = round1.AddEntry<ulong>(i, 1, this.localGameWorld, null, Offsets.LocalGameWorld.MainPlayer);
 
                     var localPlayerProfile = round2.AddEntry<ulong>(i, 2, localPlayer, null, Offsets.Player.Profile);
-                    var eligibleIds = round2.AddEntry<ulong>(i, 3, localPlayer, null, Offsets.Profile.PlayerInfo);
+                    var eligibleIds = round2.AddEntry<ulong>(i, 3, exfilAddr, null, Offsets.ExfiltrationPoint.EligibleIds);
                     var eligibleEntryPoints = round2.AddEntry<ulong>(i, 4, exfilAddr, null, Offsets.ExfiltrationPoint.EligibleEntryPoints);
 
                     var localPlayerInfo = round3.AddEntry<ulong>(i, 5, localPlayerProfile, null, Offsets.Profile.PlayerInfo);
@@ -110,9 +111,9 @@ namespace eft_dma_radar
 
                 scatterReadMap.Execute();
 
-                var list = new List<Exfil>();
+                var list = new ConcurrentBag<Exfil>();
 
-                Parallel.For(0, count, i => {
+                Parallel.For(0, count, Program.Config.ParallelOptions, i => {
                     if (!scatterReadMap.Results[i][0].TryGetResult<ulong>(out var exfilAddr))
                         return;
                     if (!scatterReadMap.Results[i][1].TryGetResult<ulong>(out var localPlayer))
@@ -156,7 +157,7 @@ namespace eft_dma_radar
                     }
                 });
 
-                this.Exfils = new ReadOnlyCollection<Exfil>(list);
+                this.Exfils = new ReadOnlyCollection<Exfil>(list.ToList());
             }
             catch { }
         }

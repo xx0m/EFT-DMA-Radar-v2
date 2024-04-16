@@ -1,11 +1,7 @@
 ﻿using System.Collections.ObjectModel;
 using System.Diagnostics;
-using System.Linq;
 using System.Numerics;
 using System.Text;
-using eft_dma_radar.Source.Misc;
-using eft_dma_radar.Source.Tarkov;
-using Offsets;
 using SkiaSharp;
 using SkiaSharp.Views.Desktop;
 using static eft_dma_radar.LootFilter;
@@ -28,13 +24,14 @@ namespace eft_dma_radar
         private LootableObject _closestItemToMouse = null;
         private QuestItem _closestTaskItemToMouse = null;
         private QuestZone _closestTaskZoneToMouse = null;
+        private bool _isDragging = false;
+        private Point _lastMousePosition = Point.Empty;
         private int? _mouseOverGroup = null;
         private int _fps = 0;
         private int _mapSelectionIndex = 0;
         private Map _selectedMap;
         private SKBitmap[] _loadedBitmaps;
         private MapPosition _mapPanPosition = new();
-        
 
         #region Getters
         /// <summary>
@@ -67,8 +64,7 @@ namespace eft_dma_radar
         /// </summary>
         private Player LocalPlayer
         {
-            get =>
-                Memory.Players?.FirstOrDefault(x => x.Value.Type is PlayerType.LocalPlayer).Value;
+            get => Memory.Players?.FirstOrDefault(x => x.Value.Type is PlayerType.LocalPlayer).Value;
         }
 
         /// <summary>
@@ -125,32 +121,38 @@ namespace eft_dma_radar
         /// </summary>
         public frmMain()
         {
-            _config = Program.Config; // get ref to config
+            _config = Program.Config;
+
             InitializeComponent();
-            // init skia
+
             _mapCanvas = new SKGLControl()
             {
                 Size = new Size(50, 50),
                 Dock = DockStyle.Fill,
-                VSync = _config.Vsync // cap fps to refresh rate, reduce tearing
+                VSync = _config.Vsync
             };
-            tabRadar.Controls.Add(_mapCanvas); // place Radar Map Canvas on top of TabPage1
-            chkMapFree.Parent = _mapCanvas; // change parent for checkBox_MapFree 'button'
-            trkUIScale.ValueChanged += trkUIScale_ValueChanged; // Handle UI Adjustments
+            tabRadar.Controls.Add(_mapCanvas);
+            chkMapFree.Parent = _mapCanvas;
+            trkUIScale.ValueChanged += trkUIScale_ValueChanged;
 
             LoadConfig();
             LoadMaps();
+
             _mapChangeTimer.AutoReset = false;
             _mapChangeTimer.Elapsed += MapChangeTimer_Elapsed;
 
-            this.DoubleBuffered = true; // Prevent flickering
+            this.DoubleBuffered = true;
             this.Shown += frmMain_Shown;
-            _mapCanvas.PaintSurface += MapCanvas_PaintSurface; // Radar Drawing Event
-            _mapCanvas.MouseMove += MapCanvas_MouseMovePlayer; // Handle mouseover events on radar
+
+            _mapCanvas.PaintSurface += MapCanvas_PaintSurface;
+            _mapCanvas.MouseMove += MapCanvas_MouseMovePlayer;
+            _mapCanvas.MouseDown += MapCanvas_MouseDown;
+            _mapCanvas.MouseUp += MapCanvas_MouseUp;
+
             tabControl.SelectedIndexChanged += TabControl_SelectedIndexChanged;
-            _mapCanvas.MouseClick += MapCanvas_MouseClick;
+
             lstViewPMCHistory.MouseDoubleClick += lstViewPMCHistory_MouseDoubleClick;
-            _fpsWatch.Start(); // fps counter
+            _fpsWatch.Start();
 
         }
         #endregion
@@ -632,7 +634,7 @@ namespace eft_dma_radar
                 {
                     if (selectedFilter.Items.Contains(selectedItem.ID))
                     {
-                        return; // item already exists
+                        return;
                     }
                     else
                     {
@@ -740,7 +742,7 @@ namespace eft_dma_radar
         /// </summary>
         private void MapCanvas_MouseMovePlayer(object sender, MouseEventArgs e)
         {
-            if (this.InGame && Memory.LocalPlayer is not null) // Must be in-game
+            if (this.InGame && Memory.LocalPlayer != null) // Must be in-game
             {
                 var players = this.AllPlayers
                     ?.Select(x => x.Value)
@@ -877,7 +879,7 @@ namespace eft_dma_radar
                     ClearTaskZoneRefs();
                 }
             }
-            else
+            else if (this.InGame && Memory.LocalPlayer == null)
             {
                 ClearPlayerRefs();
                 ClearItemRefs();
@@ -885,27 +887,66 @@ namespace eft_dma_radar
                 ClearTaskZoneRefs();
             }
 
-            void ClearPlayerRefs()
+            if (this._isDragging && chkMapFree.Checked)
             {
-                _closestPlayerToMouse = null;
-                _mouseOverGroup = null;
-            }
+                if (!this._lastMousePosition.IsEmpty) // if this isn't the first MouseMove event
+                {
+                    lock (_renderLock)
+                    {
+                        // calculate the difference in position
+                        int dx = e.X - this._lastMousePosition.X;
+                        int dy = e.Y - this._lastMousePosition.Y;
 
-            void ClearItemRefs()
+                        this._mapPanPosition = new MapPosition() // Pan based on difference in position
+                        {
+                            X = this._mapPanPosition.X - dx, // Negate the difference in X
+                            Y = this._mapPanPosition.Y - dy  // Negate the difference in Y
+                        };
+                    }
+                }
+
+                // store the current mouse position for the next MouseMove event
+                this._lastMousePosition = e.Location;
+            }
+        }
+
+        private void MapCanvas_MouseDown(object sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left)
             {
-                _closestItemToMouse = null;
+                this._isDragging = true;
+                this._lastMousePosition = e.Location;
             }
+        }
 
-            void ClearTaskItemRefs()
+        private void MapCanvas_MouseUp(object sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left)
             {
-                _closestTaskItemToMouse = null;
+                this._isDragging = false;
+                this._lastMousePosition = Point.Empty;
             }
+        }
 
-            void ClearTaskZoneRefs()
-            {
-                _closestTaskZoneToMouse = null;
-            }
+        private void ClearPlayerRefs()
+        {
+            _closestPlayerToMouse = null;
+            _mouseOverGroup = null;
+        }
 
+        private void ClearItemRefs()
+        {
+            _closestItemToMouse = null;
+        }
+
+        private void ClearTaskItemRefs()
+        {
+            _closestTaskItemToMouse = null;
+        }
+
+        private void ClearTaskZoneRefs()
+        {
+            _closestTaskZoneToMouse = null;
         }
 
         /// <summary>
@@ -1105,7 +1146,7 @@ namespace eft_dma_radar
         /// </summary>
         private void btnRefreshLoot_Click(object sender, EventArgs e)
         {
-            Memory.RefreshLoot();
+            Memory.Loot.RefreshLoot(true);
         }
 
         /// <summary>
@@ -1536,6 +1577,22 @@ namespace eft_dma_radar
                 cboLootItems.DisplayMember = "Name";
             }
 
+            if (cboRefreshMap.Items.Count == 0)
+            {
+                foreach(var key in _config.AutoRefreshSettings)
+                {
+                    cboRefreshMap.Items.Add(key.Key);
+                }
+
+                int selectedIndex = 0;
+                if (_selectedMap != null)
+                {
+                    selectedIndex = cboRefreshMap.FindString(_selectedMap.Name);
+                }
+
+                cboRefreshMap.SelectedIndex = selectedIndex;
+            }
+
             UpdateLootFilterComboBoxes();
             UpdateLootFilterList();
             UpdateEditFilterListBox();
@@ -1716,7 +1773,6 @@ namespace eft_dma_radar
 
                     listItem.SubItems.Add(item.Item.name);
                     listItem.SubItems.Add(item.Item.shortName);
-                    //listItem.SubItems.Add(TarkovDevManager.FormatNumber(item.Value));
                     listItem.SubItems.Add(TarkovDevManager.FormatNumber(TarkovDevManager.GetItemValue(item.Item)));
 
                     lstViewLootFilter.Items.Add(listItem);
@@ -1855,7 +1911,8 @@ namespace eft_dma_radar
 
                 if (_fpsWatch.ElapsedMilliseconds >= 1000)
                 {
-                    _mapCanvas.GRContext.PurgeResources(); // Seems to fix mem leak issue on increasing resource cache
+                    // RE-ENABLE & EXPLORE WHAT THIS DOES
+                    //_mapCanvas.GRContext.PurgeResources(); // Seems to fix mem leak issue on increasing resource cache
                     string title = "EFT Radar";
 
                     title += $" ({_fps} fps) ({Memory.Ticks} mem/s)";
@@ -1891,6 +1948,9 @@ namespace eft_dma_radar
                     CleanupLoadedBitmaps();
                     LoadMapBitmaps();
                     tabRadar.Text = $"Radar ({_selectedMap.Name})";
+
+                    int selectedIndex = cboRefreshMap.FindString(_selectedMap.Name);
+                    cboRefreshMap.SelectedIndex = selectedIndex != 0 ? selectedIndex : 0;
                 }
             }
         }
@@ -1966,13 +2026,12 @@ namespace eft_dma_radar
             }
             else
                 return GetMapParameters(localPlayerMapPos); // Map auto follow LocalPlayer
-        }   
+        }
 
         private void DrawMap(SKCanvas canvas)
         {
             var localPlayer = this.LocalPlayer; // cache ref to current player
             var localPlayerPos = localPlayer.Position;
-            var localPlayerMapPos = localPlayerPos.ToMapPos(_selectedMap); // cache localPlayerMapPos
 
             if (grpMapSetup.Visible) // Print coordinates (to make it easy to setup JSON configs)
             {
@@ -1997,22 +2056,12 @@ namespace eft_dma_radar
                 mapCanvasBounds,
                 SKPaints.PaintBitmap
             );
-
-            // Draw LocalPlayer
-            {
-                var localPlayerZoomedPos = localPlayerMapPos.ToZoomedPos(mapParams); // always true
-                localPlayerZoomedPos.DrawPlayerMarker(
-                    canvas,
-                    localPlayer,
-                    trkAimLength.Value,
-                    null
-                );
-            }
         }
 
         private void DrawPlayers(SKCanvas canvas)
         {
             var localPlayer = this.LocalPlayer; // cache ref to current player
+
             if (this.InGame && localPlayer != null)
             {
                 var allPlayers = this.AllPlayers
@@ -2025,7 +2074,18 @@ namespace eft_dma_radar
                     var localPlayerPos = localPlayer.Position;
                     var localPlayerMapPos = localPlayerPos.ToMapPos(_selectedMap);
                     var mouseOverGroup = _mouseOverGroup;
-                    var mapParams = GetMapLocation();
+                    MapParameters mapParams = GetMapLocation();
+
+                    // Draw LocalPlayer
+                    {
+                        var localPlayerZoomedPos = localPlayerMapPos.ToZoomedPos(mapParams); // always true
+                        localPlayerZoomedPos.DrawPlayerMarker(
+                            canvas,
+                            localPlayer,
+                            trkAimLength.Value,
+                            null
+                        );
+                    }
 
                     foreach (var player in allPlayers) // Draw PMCs
                     {
@@ -2145,12 +2205,12 @@ namespace eft_dma_radar
                     var loot = this.Loot; // cache ref
                     if (loot is not null)
                     {
-                        if (Loot.Filter is null)
+                        if (loot.Filter is null)
                         {
-                            Loot.ApplyFilter();
+                            loot.ApplyFilter();
                         }
 
-                        var filter = Loot.Filter; // Get ref to collection
+                        var filter = loot.Filter; // Get ref to collection
 
                         if (filter is not null)
                         {
@@ -2159,7 +2219,7 @@ namespace eft_dma_radar
 
                             foreach (var item in filter)
                             {
-                                if ((this._config.ImportantLootOnly && !item.Important && !item.AlwaysShow) || (item is LootCorpse && !this._config.ShowCorpsesEnabled))
+                                if (item == null || (this._config.ImportantLootOnly && !item.Important && !item.AlwaysShow) || (item is LootCorpse && !this._config.ShowCorpsesEnabled))
                                     continue;
 
                                 float position = item.Position.Z - localPlayerMapPos.Height;
@@ -2739,6 +2799,24 @@ namespace eft_dma_radar
             }
 
             base.OnMouseWheel(e);
+        }
+
+        private void numRefreshDelay_ValueChanged(object sender, EventArgs e)
+        {
+            var mapName = cboRefreshMap.SelectedItem.ToString();
+            var value = (int)numRefreshDelay.Value;
+
+            if (value != _config.AutoRefreshSettings[mapName])
+            {
+                _config.AutoRefreshSettings[mapName] = value;
+                //Config.SaveConfig(_config);
+            }
+        }
+
+        private void cboRefreshMap_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            var mapName = cboRefreshMap.SelectedItem.ToString();
+            numRefreshDelay.Value = _config.AutoRefreshSettings[mapName];
         }
     }
     #endregion

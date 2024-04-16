@@ -318,6 +318,12 @@ namespace eft_dma_radar
         //public List<PaintColor> PaintColors { get; set; }
         public Dictionary<string, PaintColor.Colors> PaintColors { get; set; }
 
+        [JsonPropertyName("AutoRefreshSettings")]
+        public Dictionary<string, int> AutoRefreshSettings { get; set; }
+
+        [JsonIgnore]
+        public ParallelOptions ParallelOptions { get; set; }
+
         public Config()
         {
             Vsync = true;
@@ -393,6 +399,22 @@ namespace eft_dma_radar
 
             MainThermalSetting = new ThermalSettings(0.5f, 0.001f, -0.5f, 0);
             OpticThermalSetting = new ThermalSettings(0.5f, 0.001f, -0.5f, 0);
+
+            AutoRefreshSettings = new Dictionary<string, int>
+            {
+                ["Customs"] = 30,
+                ["Factory"] = 30,
+                ["Ground Zero"] = 30,
+                ["Interchange"] = 30,
+                ["Lighthouse"] = 30,
+                ["Reserve"] = 30,
+                ["Shoreline"] = 30,
+                ["Streets of Tarkov"] = 30,
+                ["The Lab"] = 30,
+                ["Woods"] = 30
+            };
+
+            ParallelOptions = new ParallelOptions { MaxDegreeOfParallelism = 1 };
         }
 
         /// <summary>
@@ -1964,11 +1986,17 @@ namespace eft_dma_radar
             "Gladius",
             "Gromila",
             "Gus",
+            "Kant",
+            "Kaylanshchik",
             "Kapral",
+            "Karas",
             "Kartezhnik",
+            "Katorzhnik",
+            "Khetchkok",
             "Khvost",
             "Kolt",
             "Kompot",
+            "Kozyrek",
             "Kudeyar",
             "Mauzer",
             "Medoed",
@@ -1976,8 +2004,12 @@ namespace eft_dma_radar
             "Mosin",
             "Moydodyr",
             "Naperstochnik",
-            "Supermen",
+            "Poker",
+            "Polzuchiy",
             "Shtempel",
+            "Snayler",
+            "Sokhatyy",
+            "Supermen",
             "Tihiy",
             "Varan",
             "Vasiliy",
@@ -2216,6 +2248,7 @@ namespace eft_dma_radar
             "Glavdur",
             "Kozyrek Desatnik",
             "Mayor",
+            "Peps",
             "Serzhant",
             "Slonolyub",
             "Sluzhebka",

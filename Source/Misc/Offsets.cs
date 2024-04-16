@@ -41,7 +41,6 @@
         public const uint Settings = 0x58; // to ExitTriggerSettings
         public const uint Name = 0x10; // String
     }
-
     public struct UnityClass
     {
         public static readonly uint[] Name = new uint[] { 0x0, 0x0, 0x48 }; // to ClassName
@@ -55,12 +54,12 @@
         //public static readonly uint[] To_TransformInternal = new uint[] { 0xA8, 0x28, 0x28, 0x10, 0x20, 0x10 }; // to TransformInternal
         public static readonly uint[] To_TransformInternal = new uint[] { 0xA8, 0x28, 0x28, 0x10, 0x20 + (0 * 0x8), 0x10 }; // to TransformInternal
         public const uint MovementContext = 0x40; // to MovementContext
-        public const uint Corpse = 0x3C8; // EFT.Interactive.Corpse
-        public const uint Profile = 0x5B8; // to Profile
-        public const uint InventoryController = 0x610; // to InventoryController
+        public const uint Corpse = 0x3D0; // EFT.Interactive.Corpse
+        public const uint Profile = 0x5C0; // to Profile
+        public const uint InventoryController = 0x618; // to InventoryController
         public const uint PlayerBody = 0xA8; //[A8] _playerBody : EFT.PlayerBody
-        public const uint Location = 0x580; //[580] <Location>k__BackingField : String
-        public const uint Physical = 0x5C8; //[5C8] Physical : -.GClass
+        public const uint Location = 0x588; //[580] <Location>k__BackingField : String
+        public const uint Physical = 0x5D0; //[5C8] Physical : -.GClass
         public const uint ProceduralWeaponAnimation = 0x1C0; //[1C0] EFT.Animations.ProceduralWeaponAnimation
     }
     public struct Profile // EFT.Profile
@@ -119,7 +118,6 @@
     {
         public const uint LootUnknownPtr = 0x10; // to LootUnknownPtr
     }
-
     public struct LootUnknownPtr
     {
         public const uint LootInteractiveClass = 0x28; // to LootInteractiveClass
@@ -168,7 +166,6 @@
         public const uint Vertices = 0x18; // List<Vector128<float>>
         public const uint Indices = 0x20; // List<int>
     }
-
     //New Offsets (Added by Keeegi)
     //[Class] EFT.Animations.ProceduralWeaponAnimation : MonoBehaviour
     public struct ProceduralWeaponAnimation
@@ -236,7 +233,6 @@
     {
         public const uint Intensity = 0xC0; //[C0] Intensity : Single
     }
-
     public struct PlayerInfo // [Class] -.GClass
     {
         public const uint Nickname = 0x10; //[10] Nickname : String
@@ -247,12 +243,11 @@
         public const uint PlayerSide = 0x70; //[70] Side : System.Int32
         public const uint MemberCategory = 0x8C; //[8C] MemberCategory : System.Int32
     }
-
     public struct ExfiltrationPoint
     {
         public const uint EligibleEntryPoints = 0x80; //[80] EligibleEntryPoints : System.String[]
+        public const uint EligibleIds = 0xC0; // [C0] EligibleIds : System.Collections.Generic.List<String>
     }
-
     public struct LocalGameWorld // [Class] -.ClientLocalGameWorld : ClientGameWorld
     {
         public const uint MapName = 0x40; //[40] string_0x40 : String
@@ -263,19 +258,16 @@
         public const uint Grenades = 0x1A0; // to Grenades
         public const uint RaidStarted = 0x220; //[220] boolean_0x220 : Boolean
     }
-
     public struct EFTHardSettings
     {
         public const uint LOOT_RAYCAST_DISTANCE = 0x210; //[210] LOOT_RAYCAST_DISTANCE : Single
         public const uint DOOR_RAYCAST_DISTANCE = 0x214; //[214] DOOR_RAYCAST_DISTANCE : Single
     }
-
     public struct LootableContainer
     {
         public const uint ItemOwner = 0x120; //[120] ItemOwner : -.GClass
         public const uint Template = 0x128; //[128] Template : String
     }
-
     public struct ObservedLootItem
     {
         public const uint ItemOwner = 0x40; //[40] ItemOwner : -.GClass
@@ -289,7 +281,6 @@
     {
         public const uint Template = 0x40; //[40] <Template>k__BackingField : EFT.InventoryLogic.ItemTemplate
     }
-
     public struct ItemOwner
     {
         public const uint Item = 0xC0; //[C0] item_0xC0 : EFT.InventoryLogic.Item

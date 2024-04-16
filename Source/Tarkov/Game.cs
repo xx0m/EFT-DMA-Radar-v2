@@ -2,6 +2,7 @@
 using System.Collections.ObjectModel;
 using eft_dma_radar.Source.MonoSharp;
 using eft_dma_radar.Source.Tarkov;
+using Offsets;
 
 namespace eft_dma_radar
 {
@@ -151,18 +152,15 @@ namespace eft_dma_radar
 
             try
             {
-                var mapNamePrt = Memory.ReadPtrChain(this._localGameWorld, new uint[] { Offsets.LocalGameWorld.MainPlayer, Offsets.Player.Location });
-                this._mapName = Memory.ReadUnityString(mapNamePrt);
+                var mapNamePtr = Memory.ReadPtrChain(this._localGameWorld, new uint[] { Offsets.LocalGameWorld.MainPlayer, Offsets.Player.Location });
+                this._mapName = Memory.ReadUnityString(mapNamePtr);
             }
             catch
             {
                 try
                 {
-                    var mapNamePrt = Memory.ReadPtr(this._localGameWorld + Offsets.LocalGameWorld.MapName);
-                    if (mapNamePrt != 0)
-                    {
-                        this._mapName = Memory.ReadUnityString(mapNamePrt);
-                    }
+                    var mapNamePtr = Memory.ReadPtr(this._localGameWorld + Offsets.LocalGameWorld.MapName);
+                    this._mapName = Memory.ReadUnityString(mapNamePtr);
                 }
                 catch
                 {
@@ -376,17 +374,25 @@ namespace eft_dma_radar
 
             if (this._mapName == string.Empty)
             {
-                try
-                {
-                    this.GetMapName();
-                }
-                catch (Exception ex)
-                {
-                    Program.Log($"ERROR getting map name: {ex}");
-                }
+                this.GetMapName();
             }
             else
             {
+                if (this._config.LootEnabled && (this._lootManager == null|| this._refreshLoot))
+                {
+                    this._loadingLoot = true;
+                    try
+                    {
+                        this._lootManager = new LootManager(this._localGameWorld);
+                        this._refreshLoot = false;
+                    }
+                    catch (Exception ex)
+                    {
+                        Program.Log($"ERROR loading LootEngine: {ex}");
+                    }
+                    this._loadingLoot = false;
+                }
+
                 if (this._config.MasterSwitchEnabled)
                 {
                     if (this._cameraManager is null)
@@ -474,21 +480,6 @@ namespace eft_dma_radar
                     {
                         Program.Log($"ERROR loading QuestManager: {ex}");
                     }
-                }
-
-                if (this._config.LootEnabled && (this._lootManager is null || this._refreshLoot))
-                {
-                    this._loadingLoot = true;
-                    try
-                    {
-                        this._lootManager = new LootManager(this._localGameWorld);
-                        this._refreshLoot = false;
-                    }
-                    catch (Exception ex)
-                    {
-                        Program.Log($"ERROR loading LootEngine: {ex}");
-                    }
-                    this._loadingLoot = false;
                 }
             }
         }

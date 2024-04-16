@@ -116,7 +116,7 @@ namespace eft_dma_radar
         /// (PMC ONLY) Player's Gear Loadout.
         /// Key = Slot Name, Value = Item 'Long Name' in Slot
         /// </summary>
-        public Dictionary<string, GearItem> Gear
+        public ConcurrentDictionary<string, GearItem> Gear
         {
             get => this._gearManager is not null ? this._gearManager.Gear : null;
             set
@@ -127,12 +127,12 @@ namespace eft_dma_radar
         /// <summary>
         /// Gets all gear + mods/attachments of a player
         /// </summary>
-        public List<LootItem> GearItemMods
+        public ConcurrentBag<LootItem> GearItemMods
         {
             get
             {
                 GearManager gearManager = this._gearManager;
-                return ((gearManager != null) ? gearManager.GearItemMods : null) ?? new List<LootItem>();
+                return ((gearManager != null) ? gearManager.GearItemMods : null) ?? new ConcurrentBag<LootItem>();
             }
         }
         /// <summary>

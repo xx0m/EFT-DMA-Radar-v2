@@ -286,6 +286,7 @@ namespace eft_dma_radar
                     tarkovItem.id,
                     new LootItem()
                     {
+                        ID = tarkovItem.id,
                         Name = tarkovItem.name,
                         Item = tarkovItem,
                     }

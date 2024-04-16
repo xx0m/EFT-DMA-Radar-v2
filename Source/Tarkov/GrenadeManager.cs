@@ -70,15 +70,13 @@ namespace eft_dma_radar
 
                     scatterReadMap.Execute();
 
-                    Parallel.For(0, count, i =>
+                    Parallel.For(0, count, Program.Config.ParallelOptions, i =>
                     {
-                        if (!scatterReadMap.Results[i][0].TryGetResult<ulong>(out var grenadeAddr))
-                            return;
-
-                        grenades.Add(new Grenade(grenadeAddr));
+                        if (scatterReadMap.Results[i][0].TryGetResult<ulong>(out var grenadeAddr))
+                            grenades.Add(new Grenade(grenadeAddr));
                     });
                 }
-                else
+                else if (this._listBase != null)
                 {
                     this._listBase = null;
                 }
@@ -100,8 +98,12 @@ namespace eft_dma_radar
         public Vector3 Position { get; }
         public Grenade(ulong baseAddr)
         {
-            var posAddr = Memory.ReadPtrChain(baseAddr, Offsets.GameObject.To_TransformInternal);
-            this.Position = new Transform(posAddr).GetPosition();
+            try
+            {
+                var posAddr = Memory.ReadPtrChain(baseAddr, Offsets.GameObject.To_TransformInternal);
+                this.Position = new Transform(posAddr).GetPosition();
+            }
+            catch { }
         }
     }
 }

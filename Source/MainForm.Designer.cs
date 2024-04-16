@@ -109,6 +109,10 @@ namespace eft_dma_radar
             txtLootFilterEditName = new TextBox();
             picLootFilterEditColor = new PictureBox();
             grpLoot = new GroupBox();
+            lblRefreshMap = new Label();
+            cboRefreshMap = new ComboBox();
+            lblAutoRefreshDelay = new Label();
+            numRefreshDelay = new NumericUpDown();
             chkAutoLootRefresh = new CheckBox();
             chkShowSubItems = new CheckBox();
             chkShowCorpses = new CheckBox();
@@ -171,9 +175,9 @@ namespace eft_dma_radar
             chkOpticThermalVision = new CheckBox();
             chkThermalVision = new CheckBox();
             grpPhysicalFeatures = new GroupBox();
+            trkThrowPower = new TrackBar();
             chkInfiniteStamina = new CheckBox();
             chkIncreaseMaxWeight = new CheckBox();
-            trkThrowPower = new TrackBar();
             trkJumpPower = new TrackBar();
             chkThrowPower = new CheckBox();
             chkJumpPower = new CheckBox();
@@ -224,6 +228,7 @@ namespace eft_dma_radar
             grpLootFilters.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)picLootFilterEditColor).BeginInit();
             grpLoot.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)numRefreshDelay).BeginInit();
             grpLootValues.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)trkSubItemLootValue).BeginInit();
             ((System.ComponentModel.ISupportInitialize)trkCorpseLootValue).BeginInit();
@@ -509,7 +514,7 @@ namespace eft_dma_radar
             grpColors.Controls.Add(lblAIScavColor);
             grpColors.Location = new Point(888, 22);
             grpColors.Name = "grpColors";
-            grpColors.Size = new Size(162, 604);
+            grpColors.Size = new Size(162, 598);
             grpColors.TabIndex = 28;
             grpColors.TabStop = false;
             grpColors.Text = "Colors";
@@ -929,7 +934,7 @@ namespace eft_dma_radar
             grpLootFilters.Controls.Add(picLootFilterEditColor);
             grpLootFilters.Location = new Point(474, 274);
             grpLootFilters.Name = "grpLootFilters";
-            grpLootFilters.Size = new Size(408, 352);
+            grpLootFilters.Size = new Size(408, 346);
             grpLootFilters.TabIndex = 27;
             grpLootFilters.TabStop = false;
             grpLootFilters.Text = "Loot Filters/Profiles";
@@ -1059,6 +1064,10 @@ namespace eft_dma_radar
             // 
             // grpLoot
             // 
+            grpLoot.Controls.Add(lblRefreshMap);
+            grpLoot.Controls.Add(cboRefreshMap);
+            grpLoot.Controls.Add(lblAutoRefreshDelay);
+            grpLoot.Controls.Add(numRefreshDelay);
             grpLoot.Controls.Add(chkAutoLootRefresh);
             grpLoot.Controls.Add(chkShowSubItems);
             grpLoot.Controls.Add(chkShowCorpses);
@@ -1073,14 +1082,55 @@ namespace eft_dma_radar
             grpLoot.TabStop = false;
             grpLoot.Text = "Loot";
             // 
+            // lblRefreshMap
+            // 
+            lblRefreshMap.AutoSize = true;
+            lblRefreshMap.Location = new Point(102, 201);
+            lblRefreshMap.Name = "lblRefreshMap";
+            lblRefreshMap.Size = new Size(34, 15);
+            lblRefreshMap.TabIndex = 38;
+            lblRefreshMap.Text = "Map:";
+            // 
+            // cboRefreshMap
+            // 
+            cboRefreshMap.DropDownStyle = ComboBoxStyle.DropDownList;
+            cboRefreshMap.FormattingEnabled = true;
+            cboRefreshMap.Location = new Point(142, 198);
+            cboRefreshMap.Name = "cboRefreshMap";
+            cboRefreshMap.Size = new Size(121, 23);
+            cboRefreshMap.TabIndex = 37;
+            cboRefreshMap.SelectedIndexChanged += cboRefreshMap_SelectedIndexChanged;
+            // 
+            // lblAutoRefreshDelay
+            // 
+            lblAutoRefreshDelay.AutoSize = true;
+            lblAutoRefreshDelay.Location = new Point(267, 201);
+            lblAutoRefreshDelay.Name = "lblAutoRefreshDelay";
+            lblAutoRefreshDelay.Size = new Size(39, 15);
+            lblAutoRefreshDelay.TabIndex = 36;
+            lblAutoRefreshDelay.Text = "Delay:";
+            toolTip.SetToolTip(lblAutoRefreshDelay, "(in seconds)");
+            // 
+            // numRefreshDelay
+            // 
+            numRefreshDelay.Location = new Point(312, 196);
+            numRefreshDelay.Maximum = new decimal(new int[] { 60, 0, 0, 0 });
+            numRefreshDelay.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
+            numRefreshDelay.Name = "numRefreshDelay";
+            numRefreshDelay.Size = new Size(39, 23);
+            numRefreshDelay.TabIndex = 16;
+            toolTip.SetToolTip(numRefreshDelay, "The delay in seconds to automatically refresh loot");
+            numRefreshDelay.Value = new decimal(new int[] { 30, 0, 0, 0 });
+            numRefreshDelay.ValueChanged += numRefreshDelay_ValueChanged;
+            // 
             // chkAutoLootRefresh
             // 
             chkAutoLootRefresh.AutoSize = true;
             chkAutoLootRefresh.Location = new Point(6, 200);
             chkAutoLootRefresh.Name = "chkAutoLootRefresh";
-            chkAutoLootRefresh.Size = new Size(121, 19);
+            chkAutoLootRefresh.Size = new Size(94, 19);
             chkAutoLootRefresh.TabIndex = 35;
-            chkAutoLootRefresh.Text = "Auto Loot Refresh";
+            chkAutoLootRefresh.Text = "Auto Refresh";
             toolTip.SetToolTip(chkAutoLootRefresh, "Automatically refreshes loot on the map");
             chkAutoLootRefresh.UseVisualStyleBackColor = true;
             chkAutoLootRefresh.CheckedChanged += chkAutoLootRefresh_CheckedChanged;
@@ -1088,7 +1138,7 @@ namespace eft_dma_radar
             // chkShowSubItems
             // 
             chkShowSubItems.AutoSize = true;
-            chkShowSubItems.Location = new Point(133, 224);
+            chkShowSubItems.Location = new Point(105, 221);
             chkShowSubItems.Name = "chkShowSubItems";
             chkShowSubItems.Size = new Size(112, 19);
             chkShowSubItems.TabIndex = 34;
@@ -1100,7 +1150,7 @@ namespace eft_dma_radar
             // chkShowCorpses
             // 
             chkShowCorpses.AutoSize = true;
-            chkShowCorpses.Location = new Point(6, 225);
+            chkShowCorpses.Location = new Point(6, 221);
             chkShowCorpses.Name = "chkShowCorpses";
             chkShowCorpses.Size = new Size(100, 19);
             chkShowCorpses.TabIndex = 33;
@@ -1156,7 +1206,7 @@ namespace eft_dma_radar
             trkSubItemLootValue.Maximum = 200;
             trkSubItemLootValue.Minimum = 1;
             trkSubItemLootValue.Name = "trkSubItemLootValue";
-            trkSubItemLootValue.Size = new Size(207, 45);
+            trkSubItemLootValue.Size = new Size(201, 45);
             trkSubItemLootValue.SmallChange = 10;
             trkSubItemLootValue.TabIndex = 39;
             trkSubItemLootValue.TickStyle = TickStyle.None;
@@ -1190,7 +1240,7 @@ namespace eft_dma_radar
             trkCorpseLootValue.Maximum = 800;
             trkCorpseLootValue.Minimum = 10;
             trkCorpseLootValue.Name = "trkCorpseLootValue";
-            trkCorpseLootValue.Size = new Size(207, 45);
+            trkCorpseLootValue.Size = new Size(201, 45);
             trkCorpseLootValue.SmallChange = 10;
             trkCorpseLootValue.TabIndex = 36;
             trkCorpseLootValue.TickStyle = TickStyle.None;
@@ -1233,7 +1283,7 @@ namespace eft_dma_radar
             trkImportantLootValue.Maximum = 500;
             trkImportantLootValue.Minimum = 250;
             trkImportantLootValue.Name = "trkImportantLootValue";
-            trkImportantLootValue.Size = new Size(207, 45);
+            trkImportantLootValue.Size = new Size(201, 45);
             trkImportantLootValue.SmallChange = 10;
             trkImportantLootValue.TabIndex = 33;
             trkImportantLootValue.TickStyle = TickStyle.None;
@@ -1258,7 +1308,7 @@ namespace eft_dma_radar
             trkRegularLootValue.Maximum = 249;
             trkRegularLootValue.Minimum = 10;
             trkRegularLootValue.Name = "trkRegularLootValue";
-            trkRegularLootValue.Size = new Size(207, 45);
+            trkRegularLootValue.Size = new Size(201, 45);
             trkRegularLootValue.SmallChange = 10;
             trkRegularLootValue.TabIndex = 31;
             trkRegularLootValue.TickStyle = TickStyle.None;
@@ -1280,7 +1330,7 @@ namespace eft_dma_radar
             // chkHideLootValue
             // 
             chkHideLootValue.AutoSize = true;
-            chkHideLootValue.Location = new Point(290, 201);
+            chkHideLootValue.Location = new Point(318, 221);
             chkHideLootValue.Name = "chkHideLootValue";
             chkHideLootValue.Size = new Size(82, 19);
             chkHideLootValue.TabIndex = 29;
@@ -1292,11 +1342,11 @@ namespace eft_dma_radar
             // chkImportantLootOnly
             // 
             chkImportantLootOnly.AutoSize = true;
-            chkImportantLootOnly.Location = new Point(133, 201);
+            chkImportantLootOnly.Location = new Point(219, 221);
             chkImportantLootOnly.Name = "chkImportantLootOnly";
-            chkImportantLootOnly.Size = new Size(151, 19);
+            chkImportantLootOnly.Size = new Size(93, 19);
             chkImportantLootOnly.TabIndex = 22;
-            chkImportantLootOnly.Text = "Important/Filtered Only";
+            chkImportantLootOnly.Text = "Filtered Only";
             toolTip.SetToolTip(chkImportantLootOnly, "Only shows items considered 'important' or ones in a filter");
             chkImportantLootOnly.UseVisualStyleBackColor = true;
             chkImportantLootOnly.CheckedChanged += chkImportantLootOnly_CheckedChanged;
@@ -1536,7 +1586,7 @@ namespace eft_dma_radar
             trkThermalShift.Maximum = 100;
             trkThermalShift.Minimum = -50;
             trkThermalShift.Name = "trkThermalShift";
-            trkThermalShift.Size = new Size(150, 45);
+            trkThermalShift.Size = new Size(148, 45);
             trkThermalShift.TabIndex = 30;
             trkThermalShift.TickStyle = TickStyle.None;
             trkThermalShift.Scroll += trkThermalShift_Scroll;
@@ -1555,7 +1605,7 @@ namespace eft_dma_radar
             trkThermalMinTemperature.Location = new Point(296, 46);
             trkThermalMinTemperature.Maximum = 100;
             trkThermalMinTemperature.Name = "trkThermalMinTemperature";
-            trkThermalMinTemperature.Size = new Size(150, 45);
+            trkThermalMinTemperature.Size = new Size(148, 45);
             trkThermalMinTemperature.TabIndex = 9;
             trkThermalMinTemperature.TickStyle = TickStyle.None;
             trkThermalMinTemperature.Value = 1;
@@ -1576,7 +1626,7 @@ namespace eft_dma_radar
             trkThermalColorCoefficient.Maximum = 100;
             trkThermalColorCoefficient.Minimum = 1;
             trkThermalColorCoefficient.Name = "trkThermalColorCoefficient";
-            trkThermalColorCoefficient.Size = new Size(150, 45);
+            trkThermalColorCoefficient.Size = new Size(148, 45);
             trkThermalColorCoefficient.TabIndex = 7;
             trkThermalColorCoefficient.TickStyle = TickStyle.None;
             trkThermalColorCoefficient.Value = 1;
@@ -1818,9 +1868,9 @@ namespace eft_dma_radar
             // 
             // grpPhysicalFeatures
             // 
+            grpPhysicalFeatures.Controls.Add(trkThrowPower);
             grpPhysicalFeatures.Controls.Add(chkInfiniteStamina);
             grpPhysicalFeatures.Controls.Add(chkIncreaseMaxWeight);
-            grpPhysicalFeatures.Controls.Add(trkThrowPower);
             grpPhysicalFeatures.Controls.Add(trkJumpPower);
             grpPhysicalFeatures.Controls.Add(chkThrowPower);
             grpPhysicalFeatures.Controls.Add(chkJumpPower);
@@ -1830,6 +1880,20 @@ namespace eft_dma_radar
             grpPhysicalFeatures.TabIndex = 26;
             grpPhysicalFeatures.TabStop = false;
             grpPhysicalFeatures.Text = "Physical Features";
+            // 
+            // trkThrowPower
+            // 
+            trkThrowPower.LargeChange = 10;
+            trkThrowPower.Location = new Point(108, 72);
+            trkThrowPower.Minimum = 1;
+            trkThrowPower.Name = "trkThrowPower";
+            trkThrowPower.Size = new Size(116, 45);
+            trkThrowPower.TabIndex = 31;
+            trkThrowPower.TickStyle = TickStyle.None;
+            toolTip.SetToolTip(trkThrowPower, "The 'strength' of the throw");
+            trkThrowPower.Value = 5;
+            trkThrowPower.Visible = false;
+            trkThrowPower.Scroll += trkThrowPower_Scroll;
             // 
             // chkInfiniteStamina
             // 
@@ -1854,20 +1918,6 @@ namespace eft_dma_radar
             toolTip.SetToolTip(chkIncreaseMaxWeight, "Increases maximum weight capacity");
             chkIncreaseMaxWeight.UseVisualStyleBackColor = true;
             chkIncreaseMaxWeight.CheckedChanged += chkIncreaseMaxWeight_CheckedChanged;
-            // 
-            // trkThrowPower
-            // 
-            trkThrowPower.LargeChange = 10;
-            trkThrowPower.Location = new Point(108, 72);
-            trkThrowPower.Minimum = 1;
-            trkThrowPower.Name = "trkThrowPower";
-            trkThrowPower.Size = new Size(116, 45);
-            trkThrowPower.TabIndex = 31;
-            trkThrowPower.TickStyle = TickStyle.None;
-            toolTip.SetToolTip(trkThrowPower, "The 'strength' of the throw");
-            trkThrowPower.Value = 5;
-            trkThrowPower.Visible = false;
-            trkThrowPower.Scroll += trkThrowPower_Scroll;
             // 
             // trkJumpPower
             // 
@@ -2116,6 +2166,7 @@ namespace eft_dma_radar
             ((System.ComponentModel.ISupportInitialize)picLootFilterEditColor).EndInit();
             grpLoot.ResumeLayout(false);
             grpLoot.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)numRefreshDelay).EndInit();
             grpLootValues.ResumeLayout(false);
             grpLootValues.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)trkSubItemLootValue).EndInit();
@@ -2317,6 +2368,10 @@ namespace eft_dma_radar
         private TrackBar trkThermalMinTemperature;
         private Label lblThermalMinTemperature;
         private Button btnApplyMapScale;
+        private Label lblAutoRefreshDelay;
+        private NumericUpDown numRefreshDelay;
+        private Label lblRefreshMap;
+        private ComboBox cboRefreshMap;
     }
 }
 

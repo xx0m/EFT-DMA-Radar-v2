@@ -28,7 +28,7 @@
         {
             var foundFPSCamera = false;
             var foundOpticCamera = false;
-            var count = 100;
+            var count = 400;
             var addr = Memory.ReadPtr(this._unityBase + Offsets.ModuleBase.CameraObjectManager);
 
             var scatterReadMap = new ScatterReadMap(count);
@@ -73,7 +73,6 @@
 
                 if (foundFPSCamera && foundOpticCamera)
                 {
-                    Console.WriteLine(i);
                     break;
                 }
             }

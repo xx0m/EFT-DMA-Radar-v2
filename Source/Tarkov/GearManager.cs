@@ -1,13 +1,15 @@
-﻿namespace eft_dma_radar
+﻿using System.Collections.Concurrent;
+
+namespace eft_dma_radar
 {
     public class GearManager
     {
-        private static readonly List<string> _skipSlots = new List<string> { "SecuredContainer", "Dogtag", "Compass", "Eyewear", "ArmBand" };
-        private static readonly List<string> _thermalScopes = new List<string> { "5a1eaa87fcdbcb001865f75e", "5d1b5e94d7ad1a2b865a96b0", "63fc44e2429a8a166c7f61e6", "6478641c19d732620e045e17", "63fc44e2429a8a166c7f61e6" };
+        private static readonly ConcurrentBag<string> slotsToSkip = new ConcurrentBag<string> { "SecuredContainer", "Dogtag", "Compass", "Eyewear", "ArmBand" };
+        private static readonly ConcurrentBag<string> thermalIDs = new ConcurrentBag<string> { "5a1eaa87fcdbcb001865f75e", "5d1b5e94d7ad1a2b865a96b0", "63fc44e2429a8a166c7f61e6", "6478641c19d732620e045e17", "63fc44e2429a8a166c7f61e6" };
         /// <summary>
         /// List of equipped items in PMC Inventory Slots.
         /// </summary>
-        public Dictionary<string, GearItem> Gear { get; set; }
+        public ConcurrentDictionary<string, GearItem> Gear { get; set; }
 
         /// <summary>
         /// Total value of all equipped items.
@@ -17,14 +19,14 @@
         /// <summary>
         /// All gear items and mods.
         /// </summary>
-        public List<LootItem> GearItemMods { get; set; }
+        public ConcurrentBag<LootItem> GearItemMods { get; set; }
 
         public GearManager(ulong slots)
         {
             var gearItemMods = new List<LootItem>();
             var totalValue = 0;
             var slotDict = this.GetSlotDictionary(slots);
-            var gearDict = new Dictionary<string, GearItem>(StringComparer.OrdinalIgnoreCase);
+            var gearDict = new ConcurrentDictionary<string, GearItem>(StringComparer.OrdinalIgnoreCase);
 
             var scatterReadMap = new ScatterReadMap(slotDict.Count);
             var round1 = scatterReadMap.AddRound();
@@ -44,61 +46,69 @@
 
             scatterReadMap.Execute();
 
-            for (int i = 0; i < slotDict.Count; i++)
+            var task = Task.Run(() =>
             {
-                if (!scatterReadMap.Results[i][0].TryGetResult<ulong>(out var containedItem))
-                    continue;
-                if (!scatterReadMap.Results[i][1].TryGetResult<ulong>(out var inventorytemplate))
-                    continue;
-                if (!scatterReadMap.Results[i][2].TryGetResult<ulong>(out var parentSlot))
-                    continue;
-                if (!scatterReadMap.Results[i][3].TryGetResult<ulong>(out var idPtr))
-                    continue;
-
-                var id = Memory.ReadUnityString(idPtr);
-
-                if (TarkovDevManager.AllItems.TryGetValue(id, out LootItem lootItem))
+                Parallel.For(0, slotDict.Count, Program.Config.ParallelOptions, i =>
                 {
-                    string longName = lootItem.Item.name;
-                    string shortName = lootItem.Item.shortName;
-                    var tmpGearItemMods = new List<LootItem>();
-                    var totalGearValue = TarkovDevManager.GetItemValue(lootItem.Item);
-
-                    var result = new PlayerWeaponInfo();
-                    this.GetItemsInSlots(parentSlot, tmpGearItemMods, ref result);
-
-                    totalGearValue += tmpGearItemMods.Sum(x => TarkovDevManager.GetItemValue(x.Item));
-                    totalValue += tmpGearItemMods.Sum(x => TarkovDevManager.GetItemValue(x.Item));
-                    gearItemMods.AddRange(tmpGearItemMods);
-
-                    var extraSlotInfo = result.ToString();
-                    var hasThermal = result.ThermalScope != null;
-
-                    if (extraSlotInfo is not null)
+                    try
                     {
-                        longName += $" ({extraSlotInfo})";
-                        shortName += $" ({extraSlotInfo})";
-                    }
+                        if (!scatterReadMap.Results[i][0].TryGetResult<ulong>(out var containedItem))
+                            return;
+                        if (!scatterReadMap.Results[i][1].TryGetResult<ulong>(out var inventorytemplate))
+                            return;
+                        if (!scatterReadMap.Results[i][2].TryGetResult<ulong>(out var parentSlot))
+                            return;
+                        if (!scatterReadMap.Results[i][3].TryGetResult<ulong>(out var idPtr))
+                            return;
 
-                    var gear = new GearItem()
-                    {
-                        ID = id,
-                        Long = longName,
-                        Short = shortName,
-                        Value = totalGearValue,
-                        HasThermal = hasThermal
-                    };
+                        var id = Memory.ReadUnityString(idPtr);
 
-                    gearDict.TryAdd(slotNames[i], gear);
-                }
-            }
+                        if (TarkovDevManager.AllItems.TryGetValue(id, out LootItem lootItem))
+                        {
+                            string longName = lootItem.Item.name;
+                            string shortName = lootItem.Item.shortName;
+                            var tmpGearItemMods = new ConcurrentBag<LootItem>();
+                            var totalGearValue = TarkovDevManager.GetItemValue(lootItem.Item);
+
+                            var result = new PlayerWeaponInfo();
+                            this.GetItemsInSlots(parentSlot, tmpGearItemMods, ref result);
+
+                            totalGearValue += tmpGearItemMods.Sum(x => TarkovDevManager.GetItemValue(x.Item));
+                            totalValue += tmpGearItemMods.Sum(x => TarkovDevManager.GetItemValue(x.Item));
+                            gearItemMods.AddRange(tmpGearItemMods);
+
+                            var extraSlotInfo = result.ToString();
+                            var hasThermal = result.ThermalScope != null;
+
+                            if (extraSlotInfo is not null)
+                            {
+                                longName += $" ({extraSlotInfo})";
+                                shortName += $" ({extraSlotInfo})";
+                            }
+
+                            var gear = new GearItem()
+                            {
+                                ID = id,
+                                Long = longName,
+                                Short = shortName,
+                                Value = totalGearValue,
+                                HasThermal = hasThermal
+                            };
+
+                            gearDict.TryAdd(slotNames[i], gear);
+                        }
+                    } catch { return; }
+                });
+            });
+
+            task.Wait();
 
             this.Value = totalValue;
             this.GearItemMods = new(gearItemMods);
             this.Gear = new(gearDict);
         }
 
-        private void GetItemsInSlots(ulong slotItemBase, List<LootItem> loot, ref PlayerWeaponInfo result, int recurseDepth = 0)
+        private void GetItemsInSlots(ulong slotItemBase, ConcurrentBag<LootItem> loot, ref PlayerWeaponInfo result, int recurseDepth = 0)
         {
             if (slotItemBase == 0 || recurseDepth > 3)
                 return;
@@ -142,13 +152,23 @@
 
             for (int i = 0; i < slotDict.Count; i++)
             {
-                if (!scatterReadMap.Results[i][0].TryGetResult<ulong>(out var containedItem))
-                    continue;
-                if (!scatterReadMap.Results[i][1].TryGetResult<ulong>(out var inventorytemplate))
-                    continue;
-                if (!scatterReadMap.Results[i][2].TryGetResult<ulong>(out var idPtr))
-                    continue;
+                ProcessSlot(i, scatterReadMap, loot, ref result, recurseDepth, slotNames);
+            }
+        }
 
+        private void ProcessSlot(int i, ScatterReadMap scatterReadMap, ConcurrentBag<LootItem> loot, ref PlayerWeaponInfo result, int recurseDepth, List<string> slotNames)
+        {
+            if (!scatterReadMap.Results[i][0].TryGetResult<ulong>(out var containedItem))
+                return;
+            if (!scatterReadMap.Results[i][1].TryGetResult<ulong>(out var inventorytemplate))
+                return;
+            if (!scatterReadMap.Results[i][2].TryGetResult<ulong>(out var idPtr))
+                return;
+
+            var id = Memory.ReadUnityString(idPtr);
+
+            if (TarkovDevManager.AllItems.TryGetValue(id, out LootItem lootItem))
+            {
                 if (slotNames[i] == "mod_magazine")
                 {
                     if (scatterReadMap.Results[i][8].TryGetResult<ulong>(out var firstRoundIdPtr))
@@ -162,35 +182,30 @@
                     }
                 }
 
-                var id = Memory.ReadUnityString(idPtr);
-
-                if (TarkovDevManager.AllItems.TryGetValue(id, out LootItem lootItem))
+                if (GearManager.thermalIDs.Contains(id))
                 {
-                    if (GearManager._thermalScopes.Contains(id))
-                    {
-                        result.ThermalScope = lootItem.Item.shortName;
-                    }
-
-                    var newLootItem = new LootItem
-                    {
-                        ID = id,
-                        Name = lootItem.Item.name,
-                        AlwaysShow = lootItem.AlwaysShow,
-                        Important = lootItem.Important,
-                        Item = lootItem.Item,
-                        Value = TarkovDevManager.GetItemValue(lootItem.Item)
-                    };
-
-                    loot.Add(newLootItem);
+                    result.ThermalScope = lootItem.Item.shortName;
                 }
 
-                this.GetItemsInSlots(containedItem, loot, ref result, recurseDepth + 1);
+                var newLootItem = new LootItem
+                {
+                    ID = id,
+                    Name = lootItem.Item.name,
+                    AlwaysShow = lootItem.AlwaysShow,
+                    Important = lootItem.Important,
+                    Item = lootItem.Item,
+                    Value = TarkovDevManager.GetItemValue(lootItem.Item)
+                };
+
+                loot.Add(newLootItem);
             }
+
+            this.GetItemsInSlots(containedItem, loot, ref result, recurseDepth + 1);
         }
 
-        private Dictionary<string, ulong> GetSlotDictionary(ulong slotItemBase)
+        private ConcurrentDictionary<string, ulong> GetSlotDictionary(ulong slotItemBase)
         {
-            var slotDict = new Dictionary<string, ulong>(StringComparer.OrdinalIgnoreCase);
+            var slotDict = new ConcurrentDictionary<string, ulong>(StringComparer.OrdinalIgnoreCase);
 
             try
             {
@@ -215,20 +230,29 @@
 
                 scatterReadMap.Execute();
 
-                for (int i = 0; i < size; i++)
+                var task = Task.Run(() =>
                 {
-                    if (!scatterReadMap.Results[i][0].TryGetResult<ulong>(out var slotPtr))
-                        continue;
-                    if (!scatterReadMap.Results[i][1].TryGetResult<ulong>(out var namePtr))
-                        continue;
-
-                    var name = Memory.ReadUnityString(namePtr);
-
-                    if (!GearManager._skipSlots.Contains(name, StringComparer.OrdinalIgnoreCase))
+                    Parallel.For(0, size, Program.Config.ParallelOptions, i =>
                     {
-                        slotDict[name] = slotPtr;
-                    }
-                }
+                        try
+                        {
+                            if (!scatterReadMap.Results[i][0].TryGetResult<ulong>(out var slotPtr))
+                                return;
+                            if (!scatterReadMap.Results[i][1].TryGetResult<ulong>(out var namePtr))
+                                return;
+
+                            var name = Memory.ReadUnityString(namePtr);
+
+                            if (!GearManager.slotsToSkip.Contains(name, StringComparer.OrdinalIgnoreCase))
+                            {
+                                slotDict[name] = slotPtr;
+                            }
+                        }
+                        catch { return; }
+                    });
+                });
+
+                task.Wait();
             }
             catch { }
 
