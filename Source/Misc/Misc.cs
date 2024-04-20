@@ -441,7 +441,7 @@ namespace eft_dma_radar
                 ["Reserve"] = 30,
                 ["Shoreline"] = 30,
                 ["Streets of Tarkov"] = 30,
-                ["The Lab"] = 30,
+                ["Labs"] = 30,
                 ["Woods"] = 30
             };
 

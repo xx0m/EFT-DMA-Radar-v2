@@ -1535,11 +1535,13 @@ namespace eft_dma_radar
                 }
 
                 int selectedIndex = 0;
+
                 if (_selectedMap is not null)
                 {
                     selectedIndex = cboRefreshMap.FindString(_selectedMap.Name);
-                    cboRefreshMap.SelectedIndex = selectedIndex;
                 }
+
+                cboRefreshMap.SelectedIndex = selectedIndex;
             }
 
             UpdateLootFilterComboBoxes();
