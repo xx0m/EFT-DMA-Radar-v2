@@ -78,7 +78,7 @@ namespace eft_dma_radar
                             gearItemMods.AddRange(tmpGearItemMods);
 
                             var extraSlotInfo = result.ToString();
-                            var hasThermal = result.ThermalScope != null;
+                            var hasThermal = result.ThermalScope is not null;
 
                             if (extraSlotInfo is not null)
                             {
@@ -115,7 +115,7 @@ namespace eft_dma_radar
 
             var slotDict = this.GetSlotDictionary(slotItemBase);
 
-            if (slotDict == null || slotDict.Count == 0)
+            if (slotDict is null || slotDict.Count == 0)
                 return;
 
             var scatterReadMap = new ScatterReadMap(slotDict.Count);

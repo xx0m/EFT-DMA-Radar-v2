@@ -64,13 +64,13 @@ namespace eft_dma_radar
                     if (questStatus == 2)
                     {
                         TarkovDevManager.AllTasks.TryGetValue(questID, out var task);
-                        if (task != null)
+                        if (task is not null)
                         {
                             //Console.WriteLine($"Quest: {task.Name} is started ID: {questID}");
                             var objectives = task.Objectives;
                             foreach (var objective in objectives)
                             {
-                                if (objective == null)
+                                if (objective is null)
                                 {
                                     continue;
                                 }
@@ -82,7 +82,7 @@ namespace eft_dma_radar
                                 var objectiveType = Regex.Replace(objective.Type, "(\\B[A-Z])", " $1");
                                 objectiveType = objectiveType[0].ToString().ToUpper() + objectiveType.Substring(1);
 
-                                if (zones != null)
+                                if (zones is not null)
                                 {
                                     foreach (var zone in zones)
                                     {

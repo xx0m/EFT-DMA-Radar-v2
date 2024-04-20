@@ -1,5 +1,4 @@
-﻿using System;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Numerics;
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
@@ -12,26 +11,21 @@ namespace eft_dma_radar
     /// </summary>
     public class Player
     {
-        private static readonly FileSystemWatcher _watchlistMonitor;
-        private static readonly object _watchlistLock = new();
-        private static readonly ConcurrentStack<PlayerHistoryEntry> _history = new();
         private static Dictionary<string, int> _groups = new(StringComparer.OrdinalIgnoreCase);
-
         private readonly Stopwatch _posRefreshSw = new();
-        private readonly Stopwatch _kdRefreshSw = new();
         private readonly object _posLock = new(); // sync access to this.Position (non-atomic)
-        private readonly GearManager _gearManager;
+        private GearManager _gearManager;
         private Transform _transform;
 
         #region PlayerProperties
         /// <summary>
         /// Player is a PMC Operator.
         /// </summary>
-        public bool IsPmc { get; }
+        public bool IsPMC { get; set; }
         /// <summary>
         /// Player is a Local PMC Operator.
         /// </summary>
-        public bool IsLocalPlayer { get; }
+        public bool IsLocalPlayer { get; set; }
         /// <summary>
         /// Player is Alive/Not Dead.
         /// </summary>
@@ -43,11 +37,11 @@ namespace eft_dma_radar
         /// <summary>
         /// Account UUID for Human Controlled Players.
         /// </summary>
-        public string AccountID { get; }
+        public string AccountID { get; set; }
         /// <summary>
         /// Player name.
         /// </summary>
-        public string Name { get; }
+        public string Name { get; set; }
         /// <summary>
         /// Player Level (Based on experience).
         /// </summary>
@@ -63,7 +57,7 @@ namespace eft_dma_radar
         /// <summary>
         /// Group that the player belongs to.
         /// </summary>
-        public int GroupID { get; } = -1;
+        public int GroupID { get; set; } = -1;
         /// <summary>
         /// Type of player unit.
         /// </summary>
@@ -72,14 +66,14 @@ namespace eft_dma_radar
         /// Player's current health (sum of all 7 body parts).
         /// </summary>
         public int Health { get; private set; } = -1;
-        
-        public ulong HealthController { get; }
 
-        public ulong InventoryController { get; }
+        public ulong HealthController { get; set; }
 
-        public ulong InventorySlots { get; }
+        public ulong InventoryController { get; set; }
 
-        public ulong PlayerBody { get; }
+        public ulong InventorySlots { get; set; }
+
+        public ulong PlayerBody { get; set; }
 
         private Vector3 _pos = new Vector3(0, 0, 0); // backing field
         /// <summary>
@@ -113,7 +107,6 @@ namespace eft_dma_radar
         /// </summary>
         public Vector2 Rotation { get; private set; } = new Vector2(0, 0); // 64 bits will be atomic
         /// <summary>
-        /// (PMC ONLY) Player's Gear Loadout.
         /// Key = Slot Name, Value = Item 'Long Name' in Slot
         /// </summary>
         public ConcurrentDictionary<string, GearItem> Gear
@@ -131,8 +124,7 @@ namespace eft_dma_radar
         {
             get
             {
-                GearManager gearManager = this._gearManager;
-                return ((gearManager != null) ? gearManager.GearItemMods : null) ?? new ConcurrentBag<LootItem>();
+                return (this._gearManager is not null ? this._gearManager.GearItemMods : new ConcurrentBag<LootItem>());
             }
         }
         /// <summary>
@@ -144,6 +136,7 @@ namespace eft_dma_radar
         /// Consecutive number of errors that this Player object has 'errored out' while updating.
         /// </summary>
         public int ErrorCount { get; set; } = 0;
+        public bool isOfflinePlayer { get; set; } = false;
         #endregion
 
         #region Getters
@@ -151,20 +144,6 @@ namespace eft_dma_radar
         /// Contains 'Acct UUIDs' of tracked players for the Key, and the 'Reason' for the Value.
         /// </summary>
         private static ReadOnlyDictionary<string, string> Watchlist { get; set; } // init in Static Constructor
-        /// <summary>
-        /// Contains history of Enemy Players (human-controlled) that are allocated during program runtime.
-        /// </summary>
-        public static ListViewItem[] History
-        {
-            get => _history.Select(x => x.View).ToArray();
-        }
-        /// <summary>
-        /// Player is a Hostile PMC Operator.
-        /// </summary>
-        public bool IsHostilePmc
-        {
-            get => this.IsPmc && (this.Type is PlayerType.PMC || this.Type is PlayerType.SpecialPlayer);
-        }
         /// <summary>
         /// Player is human-controlled.
         /// </summary>
@@ -175,7 +154,7 @@ namespace eft_dma_radar
                 this.Type is PlayerType.Teammate ||
                 this.Type is PlayerType.PMC ||
                 this.Type is PlayerType.SpecialPlayer ||
-                this.Type is PlayerType.PScav||
+                this.Type is PlayerType.PScav ||
                 this.Type is PlayerType.BEAR ||
                 this.Type is PlayerType.USEC);
         }
@@ -189,7 +168,7 @@ namespace eft_dma_radar
                 this.Type is PlayerType.Teammate ||
                 this.Type is PlayerType.PMC ||
                 this.Type is PlayerType.SpecialPlayer ||
-                this.Type is PlayerType.PScav||
+                this.Type is PlayerType.PScav ||
                 this.Type is PlayerType.BEAR ||
                 this.Type is PlayerType.USEC) && IsActive && IsAlive;
         }
@@ -219,7 +198,8 @@ namespace eft_dma_radar
         /// <summary>
         /// Player is AI & boss, rogue, raider etc.
         /// </summary>
-        public bool IsBossRaider {
+        public bool IsBossRaider
+        {
             get => (
                 this.Type is PlayerType.AIRaider ||
                 this.Type is PlayerType.AIBossFollower ||
@@ -281,9 +261,8 @@ namespace eft_dma_radar
         /// <summary>
         /// PlayerInfo Address (GClass1044)
         /// </summary>
-        public ulong NextObservedPlayerView { get; }
-        public ulong Info { get; }
-        public ulong TransformInternal { get; }
+        public ulong Info { get; set; }
+        public ulong TransformInternal { get; set; }
         public ulong VerticesAddr { get => this._transform?.VerticesAddr ?? 0x0; }
         public ulong IndicesAddr
         {
@@ -292,8 +271,8 @@ namespace eft_dma_radar
         /// <summary>
         /// Health Entries for each Body Part.
         /// </summary>
-        public ulong[] HealthEntries { get; }
-        public ulong MovementContext { get; }
+        public ulong[] HealthEntries { get; set; }
+        public ulong MovementContext { get; set; }
         public ulong CorpsePtr
         {
             get => this.Base + Offsets.Player.Corpse;
@@ -307,147 +286,60 @@ namespace eft_dma_radar
         }
         #endregion
 
-        #region Static_Constructor
-        static Player()
-        {
-            LoadWatchlist();
-            _watchlistMonitor = new FileSystemWatcher(".")
-            {
-                NotifyFilter = NotifyFilters.LastWrite,
-                Filter = "playerWatchlist.txt",
-                EnableRaisingEvents = true
-            };
-            _watchlistMonitor.Changed += new FileSystemEventHandler(watchlist_Changed);
-        }
-        #endregion
-
         #region Constructor
         /// <summary>
         /// Player Constructor.
         /// </summary>
         public Player(ulong playerBase, ulong playerProfile, Vector3? pos = null, string baseClassName = null)
         {
+            if (string.IsNullOrEmpty(baseClassName))
+                throw new Exception("BaseClass is not set!");
+
+            var isOfflinePlayer = string.Equals(baseClassName, "ClientPlayer") || string.Equals(baseClassName, "LocalPlayer") || string.Equals(baseClassName, "HideoutPlayer");
+            var isOnlinePlayer = string.Equals(baseClassName, "ObservedPlayerView");
+
+            if (!isOfflinePlayer && !isOnlinePlayer)
+                throw new Exception("Player is not of type OfflinePlayer or OnlinePlayer");
+
             Debug.WriteLine("Player Constructor: Initialization started.");
-            try
+
+            this.Base = playerBase;
+            this.Profile = playerProfile;
+
+            if (pos is not null)
+                this.Position = (Vector3)pos;
+
+            var scatterReadMap = new ScatterReadMap(1);
+
+            if (isOfflinePlayer)
             {
-                this.Base = playerBase;
-                this.Profile = playerProfile;
-                //Debug.WriteLine($"Player Base Address: 0x{playerBase:X}, Profile Address: 0x{playerProfile:X}");
-                if (pos is not null)
-                {
-                    this.Position = (Vector3)pos; // Populate provided Position (usually only for a re-alloc)
-                }
-                if (baseClassName is null)
-                {
-                    return;
-                } else {
-                    //Debug.WriteLine($"Base Class Name: {baseClassName}");
-                }
-                if (baseClassName == "ClientPlayer" || baseClassName == "LocalPlayer" || baseClassName == "HideoutPlayer") {
-                    ulong localPlayerInfoOffset = playerProfile + Offsets.Profile.PlayerInfo;
-                    this.Info = Memory.ReadPtr(localPlayerInfoOffset);
-                    this.MovementContext = Memory.ReadPtr(playerBase + Offsets.Player.MovementContext);
-                    this.TransformInternal = Memory.ReadPtrChain(playerBase, Offsets.Player.To_TransformInternal);
-                    this._transform = new Transform(this.TransformInternal, true);
-                    var namePtr = Memory.ReadPtr(this.Info + Offsets.PlayerInfo.Nickname);
-                    this.Name = Memory.ReadUnityString(namePtr);
-                    this.InventoryController = Memory.ReadPtr(playerBase + Offsets.Player.InventoryController);
-                    var inventory = Memory.ReadPtr(InventoryController + Offsets.InventoryController.Inventory);
-                    var equipment = Memory.ReadPtr(inventory + Offsets.Inventory.Equipment);
-                    this.InventorySlots = Memory.ReadPtr(equipment + Offsets.Equipment.Slots);
-                    this.PlayerBody = Memory.ReadPtr(playerBase + Offsets.Player.PlayerBody);
+                this.SetupOfflineScatterReads(scatterReadMap);
+                this.ProcessOfflinePlayerScatterReadResults(scatterReadMap);
 
-                    try
-                    {
-                        var gameVersionPtr = Memory.ReadPtr(Info + Offsets.PlayerInfo.GameVersion);
-                        var gameVersion = Memory.ReadUnityString(gameVersionPtr);
+                //try
+                //{
 
-                        this.GroupID = this.GetGroupID();
-                        this.PlayerBody = Memory.ReadPtr(playerBase + 0xA8);
-                        try { this._gearManager = new GearManager(this.InventorySlots); } catch { }
-
-                        //If empty, then it's a scav
-                        if (gameVersion == "")
-                        {
-                            //Console.WriteLine("Scav Detected");
-                            this.Type = PlayerType.AIOfflineScav;
-                            this.IsLocalPlayer = false;
-                            this.IsPmc = false;
-                            this.Name = Helpers.TransliterateCyrillic(Name);
-
-                        }
-                        else
-                        {
-                            this.Type = PlayerType.LocalPlayer;
-                            this.IsLocalPlayer = true;
-                            this.IsPmc = true;
-                        }
-                    } catch {}
-                } else if (baseClassName == "ObservedPlayerView") {
-                    this.IsLocalPlayer = false;
-                    //Debug.WriteLine("Processing PMC Player.");
-                    var ObservedPlayerView = playerBase;
-                    this.MovementContext = Memory.ReadPtrChain(ObservedPlayerView, Offsets.ObservedPlayerView.To_MovementContext);
-                    this.TransformInternal = Memory.ReadPtrChain(ObservedPlayerView, Offsets.ObservedPlayerView.To_TransformInternal);
-                    this._transform = new Transform(this.TransformInternal, true);
-                    this.Name = Memory.ReadUnityString(Memory.ReadPtr(ObservedPlayerView + Offsets.ObservedPlayerView.NickName));
-                    this.Name =  Helpers.TransliterateCyrillic(this.Name);
-                    this.Info = ObservedPlayerView;
-                    var playerSide = GetNextObservedPlayerSide();
-                    var playerIsAI = GetNextObservedPlayerIsAI();
-
-                    this.PlayerBody = Memory.ReadPtr(ObservedPlayerView + Offsets.ObservedPlayerView.PlayerBody);
-                    this.InventoryController = Memory.ReadPtrChain(ObservedPlayerView, Offsets.ObservedPlayerView.To_InventoryController);
-                    var inventory = Memory.ReadPtr(this.InventoryController + Offsets.InventoryController.Inventory);
-                    var equipment = Memory.ReadPtr(inventory + Offsets.Inventory.Equipment);
-                    this.InventorySlots = Memory.ReadPtr(equipment + Offsets.Equipment.Slots);
-
-                    this.AccountID = Memory.ReadUnityString(Memory.ReadPtr(ObservedPlayerView + Offsets.ObservedPlayerView.AccountID));
-
-
-                    if (Helpers.NameTranslations.ContainsKey(this.Name)) {
-                        this.Name = Helpers.NameTranslations[this.Name];
-                    }
-                    
-                    try { this._gearManager = new GearManager(this.InventorySlots); } catch { }
-
-                    this.GroupID = this.GetObservedPlayerGroupID();
-                    this.HealthController = Memory.ReadPtrChain(playerBase, Offsets.ObservedPlayerView.To_HealthController);
-
-                    if ((playerSide == 1 || playerSide == 2) && !playerIsAI) {
-                        this.IsPmc = true;
-                        this.Type = (playerSide == 1 ? PlayerType.USEC : PlayerType.BEAR);
-                        //this.KDA = KDManager.GetKD(this.AccountID).Result;
-                    } else if (playerSide == 4 && !playerIsAI) {
-                        this.Type = PlayerType.PScav;
-                    } else if (playerSide == 4 && playerIsAI) {
-                        if (Helpers.NameTranslations.ContainsValue(this.Name)) {
-                            this.Type = PlayerType.AIBoss;
-                        } else if (Helpers.RaiderGuardRogueNames.Contains(this.Name)) {
-                            this.Type = PlayerType.AIRaider;
-                        } else {
-                            this.Type = PlayerType.AIScav;
-                        }
-                    }
-
-                } else throw new ArgumentOutOfRangeException("classNameString");
-
-                this.FinishAlloc(); // Finish allocation (check watchlist, member type,etc.)
+                //}
+                //catch (Exception ex)
+                //{
+                //    throw new Exception($"ERROR during EFT.Player constructor for base addr 0x{playerBase.ToString("X")}", ex);
+                //}
             }
-            catch (Exception ex)
+            else if (isOnlinePlayer)
             {
-                throw new DMAException($"ERROR during Player constructor for base addr 0x{playerBase.ToString("X")}", ex);
-            }
-        }
-        #endregion
+                this.Info = playerBase;
+                this.SetupOnlineScatterReads(scatterReadMap);
+                this.ProcessOnlinePlayerScatterReadResults(scatterReadMap);
 
-        #region Events
-        /// <summary>
-        /// Event fires when the Player Watchlist Textfile is updated.
-        /// </summary>
-        private static void watchlist_Changed(object sender, FileSystemEventArgs e)
-        {
-            LoadWatchlist();
+                //try
+                //{
+
+                //}
+                //catch (Exception ex)
+                //{
+                //    throw new Exception($"ERROR during ObservedPlayerView constructor for base addr 0x{playerBase.ToString("X")}", ex);
+                //}
+            }
         }
         #endregion
 
@@ -455,34 +347,23 @@ namespace eft_dma_radar
         /// <summary>
         /// Set player health.
         /// </summary>
-        public bool SetHealth(int ETagStatus)
+        public bool SetHealth(int eTagStatus)
         {
             try
             {
-                float totalHealth;
-                switch (ETagStatus){
-                    case 1024:
-                        totalHealth = 100;
-                        break;
-                    case 2048:
-                        totalHealth = 50;
-                        break;
-                    case 4096:
-                        totalHealth = 10;
-                        break;
-                    case 8192:
-                        totalHealth = 0;
-                        break;
-                    default:
-                        totalHealth = -1;
-                        break;
-                }
-                this.Health = (int)Math.Round(totalHealth);
+                this.Health = eTagStatus switch
+                {
+                    1024 => 100,
+                    2048 => 50,
+                    4096 => 10,
+                    8192 => 0,
+                    _ => -1,
+                };
                 return true;
             }
             catch (Exception ex)
             {
-                Program.Log($"ERROR getting Player '{Name}' Health: {ex}");
+                Program.Log($"ERROR getting Player '{this.Name}' Health: {ex}");
                 return false;
             }
         }
@@ -494,22 +375,18 @@ namespace eft_dma_radar
         {
             try
             {
-                Vector2 rotation = (Vector2)obj; // unbox
-                Vector2 result;
-                rotation.X -= 90; // degs offset
-                if (rotation.X < 0) rotation.X += 360f; // handle if neg
+                if (obj is not Vector2 rotation)
+                    throw new ArgumentException("Rotation data must be of type Vector2.", nameof(obj));
 
-                if (rotation.X < 0) result.X = 360f + rotation.X;
-                else result.X = rotation.X;
-                if (rotation.Y < 0) result.Y = 360f + rotation.Y;
-                else result.Y = rotation.Y;
-                this.Rotation = result;
+                rotation.X = (rotation.X - 90 + 360) % 360;
+                rotation.Y = (rotation.Y + 360) % 360;
 
+                this.Rotation = rotation;
                 return true;
             }
             catch (Exception ex)
             {
-                Program.Log($"ERROR getting Player '{Name}' Rotation: {ex}");
+                Program.Log($"ERROR getting Player '{this.Name}' Rotation: {ex}");
                 return false;
             }
         }
@@ -523,19 +400,24 @@ namespace eft_dma_radar
             {
                 if (obj is null)
                     throw new NullReferenceException();
-                //Debug.WriteLine($"Player '{Name}' Position: {obj[0]}, {obj[1]}, {obj[2]}");
+
                 this.Position = this._transform.GetPosition(obj);
+
                 return true;
             }
             catch (Exception ex) // Attempt to re-allocate Transform on error
             {
-                Program.Log($"ERROR getting Player '{Name}' Position: {ex}");
+                Program.Log($"ERROR getting Player '{this.Name}' Position: {ex}");
+
                 if (!this._posRefreshSw.IsRunning)
+                {
                     this._posRefreshSw.Start();
-                else if (this._posRefreshSw.ElapsedMilliseconds < 250) // Rate limit attempts on getting pos to prevent stutters
+                }
+                else if (this._posRefreshSw.ElapsedMilliseconds < 250)
                 {
                     return false;
                 }
+
                 try
                 {
                     Program.Log($"Attempting to get new Transform for Player '{this.Name}'...");
@@ -547,235 +429,312 @@ namespace eft_dma_radar
                 {
                     Program.Log($"ERROR getting new Transform for Player '{this.Name}': {ex2}");
                 }
-                finally {
+                finally
+                {
                     this._posRefreshSw.Restart();
                 }
+
                 return false;
-            }
-        }
-
-        /// <summary>
-        /// Set PMC Player K/D.
-        /// </summary>
-        public async Task SetKDAsync()
-        {
-            try
-            {
-                if ( this.KDA == -1f && this.IsHumanActive) // Get K/D for Hostile PMCs
-                {
-                    if (this._kdRefreshSw.IsRunning && this._kdRefreshSw.ElapsedMilliseconds < 20000)
-                        return; // Rate-limit check
-
-                    if (!this._kdRefreshSw.IsRunning || this._kdRefreshSw.ElapsedMilliseconds >= 20000)
-                    {
-                        this._kdRefreshSw.Restart();
-                        //this.KDA = KDManager.GetKD(this.AccountID).ConfigureAwait(true);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Program.Log($"ERROR getting Player '{this.Name}' K/D: {ex}");
-                if (!this._kdRefreshSw.IsRunning)
-                    this._kdRefreshSw.Start();
             }
         }
         #endregion
 
         #region Methods
         /// <summary>
-        /// Allocation wrap-up.
+        /// Returns PlayerType based on isAI & playuerSide
         /// </summary>
-        /// 
-        public static class QuestItemRepository
+        private PlayerType GetOnlinePlayerType(bool isAI, int playerSide, string name)
         {
-            private static HashSet<string> questItemIds = new HashSet<string>();
-
-            public static void AddQuestItemId(string itemId)
+            if (!isAI)
             {
-                questItemIds.Add(itemId);
-            }
-
-            public static bool IsQuestItem(string itemId)
-            {
-                return questItemIds.Contains(itemId);
-            }
-        }
-        
-        private void FinishAlloc()
-        {
-            if (this.IsHumanHostile) // Hostile Human Controlled Players
-            {
-                // build log message
-                string baseMsg = $"{this.Name} ({this.Type}),  L:{this.Lvl}, "; // append name, type, level
-                if (this.GroupID != -1)
-                    baseMsg += $"G:{this.GroupID}, "; // append group (if in group)
-                if (this.Category is not null)
+                return playerSide switch
                 {
-                    this.Type = PlayerType.SpecialPlayer; // Flag Special Account Types
-                    baseMsg += $"Special Acct: {this.Category}, "; // append acct type (if special)
-                }
-
-                baseMsg += $"@{DateTime.Now.ToLongTimeString()}"; // append timestamp
-
-                if (this.AccountID is not null &&
-                    Watchlist is not null &&
-                    Watchlist.TryGetValue(this.AccountID, out var reason)) // player is on watchlist
-                {
-                    this.Type = PlayerType.SpecialPlayer; // Flag watchlist player
-                    var entry = new PlayerHistoryEntry(this.AccountID, $"** WATCHLIST ALERT for {baseMsg} ~~ Reason: {reason}");
-                    _history.Push(entry);
-                }
-                else // Not on watchlist
-                {
-                    var entry = new PlayerHistoryEntry(this.AccountID, baseMsg);
-                    _history.Push(entry);
-                }
+                    1 => PlayerType.USEC,
+                    2 => PlayerType.BEAR,
+                    _ => PlayerType.PScav,
+                };
             }
-        }
-        /// <summary>
-        /// Checks account type of player. Flags special accounts (Sherpa,etc.)
-        /// </summary>
-        private string GetMemberCategory()
-        {
-            var member = Memory.ReadValue<int>(this.Info + Offsets.PlayerInfo.MemberCategory);
-            if (member == 0x0 || member == 0x2) return null; // Ignore 0x0 (Standard Acct) and 0x2 (EOD Acct)
             else
             {
-                var flags = (MemberCategory)member;
-                return flags.ToString("G"); // Returns all flags that are set
+                if (Helpers.BossNames.Contains(name))
+                {
+                    return PlayerType.AIBoss;
+                }
+                else if (Helpers.RaiderGuardRogueNames.Contains(name))
+                {
+                    return PlayerType.AIRaider;
+                }
+                else
+                {
+                    return PlayerType.AIScav;
+                }
             }
         }
 
-        private int GetNextObservedPlayerSide()
+        private PlayerType GetOfflinePlayerType(bool isAI, string name)
         {
-            return Memory.ReadValue<int>(Base + Offsets.ObservedPlayerView.PlayerSide);
+            if (!isAI)
+            {
+                return PlayerType.LocalPlayer;
+            }
+            else
+            {
+                if (Helpers.BossNames.Any(bossName => name.Contains(bossName)))
+                {
+                    if (this.Name.Contains("BTR"))
+                        this.Name = "BTR";
+
+                    return PlayerType.AIBoss;
+                }
+                else if (Helpers.RaiderGuardRogueNames.Contains(name))
+                {
+                    return PlayerType.AIRaider;
+                }
+                else
+                {
+                    return PlayerType.AIScav;
+                }
+            }
         }
 
-        private bool GetNextObservedPlayerIsAI()
+        private void SetupOfflineScatterReads(ScatterReadMap scatterReadMap)
         {
-            return Memory.ReadValue<bool>(Base + Offsets.ObservedPlayerView.IsAI);
+            var round1 = scatterReadMap.AddRound();
+            var round2 = scatterReadMap.AddRound();
+            var round3 = scatterReadMap.AddRound();
+            var round4 = scatterReadMap.AddRound();
+            var round5 = scatterReadMap.AddRound();
+            var round6 = scatterReadMap.AddRound();
+
+            var transIntPtr1 = round1.AddEntry<ulong>(0, 0, this.Base, null, Offsets.Player.To_TransformInternal[0]);
+            var info = round1.AddEntry<ulong>(0, 1, this.Profile, null, Offsets.Profile.PlayerInfo);
+            var inventoryController = round1.AddEntry<ulong>(0, 2, this.Base, null, Offsets.Player.InventoryController);
+            var playerBody = round1.AddEntry<ulong>(0, 3, this.Base, null, Offsets.Player.PlayerBody);
+            var movementContext = round1.AddEntry<ulong>(0, 4, this.Base, null, Offsets.Player.MovementContext);
+
+            var transIntPtr2 = round2.AddEntry<ulong>(0, 5, transIntPtr1, null, Offsets.Player.To_TransformInternal[1]);
+            var name = round2.AddEntry<ulong>(0, 6, info, null, Offsets.PlayerInfo.Nickname);
+            var inventory = round2.AddEntry<ulong>(0, 7, inventoryController, null, Offsets.InventoryController.Inventory);
+            var registrationDate = round2.AddEntry<int>(0, 8, info, null, Offsets.PlayerInfo.RegistrationDate);
+            var groupID = round2.AddEntry<ulong>(0, 9, info, null, Offsets.PlayerInfo.GroupId);
+
+            var transIntPtr3 = round3.AddEntry<ulong>(0, 10, transIntPtr2, null, Offsets.Player.To_TransformInternal[2]);
+            var equipment = round3.AddEntry<ulong>(0, 11, inventory, null, Offsets.Inventory.Equipment);
+
+            var transIntPtr4 = round4.AddEntry<ulong>(0, 12, transIntPtr3, null, Offsets.Player.To_TransformInternal[3]);
+            var inventorySlots = round4.AddEntry<ulong>(0, 13, equipment, null, Offsets.Equipment.Slots);
+
+            var transIntPtr5 = round5.AddEntry<ulong>(0, 14, transIntPtr4, null, Offsets.Player.To_TransformInternal[4]);
+
+            var transformInternal = round6.AddEntry<ulong>(0, 15, transIntPtr5, null, Offsets.Player.To_TransformInternal[5]);
+
+            scatterReadMap.Execute();
+        }
+
+        private void SetupOnlineScatterReads(ScatterReadMap scatterReadMap)
+        {
+            var round1 = scatterReadMap.AddRound();
+            var round2 = scatterReadMap.AddRound();
+            var round3 = scatterReadMap.AddRound();
+            var round4 = scatterReadMap.AddRound();
+            var round5 = scatterReadMap.AddRound();
+            var round6 = scatterReadMap.AddRound();
+
+            var movementContextPtr1 = round1.AddEntry<ulong>(0, 0, this.Info, null, Offsets.ObservedPlayerView.To_MovementContext[0]);
+            var transIntPtr1 = round1.AddEntry<ulong>(0, 1, this.Info, null, Offsets.ObservedPlayerView.To_TransformInternal[0]);
+            var inventoryControllerPtr1 = round1.AddEntry<ulong>(0, 2, this.Info, null, Offsets.ObservedPlayerView.To_InventoryController[0]);
+            var healthControllerPtr1 = round1.AddEntry<ulong>(0, 3, this.Info, null, Offsets.ObservedPlayerView.To_HealthController[0]);
+            var name = round1.AddEntry<ulong>(0, 4, this.Info, null, Offsets.ObservedPlayerView.NickName);
+            var accountID = round1.AddEntry<ulong>(0, 5, this.Info, null, Offsets.ObservedPlayerView.AccountID);
+            var playerSide = round1.AddEntry<int>(0, 6, this.Info, null, Offsets.ObservedPlayerView.PlayerSide);
+            var isAI = round1.AddEntry<bool>(0, 7, this.Info, null, Offsets.ObservedPlayerView.IsAI);
+            var groupID = round1.AddEntry<ulong>(0, 8, this.Info, null, Offsets.ObservedPlayerView.GroupID);
+            var playerBody = round1.AddEntry<ulong>(0, 9, this.Info, null, Offsets.ObservedPlayerView.PlayerBody);
+            var memberCategory = round1.AddEntry<int>(0, 10, this.Info, null, Offsets.PlayerInfo.MemberCategory);
+
+            var movementContextPtr2 = round2.AddEntry<ulong>(0, 11, movementContextPtr1, null, Offsets.ObservedPlayerView.To_MovementContext[1]);
+            var transIntPtr2 = round2.AddEntry<ulong>(0, 12, transIntPtr1, null, Offsets.ObservedPlayerView.To_TransformInternal[1]);
+            var inventoryController = round2.AddEntry<ulong>(0, 13, inventoryControllerPtr1, null, Offsets.ObservedPlayerView.To_InventoryController[1]);
+            var healthController = round3.AddEntry<ulong>(0, 14, healthControllerPtr1, null, Offsets.ObservedPlayerView.To_HealthController[1]);
+
+            var movementContext = round3.AddEntry<ulong>(0, 15, movementContextPtr2, null, Offsets.ObservedPlayerView.To_MovementContext[2]);
+            var transIntPtr3 = round3.AddEntry<ulong>(0, 16, transIntPtr2, null, Offsets.ObservedPlayerView.To_TransformInternal[2]);
+            var inventory = round3.AddEntry<ulong>(0, 17, inventoryController, null, Offsets.InventoryController.Inventory);
+
+            var transIntPtr4 = round4.AddEntry<ulong>(0, 18, transIntPtr3, null, Offsets.ObservedPlayerView.To_TransformInternal[3]);
+            var equipment = round4.AddEntry<ulong>(0, 19, inventory, null, Offsets.Inventory.Equipment);
+
+            var transIntPtr5 = round5.AddEntry<ulong>(0, 20, transIntPtr4, null, Offsets.ObservedPlayerView.To_TransformInternal[4]);
+            var inventorySlots = round5.AddEntry<ulong>(0, 21, equipment, null, Offsets.Equipment.Slots);
+
+            var transformInternal = round6.AddEntry<ulong>(0, 22, transIntPtr5, null, Offsets.ObservedPlayerView.To_TransformInternal[5]);
+
+            scatterReadMap.Execute();
+        }
+
+        private void ProcessOfflinePlayerScatterReadResults(ScatterReadMap scatterReadMap)
+        {
+            if (!scatterReadMap.Results[0][1].TryGetResult<ulong>(out var info))
+                return;
+            if (!scatterReadMap.Results[0][4].TryGetResult<ulong>(out var movementContext))
+                return;
+            if (!scatterReadMap.Results[0][5].TryGetResult<ulong>(out var transIntPtr2))
+                return;
+            if (!scatterReadMap.Results[0][10].TryGetResult<ulong>(out var transIntPtr3))
+                return;
+            if (!scatterReadMap.Results[0][12].TryGetResult<ulong>(out var transIntPtr4))
+                return;
+            if (!scatterReadMap.Results[0][14].TryGetResult<ulong>(out var transIntPtr5))
+                return;
+            if (!scatterReadMap.Results[0][2].TryGetResult<ulong>(out var inventoryController))
+                return;
+            if (!scatterReadMap.Results[0][3].TryGetResult<ulong>(out var playerBody))
+                return;
+            if (!scatterReadMap.Results[0][6].TryGetResult<ulong>(out var name))
+                return;
+            if (!scatterReadMap.Results[0][13].TryGetResult<ulong>(out var inventorySlots))
+                return;
+            if (!scatterReadMap.Results[0][15].TryGetResult<ulong>(out var transformInternal))
+                return;
+            if (!scatterReadMap.Results[0][9].TryGetResult<ulong>(out var groupID))
+                return;
+
+            this.Info = info;
+            this.InitializePlayerProperties(movementContext, inventoryController, inventorySlots, transformInternal, playerBody, name, groupID);
+
+            if (scatterReadMap.Results[0][8].TryGetResult<int>(out var registrationDate))
+            {
+                var isAI = registrationDate == 0;
+
+                this.IsLocalPlayer = !isAI;
+                this.IsPMC = !isAI;
+
+                if (isAI)
+                {
+                    this.Name = Helpers.TransliterateCyrillic(this.Name);
+                }
+
+                this.Type = this.GetOfflinePlayerType(isAI, this.Name);
+
+                this.isOfflinePlayer = true;
+
+                this.FinishAlloc();
+            }
+        }
+
+        private void ProcessOnlinePlayerScatterReadResults(ScatterReadMap scatterReadMap)
+        {
+            if (!scatterReadMap.Results[0][15].TryGetResult<ulong>(out var movementContext))
+                return;
+            if (!scatterReadMap.Results[0][13].TryGetResult<ulong>(out var inventoryController))
+                return;
+            if (!scatterReadMap.Results[0][21].TryGetResult<ulong>(out var inventorySlots))
+                return;
+            if (!scatterReadMap.Results[0][22].TryGetResult<ulong>(out var transformInternal))
+                return;
+            if (!scatterReadMap.Results[0][14].TryGetResult<ulong>(out var healthController))
+                return;
+            if (!scatterReadMap.Results[0][9].TryGetResult<ulong>(out var playerBody))
+                return;
+            if (!scatterReadMap.Results[0][7].TryGetResult<bool>(out var isAI))
+                return;
+            if (!scatterReadMap.Results[0][6].TryGetResult<int>(out var playerSide))
+                return;
+            if (!scatterReadMap.Results[0][5].TryGetResult<ulong>(out var accountID))
+                return;
+            if (!scatterReadMap.Results[0][4].TryGetResult<ulong>(out var name))
+                return;
+            if (!scatterReadMap.Results[0][10].TryGetResult<int>(out var memberCategory))
+                return;
+            if (!scatterReadMap.Results[0][8].TryGetResult<ulong>(out var groupID))
+                return;
+
+            this.InitializePlayerProperties(movementContext, inventoryController, inventorySlots, transformInternal, playerBody, name, groupID);
+
+            this.IsLocalPlayer = false;
+            this.HealthController = healthController;
+            this.AccountID = Memory.ReadUnityString(accountID);
+
+            if (!isAI)
+            {
+                this.IsPMC = (playerSide == 1 || playerSide == 2);
+
+                if (!this.IsPMC)
+                {
+                    this.Name = Helpers.TransliterateCyrillic(this.Name);
+                }
+            }
+            else
+            {
+                this.Name = Helpers.TransliterateCyrillic(this.Name);
+            }
+
+            this.Type = this.GetOnlinePlayerType(isAI, playerSide, this.Name);
+
+            this.FinishAlloc();
+        }
+
+        private void InitializePlayerProperties(ulong movementContext, ulong inventoryController, ulong inventorySlots, ulong transformInternal, ulong playerBody, ulong name, ulong groupID)
+        {
+            this.MovementContext = movementContext;
+            this.InventoryController = inventoryController;
+            this.InventorySlots = inventorySlots;
+            this._gearManager = new GearManager(this.InventorySlots);
+            this.TransformInternal = transformInternal;
+            this._transform = new Transform(this.TransformInternal, true);
+            this.PlayerBody = playerBody;
+            this.Name = Memory.ReadUnityString(name);
+
+            if (string.IsNullOrEmpty(this.Name) || this.Name.Length < 3)
+                throw new Exception($"Error setting name for profile '{this.Profile}'");
+
+            if (groupID != 0)
+            {
+                var group = Memory.ReadUnityString(groupID);
+                _groups.TryAdd(group, _groups.Count);
+                this.GroupID = _groups[group];
+            }
+            else
+            {
+                this.GroupID = -1;
+            }
         }
 
         /// <summary>
-        /// Get Account ID for Human-Controlled Players.
+        /// Allocation wrap-up.
         /// </summary>
-        private string GetAccountID()
+        private void FinishAlloc()
         {
-            var idPtr = Memory.ReadPtr(this.Profile + Offsets.Profile.AccountId);
-            return Memory.ReadUnityString(idPtr);
+            if (this.IsHumanHostile)
+            {
+                //TODO: Implement twitch account check
+
+                StringBuilder baseMsgBuilder = new StringBuilder();
+                baseMsgBuilder.Append($"{this.Name} ({this.Type}),  L:{this.Lvl}, ");
+
+                if (this.GroupID != -1)
+                    baseMsgBuilder.Append($"G:{this.GroupID}, ");
+
+                if (this.Category is not null)
+                {
+                    if (this.Category != "EOD" && this.Category != "Standard")
+                    {
+                        this.Type = PlayerType.SpecialPlayer;
+                        baseMsgBuilder.Append($"Special Acct: {this.Category}, ");
+                    }
+                }
+
+                baseMsgBuilder.Append($"@{DateTime.Now.ToLongTimeString()}");
+                string baseMsg = baseMsgBuilder.ToString();
+            }
         }
 
-        /// <summary>
-        /// Gets player's Group Number.
-        /// </summary>
-        private int GetGroupID()
-        {
-            try
-            {
-                var grpPtr = Memory.ReadPtr(this.Info + Offsets.PlayerInfo.GroupId);
-                var grp = Memory.ReadUnityString(grpPtr);
-                _groups.TryAdd(grp, _groups.Count);
-                return _groups[grp];
-            }
-            catch 
-            {
-                return -1; // will return null if Solo / Don't have a team
-            }
-        }
-
-        private int GetObservedPlayerGroupID()
-        {
-            try
-            {
-                var grpPtr = Memory.ReadPtr(this.Info + Offsets.ObservedPlayerView.GroupID);
-                var grp = Memory.ReadUnityString(grpPtr);
-                _groups.TryAdd(grp, _groups.Count);
-                return _groups[grp];
-            }
-            catch
-            {
-                return -1; // will return null if Solo / Don't have a team
-            }
-        }
         /// <summary>
         /// Resets/Updates 'static' assets in preparation for a new game/raid instance.
         /// </summary>
         public static void Reset()
         {
-            _groups = new(StringComparer.OrdinalIgnoreCase);
-            if (_history.TryPeek(out var last) && last.Entry == "---NEW GAME---")
-            {
-                // Don't spam repeated entries
-            }
-            else
-                _history.Push(new PlayerHistoryEntry(null, "---NEW GAME---")); // Insert separator in PMC History Log
-        }
-        /// <summary>
-        /// Reloads playerWatchlist.txt into Memory.
-        /// </summary>
-        public static void LoadWatchlist()
-        {
-            lock (_watchlistLock) // Sync access to File IO, Resources
-            {
-                var watchlist = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase); // Allocate new Dictionary (case insensitive keys)
-                if (!File.Exists("playerWatchlist.txt"))
-                {
-                    File.WriteAllText("playerWatchlist.txt",
-                        "PlayerAcctID : Watchlist reason/comment here (one entry per line)");
-                }
-                else
-                {
-                    var lines = File.ReadAllLines("playerWatchlist.txt");
-                    foreach (var line in lines)
-                    {
-                        var split = line.Split(':'); // remove single delimiting ':' character
-                        if (split.Length == 2)
-                        {
-                            var id = split[0].Trim();
-                            var reason = split[1].Trim();
-                            watchlist.TryAdd(id, reason);
-                        }
-                    }
-                }
-                Watchlist = new(watchlist); // Update ref
-            }
-        }
-
-        private PlayerType GetPlayerType(int roleFlag) {
-            switch (roleFlag) {
-                case 0: return PlayerType.AISniperScav;
-                case 1: return PlayerType.AIOfflineScav;
-                case 2: return PlayerType.AIBossGuard; // unknown
-                case 3: return PlayerType.AIBoss; // reshala
-                case 5: return PlayerType.AIBossFollower; // reshala follower
-                case 6: return PlayerType.AIBoss; // killa
-                case 7: return PlayerType.AIBoss; // shturman
-                case 8: return PlayerType.AIBossFollower; // shturman guard
-                case 9: return PlayerType.AIRaider; // raiders
-                case 11: return PlayerType.AIBoss; // glukhar
-                case 12: return PlayerType.AIBossFollower; // glukhar follower (assault)
-                case 13: return PlayerType.AIBossFollower; // glukhar follower (security)
-                case 14: return PlayerType.AIBossFollower; // glukhar follower (scout)
-                case 16: return PlayerType.AIBossFollower; // sanitar follower
-                case 17: return PlayerType.AIBoss; // sanitar
-                case 22: return PlayerType.AIBoss; // tagilla
-                case 24: return PlayerType.AIRogue; // rogues
-                case 26: return PlayerType.AIBoss; // knight
-                case 27: return PlayerType.AIBoss; // big pipe
-                case 28: return PlayerType.AIBoss; // bird eye
-                case 32: return PlayerType.AIBoss; // kaban
-                case 33: return PlayerType.AIBossFollower; // kaban follower
-                case 36: return PlayerType.AIBossFollower; // kaban follower (sniper)
-                case 41: return PlayerType.AIBossFollower; // basmach
-                case 42: return PlayerType.AIBossFollower; // gus
-                case 43: return PlayerType.AIBoss; // kollontay
-                case 44: return PlayerType.AIBossFollower; //  kollontay follower
-                case 45: return PlayerType.AIBossFollower; // kollontay follower
-
-                case 19: return PlayerType.AIScav; // unknown
-                default: return PlayerType.AIScav;
-            }
+            _groups.Clear();
         }
         #endregion
     }

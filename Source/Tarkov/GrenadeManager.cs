@@ -45,7 +45,7 @@ namespace eft_dma_radar
         /// </summary>
         public void Refresh()
         {
-            if (this._sw.ElapsedMilliseconds < 150) return;
+            if (this._sw.ElapsedMilliseconds < 100) return;
             this._sw.Restart();
 
             try
@@ -55,7 +55,7 @@ namespace eft_dma_radar
 
                 if (count > 0)
                 {
-                    if (this._listBase == null)
+                    if (this._listBase is null)
                     {
                         this._listBase = Memory.ReadPtr(this._grenadeList + Offsets.UnityList.Base);
                     }
@@ -70,13 +70,13 @@ namespace eft_dma_radar
 
                     scatterReadMap.Execute();
 
-                    Parallel.For(0, count, Program.Config.ParallelOptions, i =>
+                    for (int i = 0; i < count; i++)
                     {
                         if (scatterReadMap.Results[i][0].TryGetResult<ulong>(out var grenadeAddr))
                             grenades.Add(new Grenade(grenadeAddr));
-                    });
+                    };
                 }
-                else if (this._listBase != null)
+                else if (this._listBase is not null)
                 {
                     this._listBase = null;
                 }
@@ -101,9 +101,12 @@ namespace eft_dma_radar
             try
             {
                 var posAddr = Memory.ReadPtrChain(baseAddr, Offsets.GameObject.To_TransformInternal);
-                this.Position = new Transform(posAddr).GetPosition();
+                this.Position = new Transform(posAddr, false).GetPosition();
             }
-            catch { }
+            catch (Exception ex)
+            {
+                Program.Log($"GrenadeManager - Failed to get grenade position => {ex.Message}\nStackTrace:{ex.StackTrace}");
+            }
         }
     }
 }

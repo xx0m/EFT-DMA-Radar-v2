@@ -44,7 +44,7 @@ namespace eft_dma_radar
                 jsonResponse = LoadDataFromFile();
             }
 
-            if (jsonResponse != null)
+            if (jsonResponse is not null)
             {
                 ProcessItems(jsonResponse.data.items);
                 ProcessTasks(jsonResponse.data.tasks);
@@ -313,7 +313,7 @@ namespace eft_dma_radar
                         Type = objective.type,
                         ID = objective.id,
                         Maps = objective.maps?
-                        .Where(m => m != null)
+                        .Where(m => m is not null)
                         .Select(m => new ObjectiveMaps
                         {
                             id = m.id,
@@ -341,7 +341,7 @@ namespace eft_dma_radar
                         FoundInRaid = objective.foundInRaid
                     };
 
-                    if (objective.questItem != null)
+                    if (objective.questItem is not null)
                     {
                         newObjective.QuestItem = new ObjectiveItem
                         {

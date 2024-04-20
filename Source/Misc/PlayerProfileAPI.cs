@@ -19,7 +19,7 @@ namespace eft_dma_radar.Source.Misc
             {
                 RequestProfile profile = await SearchProfile(name);
 
-                if (profile == null)
+                if (profile is null)
                     return null;
 
                 PlayerProfile playerProfile = await GetProfileData(profile.aid);

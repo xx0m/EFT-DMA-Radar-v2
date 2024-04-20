@@ -53,12 +53,12 @@ namespace eft_dma_radar
                 //    var content = await response.Content.ReadAsStringAsync();
                 //    var playerProfile = JsonSerializer.Deserialize<PlayerProfile>(content);
                 //
-                //    if (playerProfile != null)
+                //    if (playerProfile is not null)
                 //    {
                 //        var killsItem = playerProfile.pmcStats.eft.overAllCounters.Items.FirstOrDefault(x => x.Key.Contains("Kills"));
                 //        var deathsItem = playerProfile.pmcStats.eft.overAllCounters.Items.FirstOrDefault(x => x.Key.Contains("Deaths"));
-                //        int kills = killsItem != null ? killsItem.Value : 0;
-                //        int deaths = deathsItem != null ? deathsItem.Value : 0;
+                //        int kills = killsItem is not null ? killsItem.Value : 0;
+                //        int deaths = deathsItem is not null ? deathsItem.Value : 0;
                 //
                 //        if (deaths == 0)
                 //        {

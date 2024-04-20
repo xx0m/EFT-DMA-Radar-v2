@@ -3,12 +3,8 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using System.Globalization;
-using System.Net;
-using System.Net.Sockets;
 using System.Numerics;
 using System.Runtime.InteropServices;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.Header;
 
 namespace eft_dma_radar
 {
@@ -83,7 +79,7 @@ namespace eft_dma_radar
         #region Methods
         public void StartAutoRefresh()
         {
-            if (this.autoRefreshThread != null && this.autoRefreshThread.IsAlive)
+            if (this.autoRefreshThread is not null && this.autoRefreshThread.IsAlive)
             {
                 return;
             }
@@ -103,14 +99,14 @@ namespace eft_dma_radar
         {
             await Task.Run(() =>
             {
-                if (this.autoRefreshCancellationTokenSource != null)
+                if (this.autoRefreshCancellationTokenSource is not null)
                 {
                     this.autoRefreshCancellationTokenSource.Cancel();
                     this.autoRefreshCancellationTokenSource.Dispose();
                     this.autoRefreshCancellationTokenSource = null;
                 }
 
-                if (this.autoRefreshThread != null)
+                if (this.autoRefreshThread is not null)
                 {
                     this.autoRefreshThread.Join();
                     this.autoRefreshThread = null;
@@ -126,7 +122,7 @@ namespace eft_dma_radar
                 var sleepFor = this._config.AutoRefreshSettings[this.CurrentMapName] * 1000;
                 Thread.Sleep(sleepFor);
             }
-            Console.WriteLine("[LootManager] Refresh thread stopped.");
+            Program.Log("[LootManager] Refresh thread stopped.");
         }
 
         public async Task RefreshLoot(bool forceRefresh = false)
@@ -141,19 +137,15 @@ namespace eft_dma_radar
                     {
                         this.StartAutoRefresh();
                     }
-                    else
-                    {
-
-                    }
                 });
 
-                if (this.autoRefreshThread != null)
+                if (this.autoRefreshThread is not null)
                     return;
             }
 
             Stopwatch stopwatch = new Stopwatch();
             stopwatch.Start();
-            Console.WriteLine("[LootManager] Refreshing Loot...");
+            Program.Log("[LootManager] Refreshing Loot...");
 
             var sw = new Stopwatch();
             var swTotal = new Stopwatch();
@@ -162,29 +154,29 @@ namespace eft_dma_radar
             await Task.Run(async() => { await this.GetLootList(); });
             var ts = sw.Elapsed;
             var elapsedTime = String.Format("[LootManager] Finished GetLootList {0:00}:{1:00}:{2:00}.{3:00}", ts.Hours, ts.Minutes, ts.Seconds, ts.Milliseconds / 10);
-            Console.WriteLine(elapsedTime);
+            Program.Log(elapsedTime);
             sw.Restart();
 
             await Task.Run(async () => { await this.GetLoot(); });
             ts = sw.Elapsed;
             elapsedTime = String.Format("[LootManager] Finished GetLoot {0:00}:{1:00}:{2:00}.{3:00}", ts.Hours, ts.Minutes, ts.Seconds, ts.Milliseconds / 10);
-            Console.WriteLine(elapsedTime);
+            Program.Log(elapsedTime);
             sw.Restart();
 
             await Task.Run(async () => { await this.FillLoot(); });
             ts = sw.Elapsed;
             elapsedTime = String.Format("[LootManager] Finished FillLoot {0:00}:{1:00}:{2:00}.{3:00}", ts.Hours, ts.Minutes, ts.Seconds, ts.Milliseconds / 10);
-            Console.WriteLine(elapsedTime);
+            Program.Log(elapsedTime);
             sw.Stop();
             swTotal.Stop();
             ts = swTotal.Elapsed;
             elapsedTime = String.Format("RunTime {0:00}:{1:00}:{2:00}.{3:00}", ts.Hours, ts.Minutes, ts.Seconds, ts.Milliseconds / 10);
-            Console.WriteLine("[LootManager] RunTime " + elapsedTime);
-            Console.WriteLine($"[LootManager] Found {savedLootItemsInfo.Count} loose loot items");
-            Console.WriteLine($"[LootManager] Found {savedLootContainersInfo.Count} lootable containers");
-            Console.WriteLine($"[LootManager] Found {savedLootCorpsesInfo.Count} lootable corpses");
-            Console.WriteLine($"[LootManager] Total loot items processed: {savedLootItemsInfo.Count + savedLootContainersInfo.Count + savedLootCorpsesInfo.Count}");
-            Console.WriteLine($"---------------------------------");
+            Program.Log("[LootManager] RunTime " + elapsedTime);
+            Program.Log($"[LootManager] Found {savedLootItemsInfo.Count} loose loot items");
+            Program.Log($"[LootManager] Found {savedLootContainersInfo.Count} lootable containers");
+            Program.Log($"[LootManager] Found {savedLootCorpsesInfo.Count} lootable corpses");
+            Program.Log($"[LootManager] Total loot items processed: {savedLootItemsInfo.Count + savedLootContainersInfo.Count + savedLootCorpsesInfo.Count}");
+            Program.Log($"---------------------------------");
 
             this.hasCachedItems = true;
         }
@@ -387,6 +379,7 @@ namespace eft_dma_radar
 
                                 var playerNameSplit = containerName.Split('(', ')');
                                 var playerName = playerNameSplit.Count() > 1 ? playerNameSplit[1] : playerNameSplit[0];
+                                playerName = Helpers.TransliterateCyrillic(playerName);
 
                                 this.savedLootCorpsesInfo.Add(new CorpseInfo { InteractiveClass = interactiveClass, Position = position, Slots = slots, PlayerName = playerName });
                             }
@@ -404,14 +397,17 @@ namespace eft_dma_radar
                                 Vector3 position = new Transform(posToTransform, false).GetPosition(null);
 
                                 var containerID = Memory.ReadUnityString(containerIDPtr);
-                                var containerExists = TarkovDevManager.AllLootContainers.TryGetValue(containerID, out var container) && container != null;
+                                var containerExists = TarkovDevManager.AllLootContainers.TryGetValue(containerID, out var container) && container is not null;
 
                                 this.savedLootContainersInfo.Add(new ContainerInfo { InteractiveClass = interactiveClass, Position = position, Name = containerExists ? container.Name : containerName, Grids = grids });
                             }
                         }
                         else if (className.Equals("ObservedLootItem", StringComparison.OrdinalIgnoreCase)) // handle loose weapons / gear
                         {
-                            if (!this.savedLootItemsInfo.Any(x => x.InteractiveClass == interactiveClass) || !this.savedLootContainersInfo.Any(x => x.InteractiveClass == interactiveClass))
+                            var savedItemExists = this.savedLootItemsInfo.Any(x => x.InteractiveClass == interactiveClass);
+                            var savedSearchableExists = this.savedLootContainersInfo.Any(x => x.InteractiveClass == interactiveClass);
+
+                            if (!savedItemExists || !savedSearchableExists)
                             {
                                 if (!validScatterMap.Results[i][15].TryGetResult<bool>(out var isQuestItem))
                                     return;
@@ -420,15 +416,15 @@ namespace eft_dma_radar
 
                                 var id = Memory.ReadUnityString(BSGIDPtr);
 
-                                if (id == null)
+                                if (id is null)
                                     return;
 
-                                var itemExists = TarkovDevManager.AllItems.TryGetValue(id, out var lootItem) && lootItem != null;
-                                var isSearchableItem = lootItem?.Item.categories.FirstOrDefault(x => x.name == "Weapon" || x.name == "Searchable item") != null;
+                                var itemExists = TarkovDevManager.AllItems.TryGetValue(id, out var lootItem) && lootItem is not null;
+                                var isSearchableItem = lootItem?.Item.categories.FirstOrDefault(x => x.name == "Weapon" || x.name == "Searchable item") is not null;
 
-                                if (isSearchableItem && !this.savedLootContainersInfo.Any(x => x.InteractiveClass == interactiveClass))
+                                if (isSearchableItem)
                                 {
-                                    if (!this.savedLootContainersInfo.Any(x => x.InteractiveClass == interactiveClass))
+                                    if (!savedSearchableExists)
                                     {
                                         Vector3 position = new Transform(posToTransform, false).GetPosition(null);
                                         var container = new ContainerInfo { InteractiveClass = interactiveClass, Position = position, Name = lootItem.Item.shortName ?? containerName };
@@ -445,10 +441,13 @@ namespace eft_dma_radar
                                         this.savedLootContainersInfo.Add(container);
                                     }
                                 }
-                                else if (!this.savedLootItemsInfo.Any(x => x.InteractiveClass == interactiveClass))
+                                else
                                 {
-                                    Vector3 position = new Transform(posToTransform, false).GetPosition(null);
-                                    this.savedLootItemsInfo.Add(new LootItemInfo { InteractiveClass = interactiveClass, QuestItem = isQuestItem, Position = position, ItemID = id });
+                                    if (!savedItemExists)
+                                    {
+                                        Vector3 position = new Transform(posToTransform, false).GetPosition(null);
+                                        this.savedLootItemsInfo.Add(new LootItemInfo { InteractiveClass = interactiveClass, QuestItem = isQuestItem, Position = position, ItemID = id });
+                                    }
                                 }
                             }
                         }
@@ -478,10 +477,10 @@ namespace eft_dma_radar
                         }
                         else
                         {
-                            if (this.QuestItems != null)
+                            if (this.QuestItems is not null)
                             {
                                 var questItem = this.QuestItems.Where(x => x.Id == savedLootItem.ItemID).FirstOrDefault();
-                                if (questItem != null)
+                                if (questItem is not null)
                                 {
                                     questItem.Position = savedLootItem.Position;
                                 }
@@ -540,7 +539,7 @@ namespace eft_dma_radar
         {
             var corpse = new LootCorpse
             {
-                Name = "Corpse" + (name != null ? $" {name}" : ""),
+                Name = "Corpse" + (name is not null ? $" {name}" : ""),
                 Position = position,
                 InteractiveClass = interactiveClass,
                 Slots = slots,
@@ -721,7 +720,7 @@ namespace eft_dma_radar
                                 gearItem.Color = itemIdColorPairs[gearItem.ID];
 
                                 var gearItemFilter = orderedActiveFilters.FirstOrDefault(filter => filter.Items.Contains(gearItem.ID));
-                                if (gearItemFilter != null && (lowestOrderGearItem == null || gearItemFilter.Order < orderedActiveFilters.First(filter => filter.Items.Contains(lowestOrderGearItem.ID)).Order))
+                                if (gearItemFilter is not null && (lowestOrderGearItem is null || gearItemFilter.Order < orderedActiveFilters.First(filter => filter.Items.Contains(lowestOrderGearItem.ID)).Order))
                                 {
                                     lowestOrderGearItem = gearItem;
                                 }
@@ -743,7 +742,7 @@ namespace eft_dma_radar
                                         lootItem.Color = itemIdColorPairs[lootItem.ID];
 
                                         var lootItemFilter = orderedActiveFilters.FirstOrDefault(filter => filter.Items.Contains(lootItem.ID));
-                                        if (lootItemFilter != null && (lowestOrderLootItem == null || lootItemFilter.Order < orderedActiveFilters.First(filter => filter.Items.Contains(lowestOrderLootItem.ID)).Order))
+                                        if (lootItemFilter is not null && (lowestOrderLootItem is null || lootItemFilter.Order < orderedActiveFilters.First(filter => filter.Items.Contains(lowestOrderLootItem.ID)).Order))
                                         {
                                             lowestOrderLootItem = lootItem;
                                         }
@@ -751,19 +750,19 @@ namespace eft_dma_radar
                                 }
                             }
 
-                            if (lowestOrderLootItem != null)
+                            if (lowestOrderLootItem is not null)
                             {
                                 gearItem.Color = lowestOrderLootItem.Color;
                             }
                         }
 
-                        if (lowestOrderLootItem != null && (lowestOrderGearItem == null ||
+                        if (lowestOrderLootItem is not null && (lowestOrderGearItem is null ||
                             orderedActiveFilters.First(filter => filter.Items.Contains(lowestOrderLootItem.ID)).Order <
                             orderedActiveFilters.First(filter => filter.Items.Contains(lowestOrderGearItem.ID)).Order))
                         {
                             tempCorpse.Color = lowestOrderLootItem.Color;
                         }
-                        else if (lowestOrderGearItem != null)
+                        else if (lowestOrderGearItem is not null)
                         {
                             tempCorpse.Color = lowestOrderGearItem.Color;
                         }
@@ -925,7 +924,7 @@ namespace eft_dma_radar
 
             var slotDict = this.GetSlotDictionary(slotItemBase);
 
-            if (slotDict == null || slotDict.Count == 0)
+            if (slotDict is null || slotDict.Count == 0)
                 return;
 
             var scatterReadMap = new ScatterReadMap(slotDict.Count);
@@ -987,7 +986,7 @@ namespace eft_dma_radar
                     {
                         var longName = isPocket ? "Pocket" : lootItem?.Item.name ?? "Unknown";
                         var shortName = isPocket ? "Pocket" : lootItem?.Item.shortName ?? "Unknown";
-                        var value = isPocket || lootItem == null ? 0 : TarkovDevManager.GetItemValue(lootItem.Item);
+                        var value = isPocket || lootItem is null ? 0 : TarkovDevManager.GetItemValue(lootItem.Item);
 
                         var newGearItem = new GearItem
                         {
@@ -1019,7 +1018,7 @@ namespace eft_dma_radar
 
             var slotDict = this.GetSlotDictionary(slotItemBase);
 
-            if (slotDict == null || slotDict.Count == 0)
+            if (slotDict is null || slotDict.Count == 0)
                 return;
 
             var scatterReadMap = new ScatterReadMap(slotDict.Count);

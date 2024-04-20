@@ -11,7 +11,7 @@
 // (c) Ulf Frisk, 2018-2024
 // Author: Ulf Frisk, pcileech@frizk.net
 //
-// Header Version: 5.9
+// Header Version: 5.9.8
 //
 
 #include "leechcore.h"
@@ -143,10 +143,10 @@ extern "C" {
     *              calling LcMemFree().
     * -- return = VMM_HANDLE on success for usage in subsequent API calls. NULL=fail.
     */
-    EXPORTED_FUNCTION _Success_(return != NULL)
+    EXPORTED_FUNCTION _Success_(return is not null)
         VMM_HANDLE VMMDLL_Initialize(_In_ DWORD argc, _In_ LPCSTR argv[]);
 
-    EXPORTED_FUNCTION _Success_(return != NULL)
+    EXPORTED_FUNCTION _Success_(return is not null)
         VMM_HANDLE VMMDLL_InitializeEx(_In_ DWORD argc, _In_ LPCSTR argv[], _Out_opt_ PPLC_CONFIG_ERRORINFO ppLcErrorInfo);
 
     /*
@@ -197,6 +197,7 @@ extern "C" {
 #define VMMDLL_OPT_CORE_VERBOSE_EXTRA_TLP               0x4000000400000000  // RW
 #define VMMDLL_OPT_CORE_MAX_NATIVE_ADDRESS              0x4000000800000000  // R
 #define VMMDLL_OPT_CORE_LEECHCORE_HANDLE                0x4000001000000000  // R - underlying leechcore handle (do not close).
+#define VMMDLL_OPT_CORE_VMM_ID                          0x4000002000000000  // R - use with startup option '-create-from-vmmid' to create a thread-safe duplicate VMM instance.
 
 #define VMMDLL_OPT_CORE_SYSTEM                          0x2000000100000000  // R
 #define VMMDLL_OPT_CORE_MEMORYMODEL                     0x2000000200000000  // R
@@ -427,7 +428,7 @@ extern "C" {
     * -- return
     */
     EXPORTED_FUNCTION
-        _Success_(return != NULL) PVMMDLL_VFS_FILELISTBLOB VMMDLL_VfsListBlobU(_In_ VMM_HANDLE hVMM, _In_ LPCSTR uszPath);
+        _Success_(return is not null) PVMMDLL_VFS_FILELISTBLOB VMMDLL_VfsListBlobU(_In_ VMM_HANDLE hVMM, _In_ LPCSTR uszPath);
 
     /*
     * Read select parts of a file in MemProcFS.
@@ -774,6 +775,7 @@ extern "C" {
 #define VMMDLL_FLAG_CACHE_RECENT_ONLY               0x0200  // only fetch from the most recent active cache region when reading.
 #define VMMDLL_FLAG_NO_PREDICTIVE_READ              0x0400  // do not perform additional predictive page reads (default on smaller requests).
 #define VMMDLL_FLAG_FORCECACHE_READ_DISABLE         0x0800  // disable/override any use of VMM_FLAG_FORCECACHE_READ. only recommended for local files. improves forensic artifact order.
+#define VMMDLL_FLAG_SCATTER_PREPAREEX_NOMEMZERO     0x1000  // do not zero out the memory buffer when preparing a scatter read.
 
 /*
 * Read memory in various non-contigious locations specified by the pointers to
@@ -916,7 +918,7 @@ extern "C" {
     * -- flags = optional flags as given by VMMDLL_FLAG_*
     * -- return = handle to be used in VMMDLL_Scatter_* functions.
     */
-    EXPORTED_FUNCTION _Success_(return != NULL)
+    EXPORTED_FUNCTION _Success_(return is not null)
         VMMDLL_SCATTER_HANDLE VMMDLL_Scatter_Initialize(_In_ VMM_HANDLE hVMM, _In_ DWORD dwPID, _In_ DWORD flags);
 
     /*
@@ -2297,13 +2299,13 @@ extern "C" {
     * -- fOptionString = string value to retrieve as given by VMMDLL_PROCESS_INFORMATION_OPT_STRING_*
     * -- return - fail: NULL, success: the string - NB! must be VMMDLL_MemFree'd by caller!
     */
-    EXPORTED_FUNCTION _Success_(return != NULL)
+    EXPORTED_FUNCTION _Success_(return is not null)
         LPSTR VMMDLL_ProcessGetInformationString(_In_ VMM_HANDLE hVMM, _In_ DWORD dwPID, _In_ DWORD fOptionString);
 
     /*
     * Retrieve information about: Data Directories, Sections, Export Address Table
     * and Import Address Table (IAT).
-    * If the pData == NULL upon entry the number of entries of the pData array must
+    * If the pData is null upon entry the number of entries of the pData array must
     * have in order to be able to hold the data is returned.
     * -- hVMM
     * -- dwPID
@@ -2469,7 +2471,7 @@ extern "C" {
     * -- pHives = buffer of cHives * sizeof(VMMDLL_REGISTRY_HIVE_INFORMATION) to
                   receive info about all hives. NULL to receive # hives in pcHives.
     * -- cHives
-    * -- pcHives = if pHives == NULL: # total hives. if pHives: # read hives.
+    * -- pcHives = if pHives is null: # total hives. if pHives: # read hives.
     * -- return
     */
     EXPORTED_FUNCTION _Success_(return)
@@ -2603,7 +2605,7 @@ extern "C" {
             _In_ LPCSTR uszFullPathKeyValue,
             _Out_opt_ LPDWORD lpType,
             _Out_writes_opt_(*lpcbData) LPBYTE lpData,
-            _When_(lpData == NULL, _Out_opt_) _When_(lpData != NULL, _Inout_opt_) LPDWORD lpcbData
+            _When_(lpData is null, _Out_opt_) _When_(lpData is not null, _Inout_opt_) LPDWORD lpcbData
         );
 
     /*
@@ -2685,7 +2687,7 @@ extern "C" {
             _In_ LPCWSTR wszFullPathKeyValue,
             _Out_opt_ LPDWORD lpType,
             _Out_writes_opt_(*lpcbData) LPBYTE lpData,
-            _When_(lpData == NULL, _Out_opt_) _When_(lpData != NULL, _Inout_opt_) LPDWORD lpcbData
+            _When_(lpData is null, _Out_opt_) _When_(lpData is not null, _Inout_opt_) LPDWORD lpcbData
         );
 
 
@@ -2733,7 +2735,7 @@ extern "C" {
     * -- hVM
     * -- return
     */
-    EXPORTED_FUNCTION _Success_(return != NULL)
+    EXPORTED_FUNCTION _Success_(return is not null)
         VMM_HANDLE VMMDLL_VmGetVmmHandle(_In_ VMM_HANDLE hVMM, _In_ VMMVM_HANDLE hVM);
 
     /*
@@ -2745,7 +2747,7 @@ extern "C" {
     * -- flags = optional flags as given by VMMDLL_FLAG_*
     * -- return = handle to be used in VMMDLL_Scatter_* functions.
     */
-    EXPORTED_FUNCTION _Success_(return != NULL)
+    EXPORTED_FUNCTION _Success_(return is not null)
         VMMDLL_SCATTER_HANDLE VMMDLL_VmScatterInitialize(_In_ VMM_HANDLE hVMM, _In_ VMMVM_HANDLE hVM);
 
     /*

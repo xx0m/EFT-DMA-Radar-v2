@@ -5,7 +5,7 @@
 
 using System.Text;
 
-namespace eft_dma_radar.Source.MonoSharp {
+namespace eft_dma_radar {
     internal static class MonoSharp {
         public static bool InitializeFunctions() {
             if (Monolib.init_functions()) {
@@ -223,6 +223,7 @@ namespace eft_dma_radar.Source.MonoSharp {
                 return name;
             }
         }
+
         public readonly struct mono_class_field_t {
             public static implicit operator ulong(mono_class_field_t x) => x.Base;
             private readonly ulong Base;

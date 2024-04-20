@@ -477,7 +477,7 @@ namespace vmmsharp
             IntPtr pMEM, pMEM_f, pMEM_qwA, pMEM_pb, pppMEMs;
             for (i = 0; i < MEMs.Length; i++)
             {
-                if ((MEMs[i].pb == null) || (MEMs[i].pb.Length != 0x1000))
+                if ((MEMs[i].pb is null) || (MEMs[i].pb.Length != 0x1000))
                 {
                     return;
                 }
@@ -545,7 +545,7 @@ namespace vmmsharp
                 uint cbDataOut;
                 IntPtr PtrDataOut;
                 DataOut = null;
-                if (DataIn == null)
+                if (DataIn is null)
                 {
                     result = lci.LcCommand(hLC, fOption, 0, null, out PtrDataOut, out cbDataOut);
                 }
@@ -1122,18 +1122,18 @@ namespace vmmsharp
         public unsafe ulong[] MemSearchM(uint pid, VMMDLL_MEM_SEARCHENTRY[] search, ulong vaMin = 0, ulong vaMax = 0xffffffffffffffff, uint cMaxResult = 0x10000, uint ReadFlags = 0)
         {
             // checks:
-            if (search == null || search.Length == 0 || search.Length > 16) { return new ulong[0]; }
+            if (search is null || search.Length == 0 || search.Length > 16) { return new ulong[0]; }
             // check search items and convert:
             vmmi.VMMDLL_MEM_SEARCH_CONTEXT_SEARCHENTRY[] es = new vmmi.VMMDLL_MEM_SEARCH_CONTEXT_SEARCHENTRY[16];
             for (int i = 0; i < search.Length; i++)
             {
-                if (search[i].pbSearch == null || search[i].pbSearch.Length == 0 || search[i].pbSearch.Length > 32) { return new ulong[0]; }
-                if ((search[i].pbSearchSkipMask != null) && (search[i].pbSearchSkipMask.Length > search[i].pbSearch.Length)) { return new ulong[0]; }
+                if (search[i].pbSearch is null || search[i].pbSearch.Length == 0 || search[i].pbSearch.Length > 32) { return new ulong[0]; }
+                if ((search[i].pbSearchSkipMask is not null) && (search[i].pbSearchSkipMask.Length > search[i].pbSearch.Length)) { return new ulong[0]; }
                 es[i].cbAlign = search[i].cbAlign;
                 es[i].cb = (uint)search[i].pbSearch.Length;
                 es[i].pb = new byte[32];
                 search[i].pbSearch.CopyTo(es[i].pb, 0);
-                if (search[i].pbSearchSkipMask != null && search[i].pbSearchSkipMask.Length > 0)
+                if (search[i].pbSearchSkipMask is not null && search[i].pbSearchSkipMask.Length > 0)
                 {
                     es[i].pbSkipMask = new byte[32];
                     search[i].pbSearchSkipMask.CopyTo(es[i].pbSkipMask, 0);
@@ -1266,7 +1266,7 @@ namespace vmmsharp
         public unsafe string ProcessGetInformationString(uint pid, uint fOptionString)
         {
             byte* pb = vmmi.VMMDLL_ProcessGetInformationString(hVMM, pid, fOptionString);
-            if (pb == null) { return ""; }
+            if (pb is null) { return ""; }
             string s = Marshal.PtrToStringAnsi((System.IntPtr)pb);
             vmmi.VMMDLL_MemFree(pb);
             return s;

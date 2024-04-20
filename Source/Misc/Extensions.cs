@@ -95,11 +95,11 @@ namespace eft_dma_radar
                 PlayerType.Teammate => SKColorFromPaintColor("Teammate"),
                 PlayerType.BEAR => SKColorFromPaintColor("BEAR"),
                 PlayerType.USEC => SKColorFromPaintColor("USEC"),
+                PlayerType.SpecialPlayer => SKColorFromPaintColor("Special"),
                 PlayerType.AIScav => SKColorFromPaintColor("AIScav"),
                 PlayerType.AIBoss => SKColorFromPaintColor("Boss"),
                 PlayerType.AIOfflineScav => SKColorFromPaintColor("AIScav"),
                 PlayerType.AIRaider or PlayerType.AIBossGuard or PlayerType.AIRogue or PlayerType.AIBossFollower => SKColorFromPaintColor("AIRaider"),
-                PlayerType.AISniperScav => SKColorFromPaintColor(""),
                 PlayerType.PScav => SKColorFromPaintColor("PScav"),
 
                 // default to white
@@ -208,11 +208,11 @@ namespace eft_dma_radar
                 PlayerType.Teammate => SKColorFromPaintColor("Teammate"),
                 PlayerType.BEAR => SKColorFromPaintColor("BEAR"),
                 PlayerType.USEC => SKColorFromPaintColor("USEC"),
+                PlayerType.SpecialPlayer => SKColorFromPaintColor("Special"),
                 PlayerType.AIScav => SKColorFromPaintColor("AIScav"),
                 PlayerType.AIBoss => SKColorFromPaintColor("Boss"),
                 PlayerType.AIOfflineScav => SKColorFromPaintColor("AIScav"),
                 PlayerType.AIRaider or PlayerType.AIBossGuard or PlayerType.AIRogue or PlayerType.AIBossFollower => SKColorFromPaintColor("AIRaider"),
-                PlayerType.AISniperScav => SKColorFromPaintColor(""),
                 PlayerType.PScav => SKColorFromPaintColor("PScav"),
 
                 // default to white
@@ -330,11 +330,11 @@ namespace eft_dma_radar
                 PlayerType.Teammate => SKColorFromPaintColor("Teammate"),
                 PlayerType.BEAR => SKColorFromPaintColor("BEAR"),
                 PlayerType.USEC => SKColorFromPaintColor("USEC"),
+                PlayerType.SpecialPlayer => SKColorFromPaintColor("Special"),
                 PlayerType.AIScav => SKColorFromPaintColor("AIScav"),
                 PlayerType.AIBoss => SKColorFromPaintColor("Boss"),
                 PlayerType.AIOfflineScav => SKColorFromPaintColor("AIScav"),
                 PlayerType.AIRaider or PlayerType.AIBossGuard or PlayerType.AIRogue or PlayerType.AIBossFollower => SKColorFromPaintColor("AIRaider"),
-                PlayerType.AISniperScav => SKColorFromPaintColor(""),
                 PlayerType.PScav => SKColorFromPaintColor("PScav"),
 
                 // default to white
