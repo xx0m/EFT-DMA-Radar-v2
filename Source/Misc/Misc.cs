@@ -435,7 +435,7 @@ namespace eft_dma_radar
             {
                 ["Customs"] = 30,
                 ["Factory"] = 30,
-                ["Ground Zero"] = 30,
+                ["GroundZero"] = 30,
                 ["Interchange"] = 30,
                 ["Lighthouse"] = 30,
                 ["Reserve"] = 30,

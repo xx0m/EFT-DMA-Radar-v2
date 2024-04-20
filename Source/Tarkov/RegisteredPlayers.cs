@@ -198,16 +198,16 @@ namespace eft_dma_radar
                                     continue; // Don't allocate more than one LocalPlayer on accident
                                 }
                             }
-
+                            
                             if (this._players.TryAdd(profileID, newPlayer))
                             {
+                                registered.Add(profileID);
                                 Program.Log($"Player '{newPlayer.Name}' allocated.");
                             }
                         }
                         catch
                         {
                             Program.Log($"ERROR - Failed to read player data for '{profileID}'");
-                            continue;
                         }
                     }
                 }
@@ -367,23 +367,11 @@ namespace eft_dma_radar
                             }
                         }
 
-                        bool p2 = true;
+                        var rotation = scatterMap.Results[i][0].TryGetResult<Vector2>(out var rot);
+                        bool p2 = player.SetRotation(rot);
 
-                        scatterMap.Results[i][0].TryGetResult<Vector2>(out var rotation);
-
-                        p2 = player.SetRotation(rotation);
-
-                        if (!scatterMap.Results[i][1].TryGetResult<List<int>>(out var ind))
-                        {
-                            Program.Log($"ERROR - Failed to read indices for '{player.Name}'.");
-                            continue;
-                        }
-
-                        if (!scatterMap.Results[i][2].TryGetResult<List<Vector128<float>>>(out var vert))
-                        {
-                            Program.Log($"ERROR - Failed to read vertices for '{player.Name}'.");
-                            continue;
-                        }
+                        var indices = scatterMap.Results[i][1].TryGetResult<List<int>>(out var ind);
+                        var vertices = scatterMap.Results[i][2].TryGetResult<List<Vector128<float>>>(out var vert);
 
                         var posBufs = new object[2]
                         {
@@ -394,9 +382,7 @@ namespace eft_dma_radar
                         bool p3 = true;
 
                         if (posOK)
-                        {
                             p3 = player.SetPosition(posBufs);
-                        }
 
                         if (checkHealth && !player.IsLocalPlayer && player.Type != PlayerType.Teammate)
                         {

@@ -685,7 +685,7 @@ namespace eft_dma_radar
             this.PlayerBody = playerBody;
             this.Name = Memory.ReadUnityString(name);
 
-            if (string.IsNullOrEmpty(this.Name) || this.Name.Length < 3)
+            if (this.Name == "" || this.Name.Length < 3)
                 throw new Exception($"Error setting name for profile '{this.Profile}'");
 
             if (groupID != 0)

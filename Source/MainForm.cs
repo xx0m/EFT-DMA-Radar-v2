@@ -1538,9 +1538,8 @@ namespace eft_dma_radar
                 if (_selectedMap is not null)
                 {
                     selectedIndex = cboRefreshMap.FindString(_selectedMap.Name);
+                    cboRefreshMap.SelectedIndex = selectedIndex;
                 }
-
-                cboRefreshMap.SelectedIndex = selectedIndex;
             }
 
             UpdateLootFilterComboBoxes();
@@ -2769,7 +2768,6 @@ namespace eft_dma_radar
             if (value != _config.AutoRefreshSettings[mapName])
             {
                 _config.AutoRefreshSettings[mapName] = value;
-                //Config.SaveConfig(_config);
             }
         }
 
