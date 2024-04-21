@@ -1,7 +1,4 @@
-﻿using System.Text.Json;
-using System.Diagnostics;
-using System.Text.Json.Serialization;
-using SkiaSharp;
+﻿using System.Diagnostics;
 using System.Text;
 
 namespace eft_dma_radar

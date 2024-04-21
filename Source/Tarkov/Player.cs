@@ -3,8 +3,6 @@ using System.Numerics;
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Text;
-using System.ComponentModel;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.StartPanel;
 
 namespace eft_dma_radar
 {

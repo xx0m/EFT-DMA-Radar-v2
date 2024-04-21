@@ -1,5 +1,4 @@
-﻿using System.Runtime.InteropServices;
-
+﻿
 namespace eft_dma_radar
 {
     public class CameraManager

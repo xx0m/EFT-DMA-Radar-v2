@@ -1,5 +1,4 @@
-﻿using Offsets;
-using SkiaSharp;
+﻿using SkiaSharp;
 using System.Numerics;
 
 namespace eft_dma_radar
