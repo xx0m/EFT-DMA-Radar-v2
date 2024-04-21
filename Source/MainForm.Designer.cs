@@ -89,6 +89,7 @@ namespace eft_dma_radar
             btnCancelEditFilter = new Button();
             numTimeOfDay = new NumericUpDown();
             btnLockTimeOfDay = new CheckBox();
+            numThreadSpinDelay = new NumericUpDown();
             tabLootFilter = new TabPage();
             lblActiveFilter = new Label();
             cboLootItems = new ComboBox();
@@ -186,6 +187,7 @@ namespace eft_dma_radar
             grpGearFeatures = new GroupBox();
             grpPhysicalFeatures = new GroupBox();
             grpRadar = new GroupBox();
+            lblThreadSpinDelay = new Label();
             tabRadar = new TabPage();
             grpMapSetup = new GroupBox();
             btnApplyMapScale = new Button();
@@ -197,8 +199,6 @@ namespace eft_dma_radar
             txtMapSetupX = new TextBox();
             lblMapCoords = new Label();
             tabControl = new TabControl();
-            lblThreadSpinDelay = new Label();
-            numThreadSpinDelay = new NumericUpDown();
             ((System.ComponentModel.ISupportInitialize)trkJumpPower).BeginInit();
             ((System.ComponentModel.ISupportInitialize)trkThrowPower).BeginInit();
             ((System.ComponentModel.ISupportInitialize)trkMagDrills).BeginInit();
@@ -211,6 +211,7 @@ namespace eft_dma_radar
             ((System.ComponentModel.ISupportInitialize)trkSubItemLootValue).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numRefreshDelay).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numTimeOfDay).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)numThreadSpinDelay).BeginInit();
             tabLootFilter.SuspendLayout();
             tabPlayerLoadouts.SuspendLayout();
             tabSettings.SuspendLayout();
@@ -254,7 +255,6 @@ namespace eft_dma_radar
             tabRadar.SuspendLayout();
             grpMapSetup.SuspendLayout();
             tabControl.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)numThreadSpinDelay).BeginInit();
             SuspendLayout();
             // 
             // colDialog
@@ -950,6 +950,18 @@ namespace eft_dma_radar
             toolTip.SetToolTip(btnLockTimeOfDay, "Freeze the in-game time of the day");
             btnLockTimeOfDay.UseVisualStyleBackColor = true;
             btnLockTimeOfDay.CheckedChanged += btnFreezeTime_CheckedChanged;
+            // 
+            // numThreadSpinDelay
+            // 
+            numThreadSpinDelay.Location = new Point(107, 51);
+            numThreadSpinDelay.Maximum = new decimal(new int[] { 200, 0, 0, 0 });
+            numThreadSpinDelay.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
+            numThreadSpinDelay.Name = "numThreadSpinDelay";
+            numThreadSpinDelay.Size = new Size(48, 23);
+            numThreadSpinDelay.TabIndex = 20;
+            toolTip.SetToolTip(numThreadSpinDelay, "Adjust this to achieve desired mem/sec performance. Higher = slower, Lower = faster.");
+            numThreadSpinDelay.Value = new decimal(new int[] { 100, 0, 0, 0 });
+            numThreadSpinDelay.ValueChanged += numThreadSpinDelay_ValueChanged;
             // 
             // tabLootFilter
             // 
@@ -2014,6 +2026,15 @@ namespace eft_dma_radar
             grpRadar.TabStop = false;
             grpRadar.Text = "Radar";
             // 
+            // lblThreadSpinDelay
+            // 
+            lblThreadSpinDelay.AutoSize = true;
+            lblThreadSpinDelay.Location = new Point(7, 53);
+            lblThreadSpinDelay.Name = "lblThreadSpinDelay";
+            lblThreadSpinDelay.Size = new Size(101, 15);
+            lblThreadSpinDelay.TabIndex = 19;
+            lblThreadSpinDelay.Text = "ThreadSpin Delay:";
+            // 
             // tabRadar
             // 
             tabRadar.Controls.Add(grpMapSetup);
@@ -2127,27 +2148,6 @@ namespace eft_dma_radar
             tabControl.Size = new Size(1176, 770);
             tabControl.TabIndex = 8;
             // 
-            // lblThreadSpinDelay
-            // 
-            lblThreadSpinDelay.AutoSize = true;
-            lblThreadSpinDelay.Location = new Point(7, 53);
-            lblThreadSpinDelay.Name = "lblThreadSpinDelay";
-            lblThreadSpinDelay.Size = new Size(101, 15);
-            lblThreadSpinDelay.TabIndex = 19;
-            lblThreadSpinDelay.Text = "ThreadSpin Delay:";
-            // 
-            // numThreadSpinDelay
-            // 
-            numThreadSpinDelay.Location = new Point(107, 51);
-            numThreadSpinDelay.Maximum = new decimal(new int[] { 200, 0, 0, 0 });
-            numThreadSpinDelay.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
-            numThreadSpinDelay.Name = "numThreadSpinDelay";
-            numThreadSpinDelay.Size = new Size(48, 23);
-            numThreadSpinDelay.TabIndex = 20;
-            toolTip.SetToolTip(numThreadSpinDelay, "Adjust this to achieve desired mem/sec performance. Higher = slower, Lower = faster.");
-            numThreadSpinDelay.Value = new decimal(new int[] { 100, 0, 0, 0 });
-            numThreadSpinDelay.ValueChanged += numThreadSpinDelay_ValueChanged;
-            // 
             // frmMain
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -2169,6 +2169,7 @@ namespace eft_dma_radar
             ((System.ComponentModel.ISupportInitialize)trkSubItemLootValue).EndInit();
             ((System.ComponentModel.ISupportInitialize)numRefreshDelay).EndInit();
             ((System.ComponentModel.ISupportInitialize)numTimeOfDay).EndInit();
+            ((System.ComponentModel.ISupportInitialize)numThreadSpinDelay).EndInit();
             tabLootFilter.ResumeLayout(false);
             tabLootFilter.PerformLayout();
             tabPlayerLoadouts.ResumeLayout(false);
@@ -2225,7 +2226,6 @@ namespace eft_dma_radar
             grpMapSetup.ResumeLayout(false);
             grpMapSetup.PerformLayout();
             tabControl.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize)numThreadSpinDelay).EndInit();
             ResumeLayout(false);
         }
 

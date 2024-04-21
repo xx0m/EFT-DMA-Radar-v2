@@ -16,7 +16,7 @@
     }
     public struct ModuleBase
     {
-        public const uint GameObjectManager = 0x17FFD28; // to eft_dma_radar.GameObjectManager
+        public const uint GameObjectManager = 0x17FFD28; // to GameObjectManager
         public const uint CameraObjectManager = 0x0179F500; // to Camera
     }
     public struct GameObject
@@ -80,15 +80,18 @@
         public const uint AccountID = 0x50; // to UnityString
         public const uint PlayerBody = 0x60; //[60] playerBody_0x60 : EFT.PlayerBody
         public const uint ObservedPlayerController = 0x80; // to PlayerController
+        public const uint ObservedPlayerControllerProfile = 0xE8; // profile
         public static readonly uint[] To_MovementContext = new uint[] { ObservedPlayerController, 0xC8, 0x10 }; // to MovementContext
         public static readonly uint[] To_TransformInternal = new uint[] { PlayerBody, 0x28, 0x28, 0x10, 0x20, 0x10 }; // to TransformInternal
         public static readonly uint[] To_InventoryController = new uint[] { ObservedPlayerController, 0x118 }; // to InventoryController
         public static readonly uint[] To_HealthController = new uint[] { ObservedPlayerController, 0xF0 }; // to HealthController
     }
+
     public struct ObserverdPlayerMovementContext
     {
         public const uint Rotation = 0x78; // to Vector2
     }
+
     public struct PlayerSettings
     {
         public const uint Role = 0x10; // int32 enum
@@ -315,7 +318,47 @@
         public const uint MagDrillsInventoryCheckAccuracy = 0x198; //[198] MagDrillsInventoryCheckSpeed : -.SkillManager.GClass1
         public const uint MagDrillsInstantCheck = 0x1A0; //[1A0] MagDrillsInstantCheck : -.SkillManager.GClass2
         public const uint SearchDouble = 0x4C0; //[4C0] SearchDouble : -.SkillManager.GClass2
+        public const uint EnduranceBreathElite = 0x48; //[48] EnduranceBreathElite : -.SkillManager.GClass1
+        public const uint EnduranceBuffBreathTimeInc = 0x38; //[38] EnduranceBuffBreathTimeInc : -.SkillManager.GClass1
+        public const uint EnduranceBuffEnduranceInc = 0x20; //[20] EnduranceBuffEnduranceInc : -.SkillManager.GClass1
+        public const uint EnduranceBuffJumpCostRed = 0x30; //[30] EnduranceBuffJumpCostRed : -.SkillManager.GClass1
+        public const uint EnduranceBuffRestoration = 0x40; //[40] EnduranceBuffRestoration : -.SkillManager.GClass1
+        public const uint EnduranceHands = 0x28; //[28] EnduranceHands : -.SkillManager.GClass1
+        public const uint StrengthBuffAimFatigue = 0x68; //[68] StrengthBuffAimFatigue : -.SkillManager.GClass1
+        public const uint StrengthBuffElite = 0x80; //[80] StrengthBuffElite : -.SkillManager.GClass1
+        public const uint StrengthBuffJumpHeightInc = 0x60; //[60] StrengthBuffJumpHeightInc : -.SkillManager.GClass1
+        public const uint StrengthBuffLiftWeightInc = 0x50; //[50] StrengthBuffLiftWeightInc : -.SkillManager.GClass1
+        public const uint StrengthBuffMeleeCrits = 0x88; //[88] StrengthBuffMeleeCrits : -.SkillManager.GClass1
+        public const uint StrengthBuffMeleePowerInc = 0x78; //[78] StrengthBuffMeleePowerInc : -.SkillManager.GClass1
+        public const uint StrengthBuffSprintSpeedInc = 0x58; //[58] StrengthBuffSprintSpeedInc : -.SkillManager.GClass1
+        public const uint StrengthBuffThrowDistanceInc = 0x70; //[70] StrengthBuffThrowDistanceInc : -.SkillManager.GClass1
+        public const uint ThrowingStrengthBuff = 0x320; //[320] ThrowingStrengthBuff : -.SkillManager.GClass1
+        public const uint ThrowingEliteBuff = 0x330; //[330] ThrowingEliteBuff : -.SkillManager.GClass1
+        public const uint VitalityBuffBleedStop = 0xA8; //[A8] VitalityBuffBleedStop : -.SkillManager.GClass1
+        public const uint VitalityBuffRegeneration = 0xA0; //[A0] VitalityBuffRegeneration : -.SkillManager.GClass1
+        public const uint VitalityBuffSurviobilityInc = 0x98; //[98] VitalityBuffSurviobilityInc : -.SkillManager.GClass1
+        public const uint SearchBuffSpeed = 0x4B8; //[4B8] SearchBuffSpeed : -.SkillManager.GClass1
+        public const uint MetabolismMiscDebuffTime = 0x108; //[108] MetabolismMiscDebuffTime : -.SkillManager.GClass1
+        public const uint MetabolismEliteBuffNoDyhydration = 0x110; //[110] MetabolismEliteBuffNoDyhydration : -.SkillManager.GClass1
+        public const uint AttentionEliteLuckySearch = 0x170; //[170] AttentionEliteLuckySearch : -.SkillManager.GClass1
+        public const uint HealthBreakChanceRed = 0xB0; //[B0] HealthBreakChanceRed : -.SkillManager.GClass1
+        public const uint HealthEliteAbsorbDamage = 0xD0; //[D0] HealthEliteAbsorbDamage : -.SkillManager.GClass1
+        public const uint HealthEnergy = 0xC0; //[C0] HealthEnergy : -.SkillManager.GClass1
+        public const uint SurgerySpeed = 0x4D0; //[4D0] SurgerySpeed : -.SkillManager.GClass1
+        public const uint StressBerserk = 0xF0; //[F0] StressBerserk : -.SkillManager.GClass1
+        public const uint StressPain = 0xE0; //[E0] StressPain : -.SkillManager.GClass1
+        public const uint DrawElite = 0x348; //[348] DrawElite : -.SkillManager.GClass1
+        public const uint DrawSpeed = 0x338; //[338] DrawSpeed : -.SkillManager.GClass1
+        public const uint DrawSound = 0x340; //[340] DrawSound : -.SkillManager.GClass1
+        public const uint CovertMovementSpeed = 0x488; //[488] CovertMovementSpeed : -.SkillManager.GClass1
+        public const uint CovertMovementSoundVolume = 0x478; //[478] CovertMovementSoundVolume : -.SkillManager.GClass1
+        public const uint CovertMovementLoud = 0x498; //[498] CovertMovementLoud : -.SkillManager.GClass1
+        public const uint CovertMovementEquipment = 0x480; //[480] CovertMovementEquipment : -.SkillManager.GClass1
+        public const uint CovertMovementElite = 0x490; //[490] CovertMovementElite : -.SkillManager.GClass1
+        public const uint PerceptionHearing = 0x118; //[118] PerceptionHearing : -.SkillManager.GClass1
+        public const uint PerceptionLootDot = 0x120; //[120] PerceptionLootDot : -.SkillManager.GClass1
     }
+
     public struct SkillFloat
     {
         public const uint Value = 0x30; //[30] Value : Single

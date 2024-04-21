@@ -1,9 +1,7 @@
-﻿using System.Collections.Concurrent;
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 
 namespace eft_dma_radar
 {
-
     /// <summary>
     /// Class containing Game (Raid) instance.
     /// </summary>
@@ -124,7 +122,6 @@ namespace eft_dma_radar
             {
                 this._rgtPlayers.UpdateList();
                 this._rgtPlayers.UpdateAllPlayers();
-
                 this.UpdateMisc();
             }
             catch (DMAShutdown)

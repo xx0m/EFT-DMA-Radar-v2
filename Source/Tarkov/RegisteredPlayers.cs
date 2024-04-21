@@ -1,12 +1,9 @@
-﻿using eft_dma_radar.Source.Misc;
-using Microsoft.VisualBasic.Logging;
-using Offsets;
+﻿using Offsets;
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.Intrinsics;
-using System.Windows.Forms.VisualStyles;
 
 namespace eft_dma_radar
 {
@@ -119,6 +116,7 @@ namespace eft_dma_radar
                 var scatterMap2 = new ScatterReadMap(count);
                 var round6 = scatterMap2.AddRound();
                 var round7 = scatterMap2.AddRound();
+                var round8 = scatterMap2.AddRound();
 
                 for (int i = 0; i < count; i++)
                 {
@@ -126,17 +124,20 @@ namespace eft_dma_radar
                         continue;
                     if (!scatterMap.Results[i][4].TryGetResult<string>(out var className))
                         continue;
+                    
+                    ScatterReadEntry<ulong> p2;
 
                     if (className == "ClientPlayer" || className == "LocalPlayer" || className == "HideoutPlayer")
                     {
-                        var p1 = round6.AddEntry<ulong>(i, 0, playerBase, null, Offsets.Player.Profile);
-                        var p2 = round7.AddEntry<ulong>(i, 1, p1, null, Offsets.Profile.Id);
+                        p2 = round7.AddEntry<ulong>(i, 1, playerBase, null, Offsets.Player.Profile);
                     }
                     else
                     {
-                        var p1 = round7.AddEntry<ulong>(i, 0, 0, null);
-                        var p2 = round7.AddEntry<ulong>(i, 1, playerBase, null, Offsets.ObservedPlayerView.ID);
+                        var p1 = round6.AddEntry<ulong>(i, 0, playerBase, null, Offsets.ObservedPlayerView.ObservedPlayerController);
+                        p2 = round7.AddEntry<ulong>(i, 1, p1, null, Offsets.ObservedPlayerView.ObservedPlayerControllerProfile);
                     }
+
+                    var playerID = round8.AddEntry<ulong>(i, 2, p2, null, Offsets.Profile.Id);
                 }
 
                 scatterMap2.Execute();
@@ -147,28 +148,23 @@ namespace eft_dma_radar
                         continue;
                     if (!scatterMap.Results[i][4].TryGetResult<string>(out var className))
                         continue;
-                    if (scatterMap2.Results[i][0].TryGetResult<ulong>(out var profilePtr))
-                        if (className == "ObservedPlayerView")
-                            profilePtr = playerBase;
-
-                    if (!scatterMap2.Results[i][1].TryGetResult<ulong>(out var profileIDPtr))
+                    if (!scatterMap2.Results[i][1].TryGetResult<ulong>(out var profilePtr))
+                        continue;
+                    if (!scatterMap2.Results[i][2].TryGetResult<ulong>(out var profileIDPtr))
                         continue;
 
                     var profileID = Memory.ReadUnityString(profileIDPtr);
 
-                    if (string.IsNullOrEmpty(profileID))
-                        continue;
-
-                    if (profileID.Length != 24 && profileID.Length != 36 || className.Length < 0)
+                    if (string.IsNullOrEmpty(profileID) || profileID.Length != 24 && profileID.Length != 36 || className.Length < 0)
                     {
                         Program.Log($"Invalid ProfileID: {profileID} - {className}");
                         continue;
                     }
 
-                    if (this._players.TryGetValue(profileID, out var player) && player is not null)
-                    {
-                        registered.Add(profileID);
+                    registered.Add(profileID);
 
+                    if (this._players.TryGetValue(profileID, out var player))
+                    {
                         if (player.ErrorCount > 50)
                         {
                             Program.Log($"Existing player '{player.Name}' being reallocated due to excessive errors...");
@@ -182,7 +178,9 @@ namespace eft_dma_radar
                         else
                         {
                             player.IsActive = true;
-                            player.IsAlive = true;
+
+                            if (player.MarkedDeadCount < 2)
+                                player.IsAlive = true;
                         }
                     }
                     else
@@ -191,19 +189,15 @@ namespace eft_dma_radar
                         {
                             var newPlayer = new Player(playerBase, profilePtr, null, className);
 
+                            if (string.IsNullOrEmpty(newPlayer.Name))
+                                throw new Exception($"Error setting name for profile '{newPlayer.Profile}' ({newPlayer.Name})");
+
                             if (newPlayer.Type == PlayerType.LocalPlayer)
-                            {
                                 if (this._players.Values.Any(x => x.Type == PlayerType.LocalPlayer))
-                                {
                                     continue; // Don't allocate more than one LocalPlayer on accident
-                                }
-                            }
-                            
+
                             if (this._players.TryAdd(profileID, newPlayer))
-                            {
-                                registered.Add(profileID);
                                 Program.Log($"Player '{newPlayer.Name}' allocated.");
-                            }
                         }
                         catch
                         {
@@ -324,19 +318,16 @@ namespace eft_dma_radar
                         continue;
 
                     if (this._localPlayerGroup != -100 && player.GroupID != -1 && player.IsHumanHostile && player.GroupID == this._localPlayerGroup)
-                    {
                         player.Type = PlayerType.Teammate;
-                    }
 
                     if (player.LastUpdate) // player may be dead/exfil'd
                     {
-                        if (scatterMap.Results[i][6].TryGetResult<ulong>(out var corpsePtr))
+                        scatterMap.Results[i][6].TryGetResult<ulong>(out var corpsePtr);
+
+                        if (corpsePtr > 0)
                         {
-                            if (corpsePtr > 0)
-                            {
-                                Program.Log($"{player.Name} died => {corpsePtr}");
-                                player.IsAlive = false;
-                            }
+                            Program.Log($"{player.Name} died => {corpsePtr}");
+                            player.IsAlive = false;
                         }
 
                         player.IsActive = false;
@@ -410,19 +401,12 @@ namespace eft_dma_radar
             }
         }
 
-        public void reallocatePlayer(string id, ulong playerBase, ulong profileID)
+        private void reallocatePlayer(string id, ulong playerBase, ulong profileID)
         {
             try
             {
-                if (this._players.TryGetValue(id, out var existingPlayer))
-                {
-                    this._players[id] = new Player(playerBase, profileID, existingPlayer.Position);
-                    Program.Log($"Player '{this._players[id].Name}' Re-Allocated successfully.");
-                }
-                else
-                {
-                    throw new Exception($"Player with ID '{id}' not found.");
-                }
+                this._players[id] = new Player(playerBase, profileID, this._players[id].Position);
+                Program.Log($"Player '{this._players[id].Name}' Re-Allocated successfully.");
             }
             catch (Exception ex)
             {

@@ -3,6 +3,8 @@ using System.Numerics;
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Text;
+using System.ComponentModel;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.StartPanel;
 
 namespace eft_dma_radar
 {
@@ -284,6 +286,8 @@ namespace eft_dma_radar
         {
             get => this._transform?.GetScatterReadParameters() ?? new Tuple<ulong, int, ulong, int>(0, 0, 0, 0);
         }
+
+        public int MarkedDeadCount { get; set; } = 0;
         #endregion
 
         #region Constructor
@@ -315,30 +319,12 @@ namespace eft_dma_radar
             {
                 this.SetupOfflineScatterReads(scatterReadMap);
                 this.ProcessOfflinePlayerScatterReadResults(scatterReadMap);
-
-                //try
-                //{
-
-                //}
-                //catch (Exception ex)
-                //{
-                //    throw new Exception($"ERROR during EFT.Player constructor for base addr 0x{playerBase.ToString("X")}", ex);
-                //}
             }
             else if (isOnlinePlayer)
             {
                 this.Info = playerBase;
                 this.SetupOnlineScatterReads(scatterReadMap);
                 this.ProcessOnlinePlayerScatterReadResults(scatterReadMap);
-
-                //try
-                //{
-
-                //}
-                //catch (Exception ex)
-                //{
-                //    throw new Exception($"ERROR during ObservedPlayerView constructor for base addr 0x{playerBase.ToString("X")}", ex);
-                //}
             }
         }
         #endregion
@@ -456,7 +442,7 @@ namespace eft_dma_radar
             }
             else
             {
-                if (Helpers.BossNames.Contains(name))
+                if (Helpers.BossNames.Contains(name) || name.Contains("(BTR)"))
                 {
                     return PlayerType.AIBoss;
                 }
@@ -479,11 +465,8 @@ namespace eft_dma_radar
             }
             else
             {
-                if (Helpers.BossNames.Any(bossName => name.Contains(bossName)))
+                if (Helpers.BossNames.Contains(name) || name.Contains("(BTR)"))
                 {
-                    if (this.Name.Contains("BTR"))
-                        this.Name = "BTR";
-
                     return PlayerType.AIBoss;
                 }
                 else if (Helpers.RaiderGuardRogueNames.Contains(name))
@@ -685,9 +668,6 @@ namespace eft_dma_radar
             this.PlayerBody = playerBody;
             this.Name = Memory.ReadUnityString(name);
 
-            if (this.Name == "" || this.Name.Length < 3)
-                throw new Exception($"Error setting name for profile '{this.Profile}'");
-
             if (groupID != 0)
             {
                 var group = Memory.ReadUnityString(groupID);
@@ -703,11 +683,20 @@ namespace eft_dma_radar
         /// <summary>
         /// Allocation wrap-up.
         /// </summary>
-        private void FinishAlloc()
+        private async void FinishAlloc()
         {
             if (this.IsHumanHostile)
             {
-                //TODO: Implement twitch account check
+                if (WatchlistManager.IsStreamer(this.AccountID, this.Name, out string streamerName))
+                {
+                    var isLive = await WatchlistManager.IsLive(streamerName);
+
+                    if (isLive)
+                        streamerName += " (LIVE)";
+
+                    this.Name = streamerName;
+                    this.Type = PlayerType.SpecialPlayer;
+                }
 
                 StringBuilder baseMsgBuilder = new StringBuilder();
                 baseMsgBuilder.Append($"{this.Name} ({this.Type}),  L:{this.Lvl}, ");
