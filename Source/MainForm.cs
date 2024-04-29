@@ -1,17 +1,18 @@
-﻿using System.Collections.Concurrent;
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Numerics;
 using System.Text;
 using SkiaSharp;
 using SkiaSharp.Views.Desktop;
-using static eft_dma_radar.LootFilter;
+using static eft_dma_radar.LootFilterManager;
 
 namespace eft_dma_radar
 {
     public partial class frmMain : Form
     {
         private readonly Config _config;
+        private readonly Watchlist _watchlist;
+        private readonly LootFilterManager _lootFilterManager;
         private readonly SKGLControl _mapCanvas;
         private readonly Stopwatch _fpsWatch = new();
         private readonly object _renderLock = new();
@@ -33,6 +34,7 @@ namespace eft_dma_radar
         private Map _selectedMap;
         private SKBitmap[] _loadedBitmaps;
         private MapPosition _mapPanPosition = new();
+        private Watchlist.Entry _lastWatchlistEntry;
 
         #region Getters
         /// <summary>
@@ -55,9 +57,14 @@ namespace eft_dma_radar
         {
             get => Memory.InHideout;
         }
-        private string CurrentMapName
+        private string MapName
         {
             get => Memory.MapName;
+        }
+
+        private string MapNameFormatted
+        {
+            get => Memory.MapNameFormatted;
         }
 
         /// <summary>
@@ -114,6 +121,11 @@ namespace eft_dma_radar
         {
             get => Memory.QuestManager;
         }
+
+        private ReadOnlyCollection<PlayerCorpse> Corpses
+        {
+            get => Memory.Corpses;
+        }
         #endregion
 
         #region Constructor
@@ -123,6 +135,8 @@ namespace eft_dma_radar
         public frmMain()
         {
             _config = Program.Config;
+            _watchlist = Program.Watchlist;
+            _lootFilterManager = Program.LootFilterManager;
 
             InitializeComponent();
 
@@ -132,6 +146,7 @@ namespace eft_dma_radar
                 Dock = DockStyle.Fill,
                 VSync = _config.Vsync
             };
+
             tabRadar.Controls.Add(_mapCanvas);
             chkMapFree.Parent = _mapCanvas;
             trkUIScale.ValueChanged += trkUIScale_ValueChanged;
@@ -227,7 +242,7 @@ namespace eft_dma_radar
         /// </summary>
         private void chkLootFilterActive_CheckedChanged(object sender, EventArgs e)
         {
-            LootFilter selectedFilter = (LootFilter)cboFilters.SelectedItem;
+            var selectedFilter = cboFilters.SelectedItem as Filter;
             selectedFilter.IsActive = chkLootFilterActive.Checked;
 
             Config.SaveConfig(_config);
@@ -564,94 +579,8 @@ namespace eft_dma_radar
         /// </summary>
         private void chkChams_CheckedChanged(object sender, EventArgs e)
         {
-            //_config.ChamsEnabled = chkChams.Checked;
-            Memory.Chams.ChamsEnable();
-        }
-
-        /// <summary>
-        /// Fired when item is removed from a filter & saves config
-        /// </summary>
-        private void btnLootFilterRemoveItem_Click(object sender, EventArgs e)
-        {
-            if (lstViewLootFilter.SelectedItems.Count > 0)
-            {
-                LootFilter selectedFilter = (LootFilter)cboFilters.SelectedItem;
-                ListViewItem selectedItem = lstViewLootFilter.SelectedItems[0];
-
-                if (selectedItem is not null)
-                {
-                    LootItem lootItem = (LootItem)selectedItem.Tag;
-
-                    selectedItem.Remove();
-                    selectedFilter.Items.Remove(lootItem.Item.id);
-
-                    Config.SaveConfig(_config);
-                    this.Loot?.ApplyFilter();
-                }
-            }
-        }
-
-        /// <summary>
-        /// Fired when item is added to a filter & saves config
-        /// </summary>
-        private void btnLootFilterAddItem_Click(object sender, EventArgs e)
-        {
-            if (cboLootItems.SelectedIndex != -1)
-            {
-                LootFilter selectedFilter = (LootFilter)cboFilters.SelectedItem;
-                LootItem selectedItem = (LootItem)cboLootItems.SelectedItem;
-
-                if (selectedFilter is not null)
-                {
-                    if (selectedFilter.Items.Contains(selectedItem.ID))
-                    {
-                        return;
-                    }
-                    else
-                    {
-                        ListViewItem listItem = new ListViewItem();
-                        listItem.Text = selectedItem.Item.id;
-                        listItem.SubItems.Add(selectedItem.Item.name);
-                        listItem.SubItems.Add(selectedItem.Item.shortName);
-                        listItem.SubItems.Add(TarkovDevManager.FormatNumber(selectedItem.Value));
-                        listItem.Tag = selectedItem;
-
-                        lstViewLootFilter.Items.Add(listItem);
-                        selectedFilter.Items.Add(selectedItem.Item.id);
-
-                        Config.SaveConfig(_config);
-                        this.Loot?.ApplyFilter();
-                    }
-                }
-            }
-        }
-
-        /// <summary>
-        /// Fired when an item to search for is being typed
-        /// </summary>
-        private void txtItemFilter_KeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.KeyCode is Keys.Enter)
-            {
-                var itemToSearch = txtItemFilter.Text;
-                List<LootItem> lootList = TarkovDevManager.AllItems
-                    .Select(x => x.Value)
-                    .Where(x => x.Name.Contains(itemToSearch.Trim(), StringComparison.OrdinalIgnoreCase))
-                    .OrderBy(x => x.Name)
-                    .Take(25)
-                    .ToList();
-
-                cboLootItems.DataSource = lootList;
-                cboLootItems.DisplayMember = "Label";
-            }
-        }
-
-        /// <summary>
-        /// Fired when the current filter is changed
-        /// </summary>
-        private void cboFilters_SelectedValueChanged(object sender, EventArgs e)
-        {
-            UpdateLootFilterList();
+            _config.ChamsEnabled = chkChams.Checked;
+            //Memory.Chams.ChamsEnable();
         }
 
         /// <summary>
@@ -1057,314 +986,6 @@ namespace eft_dma_radar
             ToggleMap();
         }
 
-        /// <summary>
-        /// Adjusts min regular loot based on slider value
-        /// </summary>
-        private void trkRegularLootValue_Scroll(object sender, EventArgs e)
-        {
-            int value = trkRegularLootValue.Value * 1000;
-            lblRegularLootDisplay.Text = TarkovDevManager.FormatNumber(value);
-            _config.MinLootValue = value;
-
-            if (Loot is not null)
-            {
-                Loot.ApplyFilter();
-            }
-        }
-
-        /// <summary>
-        /// Adjusts min important loot based on slider value
-        /// </summary>
-        private void trkImportantLootValue_Scroll(object sender, EventArgs e)
-        {
-            int value = trkImportantLootValue.Value * 1000;
-            lblImportantLootDisplay.Text = TarkovDevManager.FormatNumber(value);
-            _config.MinImportantLootValue = value;
-
-            if (Loot is not null)
-            {
-                Loot.ApplyFilter();
-            }
-        }
-
-        /// <summary>
-        /// Refreshes the loot in the match
-        /// </summary>
-        private void btnRefreshLoot_Click(object sender, EventArgs e)
-        {
-            Memory.Loot.RefreshLoot(true);
-        }
-
-        /// <summary>
-        /// Handles color modification for loot filters
-        /// </summary>
-        private void picLootFilterPreview_Click(object sender, EventArgs e)
-        {
-            if (colDialog.ShowDialog() == DialogResult.OK)
-            {
-                picLootFilterEditColor.BackColor = colDialog.Color;
-            }
-        }
-
-        /// <summary>
-        /// Handles the edit/save button for modifying filters
-        /// </summary>
-        private void btnEditSaveFilter_Click(object sender, EventArgs e)
-        {
-            string btnText = btnEditSaveFilter.Text;
-            if (btnText == "Edit")
-            { /// show edit button
-                txtLootFilterEditName.Enabled = true;
-                picLootFilterEditColor.Enabled = true;
-                chkLootFilterEditActive.Enabled = true;
-                btnEditSaveFilter.Text = "Save";
-                btnCancelEditFilter.Visible = true;
-            }
-            else if (btnText == "Save")
-            { // save functionality
-                if (HasUnsavedFilterEditChanges() && MessageBox.Show("Are you sure you want to save changes?", "Are you sure?", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
-                {
-                    if (txtLootFilterEditName.Text.Length > 0)
-                    {
-                        btnCancelEditFilter.Visible = false;
-                        btnEditSaveFilter.Text = "Edit";
-
-                        txtLootFilterEditName.Enabled = false;
-                        picLootFilterEditColor.Enabled = false;
-                        chkLootFilterEditActive.Enabled = false;
-
-                        LootFilter selectedFilter = (LootFilter)lstEditLootFilters.SelectedItem;
-                        int index = _config.Filters.IndexOf(selectedFilter);
-
-                        Color cols = picLootFilterEditColor.BackColor;
-                        selectedFilter.Name = txtLootFilterEditName.Text;
-                        selectedFilter.IsActive = chkLootFilterEditActive.Checked;
-                        selectedFilter.Color = new Colors
-                        {
-                            R = cols.R,
-                            G = cols.G,
-                            B = cols.B,
-                            A = cols.A
-                        };
-
-                        _config.Filters.RemoveAt(index);
-                        _config.Filters.Insert(index, selectedFilter);
-
-                        Config.SaveConfig(_config);
-                        UpdateEditFilterListBox(lstEditLootFilters.SelectedIndex);
-                    }
-                    else
-                    {
-                        MessageBox.Show("Add some text to the textbox (minimum 1 character)", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
-                }
-            }
-        }
-
-        /// <summary>
-        /// Handles cancel button when modifying filters
-        /// </summary>
-        private void btnCancelEditFilter_Click(object sender, EventArgs e)
-        {
-            if (HasUnsavedFilterEditChanges())
-            {
-                if (MessageBox.Show("Are you sure you want to cancel changes?", "Are you sure?", MessageBoxButtons.YesNo) == DialogResult.Yes)
-                {
-                    btnCancelEditFilter.Visible = false;
-                    btnEditSaveFilter.Text = "Edit";
-
-                    txtLootFilterEditName.Enabled = false;
-                    picLootFilterEditColor.Enabled = false;
-                    chkLootFilterEditActive.Enabled = false;
-
-                    UpdateEditFilterListBox(lstEditLootFilters.SelectedIndex);
-                }
-            }
-            else
-            {
-                btnCancelEditFilter.Visible = false;
-                btnEditSaveFilter.Text = "Edit";
-
-                txtLootFilterEditName.Enabled = false;
-                picLootFilterEditColor.Enabled = false;
-                chkLootFilterEditActive.Enabled = false;
-            }
-        }
-
-        /// <summary>
-        /// Updates the ListBox with filters & applys the loot filter if in-game
-        /// </summary>
-        /// <param name="index">Optional argument to set the selected index manually for the ListBox containing filters</param>
-        private void UpdateEditFilterListBox(int index = 0)
-        {
-            lstEditLootFilters.Items.Clear();
-
-            List<LootFilter> lootFilters = _config.Filters.OrderBy(lf => lf.Order).ToList();
-
-            foreach (LootFilter filter in lootFilters)
-            {
-                lstEditLootFilters.Items.Add(filter);
-            }
-
-            if (lootFilters.Count > 0)
-            {
-                lstEditLootFilters.SetSelected(index, true);
-                UpdateLootFilterComboBoxes();
-            }
-
-            if (Loot is not null)
-            {
-                Loot.ApplyFilter();
-            }
-        }
-
-        /// <summary>
-        /// Updates the information displayed about a filter
-        /// </summary>
-        private void lstEditLootFilters_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            LootFilter selectedFilter = (LootFilter)lstEditLootFilters.SelectedItem;
-
-            if (selectedFilter is not null)
-            {
-                Colors col = selectedFilter.Color;
-
-                txtLootFilterEditName.Text = selectedFilter.Name;
-                picLootFilterEditColor.BackColor = Color.FromArgb(col.A, col.R, col.G, col.B);
-                chkLootFilterEditActive.Checked = selectedFilter.IsActive;
-            }
-        }
-
-        /// <summary>
-        /// Shifts the order (aka priority) of the filter up
-        /// </summary>
-        private void btnFilterPriorityUp_Click(object sender, EventArgs e)
-        {
-            LootFilter selectedFilter = (LootFilter)lstEditLootFilters.SelectedItem;
-
-            if (selectedFilter is not null)
-            {
-                if (selectedFilter.Order != 1)
-                { // make sure we dont out of bounds ourself
-                    int tmpOrder = selectedFilter.Order;
-                    int index = selectedFilter.Order - 1;
-
-                    LootFilter swapFilter = _config.Filters.FirstOrDefault(f => f.Order == selectedFilter.Order - 1);
-
-                    selectedFilter.Order = swapFilter.Order;
-                    swapFilter.Order = tmpOrder;
-
-                    Config.SaveConfig(_config);
-                    UpdateEditFilterListBox(index - 1);
-                }
-            }
-        }
-
-        /// <summary>
-        /// Shifts the order (aka priority) of the filter down
-        /// </summary>
-        private void btnFilterPriorityDown_Click(object sender, EventArgs e)
-        {
-            LootFilter selectedFilter = (LootFilter)lstEditLootFilters.SelectedItem;
-
-            if (selectedFilter is not null)
-            {
-                if (selectedFilter.Order != _config.Filters.Count)
-                { // make sure we dont out of bounds ourself
-                    int tmpOrder = selectedFilter.Order;
-                    int index = selectedFilter.Order - 1;
-
-                    LootFilter swapFilter = _config.Filters.FirstOrDefault(f => f.Order == index + 2);
-
-                    selectedFilter.Order = swapFilter.Order;
-                    swapFilter.Order = tmpOrder;
-
-                    Config.SaveConfig(_config);
-                    UpdateEditFilterListBox(index + 1);
-                }
-            }
-        }
-
-        /// <summary>
-        /// Creates a new filter
-        /// </summary>
-        private void btnAddNewFilter_Click(object sender, EventArgs e)
-        {
-            LootFilter newFilter = new LootFilter()
-            {
-                Order = _config.Filters.Count + 1,
-                IsActive = true,
-                Name = "New Filter",
-                Items = new List<String>(),
-                Color = new Colors()
-                {
-                    R = 255,
-                    G = 255,
-                    B = 255,
-                    A = 255
-                }
-            };
-
-            _config.Filters.Add(newFilter);
-            Config.SaveConfig(_config);
-            UpdateEditFilterListBox();
-        }
-
-        /// <summary>
-        /// Nukes a filter & removes it then updates the filter lists
-        /// </summary>
-        private void btnRemoveFilter_Click(object sender, EventArgs e)
-        {
-            LootFilter selectedFilter = (LootFilter)lstEditLootFilters.SelectedItem;
-
-            if (selectedFilter is not null)
-            {
-                if (_config.Filters.Count == 1)
-                {
-                    if (MessageBox.Show("Removing the last filter will automatically create a blank one", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error) == DialogResult.OK)
-                    {
-                        _config.Filters.RemoveAt(selectedFilter.Order - 1);
-
-                        LootFilter newFilter = new LootFilter()
-                        {
-                            Order = 1,
-                            IsActive = true,
-                            Name = "New Filter",
-                            Items = new List<String>(),
-                            Color = new Colors()
-                            {
-                                R = 255,
-                                G = 255,
-                                B = 255,
-                                A = 255
-                            }
-                        };
-
-                        _config.Filters.Add(newFilter);
-                        Config.SaveConfig(_config);
-                        UpdateEditFilterListBox();
-                    }
-                }
-                else
-                {
-                    if (MessageBox.Show("Are you sure you want to delete this filter?", "Are you sure?", MessageBoxButtons.YesNo) == DialogResult.Yes)
-                    {
-                        _config.Filters.Remove(selectedFilter);
-
-                        var lootFiltersToUpdate = _config.Filters.Select(lf => lf).Where(lf => lf.Order > selectedFilter.Order);
-
-                        foreach (LootFilter filterToUpdate in lootFiltersToUpdate)
-                        {
-                            filterToUpdate.Order -= 1;
-                        }
-
-                        Config.SaveConfig(_config);
-                        UpdateEditFilterListBox();
-                    }
-                }
-            }
-        }
-
         private void picAIScavColor_Click(object sender, EventArgs e)
         {
             UpdatePaintColorByName("AIScav", picAIScavColor);
@@ -1439,6 +1060,11 @@ namespace eft_dma_radar
         {
             UpdatePaintColorByName("TextOutline", picTextOutlineColor);
         }
+
+        private void picChamsColor_Click(object sender, EventArgs e)
+        {
+            UpdatePaintColorByName("Chams", picChamsColor);
+        }
         #endregion
 
         #region Methods
@@ -1492,21 +1118,33 @@ namespace eft_dma_radar
             btnLockTimeOfDay.Checked = _config.LockTimeOfDay;
             numTimeOfDay.Value = (decimal)_config.TimeOfDay;
             chkExtendedReach.Checked = _config.ExtendedReachEnabled;
+            numThreadSpinDelay.Value = _config.ThreadSpinDelay;
             chkChams.Checked = _config.ChamsEnabled;
 
             grpThermalSettings.Enabled = _config.ThermalVisionEnabled || _config.OpticThermalVisionEnabled;
 
             cboThermalType.SelectedIndex = 0;
 
+            if (cboRefreshMap.Items.Count == 0)
+            {
+                foreach (var key in _config.AutoRefreshSettings)
+                {
+                    cboRefreshMap.Items.Add(key.Key);
+                }
+
+                cboRefreshMap.SelectedIndex = _selectedMap is not null ? cboRefreshMap.FindString(_selectedMap.Name) : 0;
+            }
+
+            #region Loot Filter
             if (_config.Filters.Count == 0)
             {
-                LootFilter newFilter = new LootFilter()
+                var newFilter = new Filter()
                 {
                     Order = 1,
                     IsActive = true,
                     Name = "Default",
                     Items = new List<String>(),
-                    Color = new Colors()
+                    Color = new Filter.Colors()
                     {
                         R = 255,
                         G = 255,
@@ -1516,37 +1154,32 @@ namespace eft_dma_radar
                 };
 
                 _config.Filters.Add(newFilter);
-                Config.SaveConfig(_config);
+                LootFilterManager.SaveLootFilterManager(_lootFilterManager);
             }
 
             if (cboLootItems.Items.Count == 0)
             {
-                List<LootItem> lootList = TarkovDevManager.AllItems.Select(x => x.Value).OrderBy(x => x.Name).Take(25).ToList();
+                var lootList = TarkovDevManager.AllItems.Select(x => x.Value).OrderBy(x => x.Name).Take(25).ToList();
 
+                cboLootItems.DataSource = null;
                 cboLootItems.DataSource = lootList;
                 cboLootItems.DisplayMember = "Name";
-            }
-
-            if (cboRefreshMap.Items.Count == 0)
-            {
-                foreach (var key in _config.AutoRefreshSettings)
-                {
-                    cboRefreshMap.Items.Add(key.Key);
-                }
-
-                int selectedIndex = 0;
-
-                if (_selectedMap is not null)
-                {
-                    selectedIndex = cboRefreshMap.FindString(_selectedMap.Name);
-                }
-
-                cboRefreshMap.SelectedIndex = selectedIndex;
             }
 
             UpdateLootFilterComboBoxes();
             UpdateLootFilterList();
             UpdateEditFilterListBox();
+            #endregion
+
+            #region Watchlist
+            if (_watchlist.Profiles.Count == 0)
+            {
+                _watchlist.AddEmptyProfile();
+            }
+
+            UpdateWatchlistProfiles();
+            #endregion
+
             UpdatePaintColorControls();
         }
 
@@ -1643,11 +1276,7 @@ namespace eft_dma_radar
         /// <summary>
         /// Determines if an aggressor player is facing a friendly player.
         /// </summary>
-        private static bool IsAggressorFacingTarget(
-            SKPoint aggressor,
-            float aggressorDegrees,
-            SKPoint target,
-            float distance)
+        private static bool IsAggressorFacingTarget(SKPoint aggressor, float aggressorDegrees, SKPoint target, float distance)
         {
             double maxDiff = 31.3573 - 3.51726 * Math.Log(Math.Abs(0.626957 - 15.6948 * distance)); // Max degrees variance based on distance variable
             if (maxDiff < 1f)
@@ -1676,83 +1305,6 @@ namespace eft_dma_radar
                 _mapSelectionIndex++; // Move onto next map
             tabRadar.Text = $"Radar ({_maps[_mapSelectionIndex].Name})";
             _mapChangeTimer.Restart(); // Start delay
-        }
-
-        /// <summary>
-        /// Adds filters into the combo box for selection
-        /// </summary>
-        private void UpdateLootFilterComboBoxes()
-        {
-            cboFilters.DataSource = null;
-            cboFilters.Items.Clear();
-
-            List<LootFilter> lootFilters = _config.Filters.OrderBy(lf => lf.Order).ToList();
-
-            foreach (LootFilter filter in lootFilters)
-            {
-                cboFilters.Items.Add(filter);
-            }
-
-            cboFilters.DisplayMember = "Name";
-
-            if (lootFilters.Count > 0)
-            {
-                cboFilters.SelectedItem = lootFilters[0];
-            }
-        }
-
-        /// <summary>
-        /// Adds items from the loot filter into the list view
-        /// </summary>
-        private void UpdateLootFilterList()
-        {
-            lstViewLootFilter.Items.Clear();
-
-            LootFilter selectedFilter = (LootFilter)cboFilters.SelectedItem;
-            List<LootItem> lootList = TarkovDevManager.AllItems.Select(x => x.Value).ToList();
-            if (selectedFilter is not null)
-            {
-                List<LootItem> matchingLoot = lootList.Where(loot => selectedFilter.Items.Any(id => id == loot.Item.id)).OrderBy(l => l.Item.name).ToList();
-
-                foreach (LootItem item in matchingLoot)
-                {
-                    ListViewItem listItem = new ListViewItem()
-                    {
-                        Text = item.Item.id,
-                        Tag = item
-                    };
-
-                    listItem.SubItems.Add(item.Item.name);
-                    listItem.SubItems.Add(item.Item.shortName);
-                    listItem.SubItems.Add(TarkovDevManager.FormatNumber(TarkovDevManager.GetItemValue(item.Item)));
-
-                    lstViewLootFilter.Items.Add(listItem);
-                }
-
-                chkLootFilterActive.Checked = selectedFilter.IsActive;
-            }
-        }
-
-        /// <summary>
-        /// Checks if the text, IsActive or color is different
-        /// </summary>
-        /// <returns>A bool</returns>
-        private bool HasUnsavedFilterEditChanges()
-        {
-            LootFilter selectedFilter = (LootFilter)lstEditLootFilters.SelectedItem;
-
-            if (selectedFilter is not null)
-            {
-                Colors col = selectedFilter.Color;
-
-                return txtLootFilterEditName.Text != selectedFilter.Name ||
-                        chkLootFilterEditActive.Checked != selectedFilter.IsActive ||
-                        picLootFilterEditColor.BackColor.ToArgb() != Color.FromArgb(col.A, col.R, col.G, col.B).ToArgb();
-            }
-            else
-            {
-                return false;
-            }
         }
 
         private void UpdatePaintColorControls()
@@ -1793,6 +1345,7 @@ namespace eft_dma_radar
             setColor(picExfilClosedIconColor, "ExfilClosedIcon");
             setColor(picTextOutlineColor, "TextOutline");
             setColor(picDeathMarkerColor, "DeathMarker");
+            setColor(picChamsColor, "Chams");
         }
 
         /// <summary>
@@ -1832,11 +1385,17 @@ namespace eft_dma_radar
                     {
                         DrawMap(canvas);
                         DrawPlayers(canvas);
-                        DrawLoot(canvas);
-                        DrawQuestItems(canvas);
+
+                        if (_config.ShowCorpsesEnabled)
+                            DrawCorpses(canvas);
+                        if (_config.LootEnabled)
+                            DrawLoot(canvas);
+                        if (_config.QuestHelperEnabled)
+                            DrawQuestItems(canvas);
                         DrawGrenades(canvas);
                         DrawExfils(canvas);
-                        DrawAimview(canvas);
+                        if (_config.AimviewEnabled)
+                            DrawAimview(canvas);
                         DrawToolTips(canvas);
                     }
                 }
@@ -1884,7 +1443,7 @@ namespace eft_dma_radar
 
         private void UpdateSelectedMap()
         {
-            string currentMap = this.CurrentMapName;
+            string currentMap = this.MapName;
             string currentMapPrefix = currentMap.ToLower().Substring(0, Math.Min(4, currentMap.Length));
 
             if (_selectedMap is null || !_selectedMap.MapID.ToLower().StartsWith(currentMapPrefix))
@@ -1898,9 +1457,9 @@ namespace eft_dma_radar
                     // Init map
                     CleanupLoadedBitmaps();
                     LoadMapBitmaps();
-                    tabRadar.Text = $"Radar ({_selectedMap.Name})";
+                    tabRadar.Text = $"Radar ({this.MapNameFormatted})";
 
-                    int selectedIndex = cboRefreshMap.FindString(_selectedMap.Name);
+                    int selectedIndex = cboRefreshMap.FindString(this.MapNameFormatted);
                     cboRefreshMap.SelectedIndex = selectedIndex != 0 ? selectedIndex : 0;
                 }
             }
@@ -2279,7 +1838,6 @@ namespace eft_dma_radar
                 var grenades = this.Grenades;
                 if (grenades is not null)
                 {
-                    var localPlayerMapPos = this.LocalPlayer.Position.ToMapPos(_selectedMap);
                     var mapParams = GetMapLocation();
 
                     foreach (var grenade in grenades)
@@ -2290,6 +1848,29 @@ namespace eft_dma_radar
                             .ToZoomedPos(mapParams);
 
                         grenadeZoomedPos.DrawGrenade(canvas);
+                    }
+                }
+            }
+        }
+
+        private void DrawCorpses(SKCanvas canvas)
+        {
+            var localPlayer = this.LocalPlayer;
+            if (this.InGame && localPlayer is not null)
+            {
+                var corpses = this.Corpses;
+                if (corpses is not null)
+                {
+                    var mapParams = GetMapLocation();
+
+                    foreach (var corpse in corpses)
+                    {
+                        var corpseZoomedPos = corpse
+                            .Position
+                            .ToMapPos(_selectedMap)
+                            .ToZoomedPos(mapParams);
+
+                        corpseZoomedPos.DrawDeathMarker(canvas);
                     }
                 }
             }
@@ -2655,7 +2236,6 @@ namespace eft_dma_radar
                 canvas.DrawCircle(drawX, drawY, circleSize * _uiScale, SKPaints.LootPaint);
             }
         }
-
         #endregion
 
         #region Overrides
@@ -2798,6 +2378,810 @@ namespace eft_dma_radar
         {
             _config.ThreadSpinDelay = (int)numThreadSpinDelay.Value;
         }
+        #endregion
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        #region Loot Filter Functionality
+        #region Helper Functions
+        /// <summary>
+        /// Adds filters into the combo box for selection
+        /// </summary>
+        private void UpdateLootFilterComboBoxes()
+        {
+            var lootFilters = _config.Filters.OrderBy(lf => lf.Order).ToList();
+            cboFilters.DataSource = null;
+            cboFilters.DataSource = lootFilters;
+            cboFilters.DisplayMember = "Name";
+            cboFilters.SelectedItem = lootFilters.FirstOrDefault();
+        }
+
+        /// <summary>
+        /// Adds items from the loot filter into the list view
+        /// </summary>
+        private void UpdateLootFilterList()
+        {
+            var selectedFilter = cboFilters.SelectedItem as Filter;
+
+            if (selectedFilter is null)
+                return;
+
+            var lootList = TarkovDevManager.AllItems.Values.ToList();
+            var matchingLoot = lootList.Where(loot => selectedFilter.Items.Contains(loot.Item.id))
+                                       .OrderBy(l => l.Item.name)
+                                       .ToList();
+
+            lstViewLootFilter.Items.Clear();
+
+            foreach (var item in matchingLoot)
+            {
+                var listItem = new ListViewItem
+                {
+                    Text = item.Item.id,
+                    Tag = item
+                };
+
+                listItem.SubItems.AddRange(new[]
+                {
+                    item.Item.name,
+                    item.Item.shortName,
+                    TarkovDevManager.FormatNumber(TarkovDevManager.GetItemValue(item.Item))
+                });
+
+                lstViewLootFilter.Items.Add(listItem);
+            }
+
+            chkLootFilterActive.Checked = selectedFilter.IsActive;
+        }
+
+        /// <summary>
+        /// Checks if the text, IsActive or color is different
+        /// </summary>
+        /// <returns>A bool</returns>
+        private bool HasUnsavedFilterEditChanges()
+        {
+            var selectedFilter = lstEditLootFilters.SelectedItem as Filter;
+
+            if (selectedFilter is null)
+                return false;
+
+            return txtLootFilterEditName.Text != selectedFilter.Name ||
+                   chkLootFilterEditActive.Checked != selectedFilter.IsActive ||
+                   picLootFilterEditColor.BackColor != Color.FromArgb(selectedFilter.Color.A, selectedFilter.Color.R, selectedFilter.Color.G, selectedFilter.Color.B);
+        }
+
+        /// <summary>
+        /// Updates the ListBox with filters & applys the loot filter if in-game
+        /// </summary>
+        /// <param name="index">Optional argument to set the selected index manually for the ListBox containing filters</param>
+        private void UpdateEditFilterListBox(int index = 0)
+        {
+            var lootFilters = _config.Filters.OrderBy(lf => lf.Order).ToList();
+            lstEditLootFilters.DataSource = null;
+            lstEditLootFilters.DataSource = lootFilters;
+            lstEditLootFilters.DisplayMember = "Name";
+            lstEditLootFilters.SelectedIndex = index;
+
+            UpdateLootFilterComboBoxes();
+
+            Loot?.ApplyFilter();
+        }
+
+        private void SaveFilterChanges()
+        {
+            if (string.IsNullOrEmpty(txtLootFilterEditName.Text))
+            {
+                MessageBox.Show("Add some text to the textbox (minimum 1 character)", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            if (ShowConfirmationDialog("Are you sure you want to save changes?", "Are you sure?") == DialogResult.Yes)
+            {
+                var selectedFilter = lstEditLootFilters.SelectedItem as Filter;
+
+                if (selectedFilter is null)
+                    return;
+
+                int index = _config.Filters.IndexOf(selectedFilter);
+
+                selectedFilter.Name = txtLootFilterEditName.Text;
+                selectedFilter.IsActive = chkLootFilterEditActive.Checked;
+                selectedFilter.Color = new Filter.Colors
+                {
+                    R = picLootFilterEditColor.BackColor.R,
+                    G = picLootFilterEditColor.BackColor.G,
+                    B = picLootFilterEditColor.BackColor.B,
+                    A = picLootFilterEditColor.BackColor.A
+                };
+
+                _lootFilterManager.UpdateFilter(selectedFilter, index);
+                UpdateEditFilterListBox(lstEditLootFilters.SelectedIndex);
+
+                UpdateFilterEditControls(false);
+            }
+        }
+
+        private void UpdateFilterEditControls(bool state)
+        {
+            txtLootFilterEditName.Enabled = state;
+            picLootFilterEditColor.Enabled = state;
+            chkLootFilterEditActive.Enabled = state;
+
+            btnEditSaveFilter.Text = state ? "Save" : "Edit";
+            btnCancelEditFilter.Visible = state;
+        }
+
+        private void UpdateFilterOrders()
+        {
+            for (int i = 0; i < _config.Filters.Count; i++)
+            {
+                _config.Filters[i].Order = i + 1;
+            }
+        }
+        #endregion
+
+        #region Event Handlers
+        /// <summary>
+        /// Adjusts min regular loot based on slider value
+        /// </summary>
+        private void trkRegularLootValue_Scroll(object sender, EventArgs e)
+        {
+            _config.MinLootValue = trkRegularLootValue.Value * 1000;
+            lblRegularLootDisplay.Text = TarkovDevManager.FormatNumber(_config.MinLootValue);
+            Loot?.ApplyFilter();
+        }
+
+        /// <summary>
+        /// Adjusts min important loot based on slider value
+        /// </summary>
+        private void trkImportantLootValue_Scroll(object sender, EventArgs e)
+        {
+            _config.MinImportantLootValue = trkImportantLootValue.Value * 1000;
+            lblImportantLootDisplay.Text = TarkovDevManager.FormatNumber(_config.MinImportantLootValue);
+            Loot?.ApplyFilter();
+        }
+
+        /// <summary>
+        /// Refreshes the loot in the match
+        /// </summary>
+        private void btnRefreshLoot_Click(object sender, EventArgs e)
+        {
+            Memory.Loot?.RefreshLoot(true);
+        }
+
+        /// <summary>
+        /// Handles color modification for loot filters
+        /// </summary>
+        private void picLootFilterPreview_Click(object sender, EventArgs e)
+        {
+            if (colDialog.ShowDialog() == DialogResult.OK)
+                picLootFilterEditColor.BackColor = colDialog.Color;
+        }
+
+        /// <summary>
+        /// Handles the edit/save button for modifying filters
+        /// </summary>
+        private void btnEditSaveFilter_Click(object sender, EventArgs e)
+        {
+            if (btnEditSaveFilter.Text == "Edit")
+                UpdateFilterEditControls(true);
+
+            if (btnEditSaveFilter.Text == "Save" && HasUnsavedFilterEditChanges())
+                SaveFilterChanges();
+        }
+
+        /// <summary>
+        /// Handles cancel button when modifying filters
+        /// </summary>
+        private void btnCancelEditFilter_Click(object sender, EventArgs e)
+        {
+            if (HasUnsavedFilterEditChanges() && MessageBox.Show("Are you sure you want to cancel changes?", "Are you sure?", MessageBoxButtons.YesNo) == DialogResult.Yes)
+                UpdateEditFilterListBox(lstEditLootFilters.SelectedIndex);
+
+            UpdateFilterEditControls(false);
+        }
+
+        /// <summary>
+        /// Shifts the order (aka priority) of the filter up
+        /// </summary>
+        private void btnFilterPriorityUp_Click(object sender, EventArgs e)
+        {
+            var selectedFilter = lstEditLootFilters.SelectedItem as Filter;
+
+            if (selectedFilter is null || selectedFilter.Order == 1)
+                return;
+
+            int index = selectedFilter.Order - 1;
+            var swapFilter = _config.Filters.FirstOrDefault(f => f.Order == index);
+
+            if (swapFilter is not null)
+            {
+                selectedFilter.Order = swapFilter.Order;
+                swapFilter.Order = index + 1;
+                LootFilterManager.SaveLootFilterManager(_lootFilterManager);
+                UpdateEditFilterListBox(index - 1);
+            }
+        }
+
+        /// <summary>
+        /// Shifts the order (aka priority) of the filter down
+        /// </summary>
+        private void btnFilterPriorityDown_Click(object sender, EventArgs e)
+        {
+            var selectedFilter = lstEditLootFilters.SelectedItem as Filter;
+
+            if (selectedFilter is null || selectedFilter.Order == _config.Filters.Count)
+                return;
+
+            int index = selectedFilter.Order;
+            var swapFilter = _config.Filters.FirstOrDefault(f => f.Order == index + 1);
+
+            if (swapFilter is not null)
+            {
+                selectedFilter.Order = swapFilter.Order;
+                swapFilter.Order = index;
+                LootFilterManager.SaveLootFilterManager(_lootFilterManager);
+                UpdateEditFilterListBox(index);
+            }
+        }
+
+        /// <summary>
+        /// Creates a new filter
+        /// </summary>
+        private void btnAddNewFilter_Click(object sender, EventArgs e)
+        {
+            var existingFilter = _config.Filters.FirstOrDefault(filter => filter.Name == "New Filter");
+
+            if (existingFilter is not null)
+            {
+                MessageBox.Show("A loot filter with the name 'New Filter' already exists. Please rename or delete the existing filter.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            _lootFilterManager.AddEmptyProfile();
+            UpdateEditFilterListBox(_config.Filters.Count - 1);
+        }
+
+        /// <summary>
+        /// Nukes a filter & removes it then updates the filter lists
+        /// </summary>
+        private void btnRemoveFilter_Click(object sender, EventArgs e)
+        {
+            var selectedFilter = lstEditLootFilters.SelectedItem as Filter;
+
+            if (selectedFilter is null)
+                return;
+
+            if (_config.Filters.Count == 1)
+            {
+                if (MessageBox.Show("Removing the last filter will automatically create a blank one", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error) == DialogResult.OK)
+                {
+                    _lootFilterManager.RemoveFilter(lstEditLootFilters.SelectedIndex);
+                    _lootFilterManager.AddEmptyProfile();
+                }
+            }
+            else
+            {
+                if (MessageBox.Show("Are you sure you want to delete this filter?", "Are you sure?", MessageBoxButtons.YesNo) == DialogResult.Yes)
+                {
+                    _lootFilterManager.RemoveFilter(selectedFilter);
+                    UpdateFilterOrders();
+                }
+            }
+
+            UpdateEditFilterListBox();
+        }
+
+        /// <summary>
+        /// Fired when item is removed from a filter & saves config
+        /// </summary>
+        private void btnLootFilterRemoveItem_Click(object sender, EventArgs e)
+        {
+            if (lstViewLootFilter.SelectedItems.Count > 0)
+            {
+                var selectedFilter = cboFilters.SelectedItem as Filter;
+                var selectedItem = lstViewLootFilter.SelectedItems[0];
+
+                if (selectedItem?.Tag is LootItem lootItem)
+                {
+                    selectedItem.Remove();
+                    _lootFilterManager.RemoveFilterItem(selectedFilter, lootItem.Item.id);
+                    Loot?.ApplyFilter();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Fired when item is added to a filter & saves config
+        /// </summary>
+        private void btnLootFilterAddItem_Click(object sender, EventArgs e)
+        {
+            if (cboLootItems.SelectedIndex != -1)
+            {
+                var selectedFilter = cboFilters.SelectedItem as Filter;
+                var selectedItem = cboLootItems.SelectedItem as LootItem;
+
+                if (selectedFilter is not null && !selectedFilter.Items.Contains(selectedItem.ID))
+                {
+                    var listItem = new ListViewItem(new[]
+                    {
+                        selectedItem.Item.id,
+                        selectedItem.Item.name,
+                        selectedItem.Item.shortName,
+                        TarkovDevManager.FormatNumber(selectedItem.Value),
+                    })
+                    {
+                        Tag = selectedItem
+                    };
+
+                    lstViewLootFilter.Items.Add(listItem);
+
+                    selectedFilter.Items.Add(selectedItem.Item.id);
+                    LootFilterManager.SaveLootFilterManager(_lootFilterManager);
+                    Loot?.ApplyFilter();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Updates the information displayed about a filter
+        /// </summary>
+        private void lstEditLootFilters_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            var selectedFilter = lstEditLootFilters.SelectedItem as Filter;
+
+            if (selectedFilter is null)
+                return;
+
+            txtLootFilterEditName.Text = selectedFilter.Name;
+            picLootFilterEditColor.BackColor = Color.FromArgb(selectedFilter.Color.A, selectedFilter.Color.R, selectedFilter.Color.G, selectedFilter.Color.B);
+            chkLootFilterEditActive.Checked = selectedFilter.IsActive;
+        }
+
+        /// <summary>
+        /// Fired when the current filter is changed
+        /// </summary>
+        private void cboFilters_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            UpdateLootFilterList();
+        }
+
+        /// <summary>
+        /// Fired when an item to search for is being typed
+        /// </summary>
+        private void txtItemFilter_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode is Keys.Enter)
+            {
+                var itemToSearch = txtItemFilter.Text;
+                var lootList = TarkovDevManager.AllItems
+                    .Select(x => x.Value)
+                    .Where(x => x.Name.Contains(itemToSearch.Trim(), StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(x => x.Name)
+                    .Take(25)
+                    .ToList();
+
+                cboLootItems.DataSource = null;
+                cboLootItems.DataSource = lootList;
+                cboLootItems.DisplayMember = "Name";
+            }
+        }
+        #endregion
+        #endregion
+
+        #region Watchlist Functionality
+        #region Helper Functions
+        private void RefreshWatchlistStatusesByProfile(Watchlist.Profile profile)
+        {
+            var enemyPlayers = this.AllPlayers
+                ?.Select(x => x.Value)
+                .Where(x => x.IsHumanHostileActive && profile.Entries.Any(entry => entry.AccountID == x.AccountID))
+                .ToList();
+
+            enemyPlayers?.ForEach(player => player.RefreshWatchlistStatus());
+        }
+
+        private void RefreshWatchlistStatuses()
+        {
+            var enemyPlayers = this.AllPlayers
+                ?.Select(x => x.Value)
+                .Where(x => x.IsHumanHostileActive)
+                .ToList();
+
+            enemyPlayers?.ForEach(player => player.RefreshWatchlistStatus());
+        }
+
+        private void RefreshWatchlistStatus(string accountID)
+        {
+            var enemyPlayer = this.AllPlayers
+                ?.Select(x => x.Value)
+                .FirstOrDefault(x => x.IsHumanHostileActive && x.AccountID == accountID);
+
+            enemyPlayer?.RefreshWatchlistStatus();
+        }
+
+        private void UpdateWatchlistProfiles(int index = 0)
+        {
+            var profiles = _watchlist.Profiles;
+            lstWatchlistProfiles.DataSource = null;
+            lstWatchlistProfiles.DataSource = profiles;
+            lstWatchlistProfiles.DisplayMember = "Name";
+            lstWatchlistProfiles.SelectedItem = profiles.FirstOrDefault();
+
+            if (profiles.Count > 0)
+            {
+                lstWatchlistProfiles.SetSelected(index, true);
+                UpdateWatchlistComboBoxes();
+            }
+        }
+
+        private void UpdateWatchlistDataControls()
+        {
+            txtWatchlistAccountID.Text = _lastWatchlistEntry?.AccountID ?? "";
+            txtWatchlistTag.Text = _lastWatchlistEntry?.Tag ?? "";
+            chkWatchlistIsStreamer.Checked = _lastWatchlistEntry?.IsStreamer ?? false;
+            rdbTwitch.Checked = _lastWatchlistEntry?.Platform == 0;
+            rdbYoutube.Checked = _lastWatchlistEntry?.Platform == 1;
+            txtWatchlistPlatformUsername.Text = _lastWatchlistEntry?.PlatformUsername ?? "";
+
+            btnRemoveCancelWatchlist.Visible = _lastWatchlistEntry is not null;
+            btnRemoveCancelWatchlist.Text = "Remove";
+        }
+
+        private void UpdateWatchlistControlState(bool state)
+        {
+            txtWatchlistAccountID.Enabled = state;
+            txtWatchlistPlatformUsername.Enabled = state;
+            txtWatchlistTag.Enabled = state;
+
+            chkWatchlistIsStreamer.Enabled = state;
+
+            rdbTwitch.Enabled = state;
+            rdbYoutube.Enabled = state;
+        }
+
+        private void UpdateWatchlistComboBoxes()
+        {
+            var profiles = _watchlist.Profiles;
+            cboWatchlistProfile.DataSource = null;
+            cboWatchlistProfile.DataSource = new List<Watchlist.Profile>(profiles);
+            cboWatchlistProfile.DisplayMember = "Name";
+            cboWatchlistProfile.SelectedItem = profiles.FirstOrDefault();
+        }
+
+        private void UpdateWatchlistEntriesList()
+        {
+            lstViewWatchlistEntries.Items.Clear();
+
+            var selectedProfile = cboWatchlistProfile.SelectedItem as Watchlist.Profile;
+            var watchlistEntries = selectedProfile?.Entries ?? Enumerable.Empty<Watchlist.Entry>();
+
+            lstViewWatchlistEntries.Items.AddRange(watchlistEntries.Select(entry => new ListViewItem
+            {
+                Text = entry.AccountID,
+                Tag = entry,
+                SubItems = { entry.Tag, entry.PlatformUsername }
+            }).ToArray());
+        }
+
+        private bool HasUnsavedWatchlistProfileEditChanges()
+        {
+            var selectedProfile = lstWatchlistProfiles.SelectedItem as Watchlist.Profile;
+            return (selectedProfile is not null && txtWatchlistProfileName.Text != selectedProfile.Name);
+        }
+
+        private bool HasUnsavedWatchlistEntryEditChanges()
+        {
+            if (_lastWatchlistEntry is null)
+                return false;
+            else
+                return txtWatchlistAccountID.Text != _lastWatchlistEntry.AccountID ||
+                        txtWatchlistTag.Text != _lastWatchlistEntry.Tag ||
+                        chkWatchlistIsStreamer.Checked != _lastWatchlistEntry.IsStreamer ||
+                        (rdbTwitch.Checked ? 0 : 1) != _lastWatchlistEntry.Platform ||
+                        txtWatchlistPlatformUsername.Text != _lastWatchlistEntry.PlatformUsername;
+        }
+
+        private void ShowEditWatchlistProfileControls()
+        {
+            btnEditSaveWatchlistProfile.Text = "Save";
+            txtWatchlistProfileName.Enabled = true;
+            btnCancelEditWatchlistProfile.Visible = true;
+        }
+
+        private void SaveWatchlistProfile()
+        {
+            if (string.IsNullOrEmpty(txtWatchlistProfileName.Text))
+            {
+                MessageBox.Show("Add some text to the textbox (minimum 1 character)", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            if (HasUnsavedWatchlistProfileEditChanges())
+            {
+                if (ShowConfirmationDialog("Are you sure you want to save changes?", "Are you sure?") == DialogResult.Yes)
+                {
+                    var selectedProfile = lstWatchlistProfiles.SelectedItem as Watchlist.Profile;
+                    int index = _watchlist.Profiles.IndexOf(selectedProfile);
+
+                    selectedProfile.Name = txtWatchlistProfileName.Text;
+
+                    _watchlist.UpdateProfile(selectedProfile, index);
+
+                    UpdateWatchlistProfiles(lstWatchlistProfiles.SelectedIndex);
+                    HideEditWatchlistProfileControls();
+
+                    RefreshWatchlistStatusesByProfile(selectedProfile);
+                }
+            }
+        }
+
+        private void CancelEditWatchlistProfile()
+        {
+            HideEditWatchlistProfileControls();
+            UpdateWatchlistProfiles(lstWatchlistProfiles.SelectedIndex);
+        }
+
+        private void HideEditWatchlistProfileControls()
+        {
+            btnCancelEditWatchlistProfile.Visible = false;
+            txtWatchlistProfileName.Enabled = false;
+            btnEditSaveWatchlistProfile.Text = "Edit";
+        }
+
+        private void UpdateWatchlistEntryControls(bool state)
+        {
+            UpdateWatchlistControlState(state);
+            btnEditSaveWatchlistEntry.Text = state ? "Save" : "Edit";
+            btnRemoveCancelWatchlist.Text = "Cancel";
+            btnRemoveCancelWatchlist.Visible = state;
+        }
+
+        private void SaveWatchlistEntry(Watchlist.Profile selectedProfile)
+        {
+            if (string.IsNullOrEmpty(txtWatchlistAccountID.Text) ||
+                string.IsNullOrEmpty(txtWatchlistPlatformUsername.Text) ||
+                string.IsNullOrEmpty(txtWatchlistTag.Text))
+            {
+                MessageBox.Show("Add some text to the textboxes (minimum 1 character)", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            if (HasUnsavedWatchlistEntryEditChanges())
+            {
+                if (ShowConfirmationDialog("Are you sure you want to save changes?", "Are you sure?") == DialogResult.Yes)
+                {
+                    var entry = _lastWatchlistEntry;
+                    var index = selectedProfile.Entries.IndexOf(entry);
+
+                    entry = new Watchlist.Entry()
+                    {
+                        AccountID = txtWatchlistAccountID.Text,
+                        Tag = txtWatchlistTag.Text,
+                        IsStreamer = chkWatchlistIsStreamer.Checked,
+                        Platform = rdbTwitch.Checked ? 0 : 1,
+                        PlatformUsername = txtWatchlistPlatformUsername.Text
+                    };
+
+                    _watchlist.UpdateEntry(selectedProfile, entry, index);
+
+                    _lastWatchlistEntry = entry;
+
+                    UpdateWatchlistEntryControls(false);
+                    UpdateWatchlistEntriesList();
+                    RefreshWatchlistStatus(entry.AccountID);
+                }
+            }
+        }
+
+        private void RemoveWatchlistEntry(Watchlist.Profile selectedProfile, Watchlist.Entry selectedEntry)
+        {
+            _watchlist.RemoveEntry(selectedProfile, selectedEntry);
+            UpdateWatchlistEntriesList();
+            RefreshWatchlistStatus(selectedEntry.AccountID);
+        }
+
+        private void CancelEditWatchlistEntry()
+        {
+            if (HasUnsavedWatchlistEntryEditChanges())
+            {
+                if (ShowConfirmationDialog("Are you sure you want to cancel changes?", "Are you sure?") == DialogResult.Yes)
+                {
+                    UpdateWatchlistEntryControls(false);
+                    UpdateWatchlistDataControls();
+                }
+            }
+            else
+            {
+                UpdateWatchlistEntryControls(false);
+            }
+        }
+
+        private DialogResult ShowConfirmationDialog(string message, string title)
+        {
+            return MessageBox.Show(message, title, MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+        }
+        #endregion
+
+        #region Event Handlers
+        private void btnAddWatchlistProfile_Click(object sender, EventArgs e)
+        {
+            var existingEntry = _watchlist.Profiles.FirstOrDefault(profile => profile.Name == "Default");
+
+            if (existingEntry is not null)
+            {
+                MessageBox.Show("A profile with the name 'Default' already exists. Please edit or delete the existing profile.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            _watchlist.AddEmptyProfile();
+            UpdateWatchlistProfiles();
+        }
+
+        private void btnRemoveWatchlistProfile_Click(object sender, EventArgs e)
+        {
+            var selectedProfile = lstWatchlistProfiles.SelectedItem as Watchlist.Profile;
+
+            if (selectedProfile is null)
+                return;
+
+            var profiles = _watchlist.Profiles;
+
+            if (profiles.Count == 1)
+            {
+                if (MessageBox.Show("Removing the last profile will automatically create a blank one", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error) == DialogResult.OK)
+                {
+                    _watchlist.RemoveProfile(lstWatchlistProfiles.SelectedIndex);
+                    _watchlist.AddEmptyProfile();
+                    RefreshWatchlistStatusesByProfile(selectedProfile);
+                }
+            }
+            else
+            {
+                if (MessageBox.Show("Are you sure you want to delete this profile?", "Are you sure?", MessageBoxButtons.YesNo) == DialogResult.Yes)
+                {
+                    _watchlist.RemoveProfile(selectedProfile);
+                    RefreshWatchlistStatusesByProfile(selectedProfile);
+                }
+            }
+
+            UpdateWatchlistProfiles();
+        }
+
+        private void btnEditSaveWatchlistProfile_Click(object sender, EventArgs e)
+        {
+            string btnText = btnEditSaveWatchlistProfile.Text;
+
+            if (btnText == "Edit")
+                ShowEditWatchlistProfileControls();
+
+            if (btnText == "Save")
+                SaveWatchlistProfile();
+        }
+
+        private void btnCancelEditWatchlistProfile_Click(object sender, EventArgs e)
+        {
+            CancelEditWatchlistProfile();
+        }
+
+        private void btnEditSaveWatchlistEntry_Click(object sender, EventArgs e)
+        {
+            string btnText = btnEditSaveWatchlistEntry.Text;
+            var selectedProfile = cboWatchlistProfile.SelectedItem as Watchlist.Profile;
+
+            if (_lastWatchlistEntry is null)
+                return;
+
+            if (btnText == "Edit")
+                UpdateWatchlistEntryControls(true);
+
+            if (btnText == "Save")
+                SaveWatchlistEntry(selectedProfile);
+        }
+
+        private void btnRemoveCancelWatchlist_Click(object sender, EventArgs e)
+        {
+            var btnText = btnRemoveCancelWatchlist.Text;
+            var selectedProfile = cboWatchlistProfile.SelectedItem as Watchlist.Profile;
+            var selectedEntry = _lastWatchlistEntry;
+
+            if (btnText == "Remove")
+                RemoveWatchlistEntry(selectedProfile, selectedEntry);
+            else
+                CancelEditWatchlistEntry();
+        }
+
+        private void btnAddWatchlistEntry_Click(object sender, EventArgs e)
+        {
+            var selectedProfile = cboWatchlistProfile.SelectedItem as Watchlist.Profile;
+
+            if (selectedProfile is null)
+                return;
+
+            var existingEntry = selectedProfile.Entries.FirstOrDefault(entry => entry.AccountID == "New Entry");
+
+            if (existingEntry is not null)
+            {
+                MessageBox.Show("An entry with the account id 'New Entry' already exists. Please edit or delete the existing entry.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            _watchlist.AddEmptyEntry(selectedProfile);
+            UpdateWatchlistEntriesList();
+        }
+
+        private void btnRefreshPlayerlist_Click(object sender, EventArgs e)
+        {
+            var enemyPlayers = this.AllPlayers
+                ?.Select(x => x.Value)
+                .Where(x => x.IsHumanHostileActive)
+                .OrderBy(x => x.GroupID)
+                .ThenBy(x => x.Name)
+                .ToList();
+
+            lstWatchlistPlayerList.DataSource = null;
+            lstWatchlistPlayerList.DataSource = enemyPlayers;
+            lstWatchlistPlayerList.DisplayMember = "Name";
+        }
+
+        private void btnAddPlayerToWatchlist_Click(object sender, EventArgs e)
+        {
+            var selectedPlayer = lstWatchlistPlayerList.SelectedItem as Player;
+            var selectedProfile = cboWatchlistProfile.SelectedItem as Watchlist.Profile;
+
+            if (selectedPlayer is not null && selectedProfile is not null)
+            {
+                var accountIdExists = selectedProfile.Entries.Any(entry => entry.AccountID == selectedPlayer.AccountID);
+
+                if (accountIdExists)
+                {
+                    MessageBox.Show($"The player with AccountID '{selectedPlayer.AccountID}' already exists in the active filter.", "Duplicate Entry", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+                else
+                {
+                    _watchlist.AddEntry(selectedProfile, selectedPlayer.AccountID, selectedPlayer.Name);
+                    UpdateWatchlistEntriesList();
+                    RefreshWatchlistStatuses();
+                }
+            }
+        }
+
+        private void cboWatchlistProfile_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            _lastWatchlistEntry = null;
+            UpdateWatchlistEntriesList();
+            UpdateWatchlistDataControls();
+        }
+
+        private void lstWatchlistProfiles_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            var selectedProfile = lstWatchlistProfiles.SelectedItem as Watchlist.Profile;
+            txtWatchlistProfileName.Text = selectedProfile?.Name ?? "";
+        }
+
+        private void lstViewWatchlistEntries_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            _lastWatchlistEntry = lstViewWatchlistEntries.SelectedItems.Count > 0 ? (Watchlist.Entry)lstViewWatchlistEntries.SelectedItems[0].Tag : null;
+            UpdateWatchlistDataControls();
+        }
+        #endregion
+        #endregion
     }
-    #endregion
 }

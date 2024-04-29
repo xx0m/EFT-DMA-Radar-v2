@@ -1,4 +1,7 @@
 ﻿using System.Collections.ObjectModel;
+using System.Drawing;
+using System.Numerics;
+using System.Reflection.Metadata.Ecma335;
 
 namespace eft_dma_radar
 {
@@ -19,7 +22,32 @@ namespace eft_dma_radar
 
         private static Dictionary<string, Player> PlayersWithChams = new Dictionary<string, Player>();
 
-        public void ChamsEnable(bool updateAllPlayers = false)
+        public int PlayersWithChamsCount
+        {
+            get => PlayersWithChams.Count;
+        }
+
+        public ulong NVGMaterial
+        {
+            get => _nvgMaterial;
+        }
+
+        public ulong ThermalMaterial
+        {
+            get => _thermalMaterial;
+        }
+
+        private Vector4 _color
+        {
+            get => Extensions.Vector4FromPaintColor("Chams");
+        }
+
+        private ulong _nvgMaterial;
+        private ulong _thermalMaterial;
+
+        private Vector4 lastColor = new Vector4(0.0f, 0.0f, 0.0f, 0.0f);
+
+        public void ChamsEnable()
         {
             if (!this.InGame)
             {
@@ -33,73 +61,59 @@ namespace eft_dma_radar
             if (nightVisionComponent == 0 || fpsThermal == 0)
             {
                 Console.WriteLine("nvg or fps thermal component not found");
+                Memory.CameraManager.UpdateCamera();
                 return;
             }
 
-            var nvgMaterial = Memory.ReadPtrChain(nightVisionComponent, new uint[] { 0x90, 0x10, 0x8 });
-            var thermalMaterial = Memory.ReadPtrChain(fpsThermal, new uint[] { 0x90, 0x10, 0x8 });
+            if (_nvgMaterial == 0UL)
+            {
+                _nvgMaterial = Memory.ReadPtrChain(nightVisionComponent, new uint[] { 0x90, 0x10, 0x8 });
+            }
 
-            //var colorValuePMC = new Vector4(1.0f, 1.0f, 0.0f, 1.0f);
-            //Memory.WriteValue<Vector4>(nvgMaterial + 0xD8, colorValuePMC);
+            if (_thermalMaterial == 0UL)
+            {
+                _thermalMaterial = Memory.ReadPtrChain(fpsThermal, new uint[] { 0x90, 0x10, 0x8 });
+            }
 
-            //var colorValuePMC = new Vector4(0.0f, 0.0f, 1.0f, 1.0f);
-            //Memory.WriteValue<Vector4>(thermalMaterial + 0xD8, colorValuePMC);
+            if (_nvgMaterial == 0UL || _thermalMaterial == 0UL)
+            {
+                Console.WriteLine("nvg or thermal material not found");
+                return;
+            }
 
+            if (lastColor != _color)
+            {
+                lastColor = _color;
+                Memory.WriteValue(nightVisionComponent + 0xD8, lastColor);
+            }
 
             var players = this.AllPlayers
-                ?.Where(x => x.Value.Type is not PlayerType.LocalPlayer)
-                .Select(x => x.Value);
+                ?.Where(x => x.Value.IsAlive && x.Value.Type is not PlayerType.LocalPlayer && !Chams.PlayersWithChams.ContainsKey(x.Value.Base.ToString()))
+                .Select(x => x.Value)
+                .ToList();
 
-            if (!updateAllPlayers) // if we're not updating all players, only update the ones that don't have chams
-                players = players?.Where(x => !Chams.PlayersWithChams.ContainsKey(x.Base.ToString()));
-
-            if (players != null)
+            if (players is not null && players.Count > 0)
             {
                 foreach (var player in players)
                 {
                     try
                     {
                         string key = player.Base.ToString();
-                        var material = (player.IsPMC ? nvgMaterial : thermalMaterial);
 
-                        // only night vision can have rgba set
-                        if (material == nvgMaterial)
-                        {
-                            var color = Extensions.Vector4FromPlayerPaintColor(player);
-                            Memory.WriteValue(nightVisionComponent + 0xD8, color);
-                        }
+                        var materialTouse = player.IsHuman ? _nvgMaterial : _thermalMaterial;
 
-                        this.SetPlayerBodyChams(player, material);
-
-                        if (updateAllPlayers)
-                        {
-                            if (Chams.PlayersWithChams.ContainsKey(key))
-                            {
-                                Chams.PlayersWithChams[key] = player;
-                            }
-                            else
-                            {
-                                Chams.PlayersWithChams.Add(key, player);
-                            }
-                        }
-                        else
-                        {
-                            Chams.PlayersWithChams.TryAdd(key, player);
-                        }
+                        this.SetPlayerBodyChams(player, materialTouse);
+                        Chams.PlayersWithChams.TryAdd(key, player);
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"Chams - PlayerBodyChams -> {ex.Message}\nStackTrace:{ex.StackTrace}");
+                        Console.WriteLine($"ERROR -> ChamsEnable -> {ex.Message}\nStackTrace:{ex.StackTrace}");
                     }
                 }
             }
-            else
-            {
-                Console.WriteLine("[Chams] - No players found");
-            }
         }
 
-        private bool SetPlayerBodyChams(Player player, ulong material)
+        public bool SetPlayerBodyChams(Player player, ulong material)
         {
             var count = 1;
             var setAnyMaterial = false;
@@ -175,6 +189,9 @@ namespace eft_dma_radar
                     if (j == 1)
                         pLodEntry = Memory.ReadPtr(pLodEntry + 0x20);
 
+                    if (pLodEntry == 0)
+                        continue;
+
                     if (materialCount > 0 && materialCount < 5)
                     {
                         var scatterReadMap4 = new ScatterReadMap(materialCount);
@@ -192,10 +209,19 @@ namespace eft_dma_radar
                             if (!scatterReadMap4.Results[k][0].TryGetResult<ulong>(out var pMaterial))
                                 continue;
 
-                            Chams.SavePointer(materialDictionaryBase + (0x50 * (uint)k), pMaterial);
+                            try
+                            {
+                                if (pMaterial == 0 || material == 0)
+                                    continue;
 
-                            Memory.WriteValue(materialDictionaryBase + (0x50 * (uint)k), material);
-                            setAnyMaterial = true;
+                                //if (player.Type == PlayerType.AIBoss)
+                                    //continue;
+                                
+                                SavePointer(materialDictionaryBase + (0x50 * (uint)k), pMaterial, player);
+                                Memory.WriteValue(materialDictionaryBase + (0x50 * (uint)k), material);
+                                setAnyMaterial = true;
+                            } catch
+                            { continue; }
                         }
                     }
                 }
@@ -204,108 +230,53 @@ namespace eft_dma_radar
             return setAnyMaterial;
         }
 
-        private void PlayerGearChams(Player player, ulong material)
-        {
-            var slotViews = Memory.ReadPtr(player.PlayerBody + 0x58);
-            if (slotViews == 0)
-            {
-                return;
-            }
-            var slotViewsList = Memory.ReadPtr(slotViews + 0x18);
-            if (slotViewsList == 0)
-            {
-                return;
-            }
-            var slotViewsBase = Memory.ReadPtr(slotViewsList + 0x10);
-            var slotViewsListSize = Memory.ReadValue<int>(slotViewsList + 0x18);
-            if (slotViewsListSize > 0 && slotViewsListSize < 11)
-            {
-                for (int i = 0; i < slotViewsListSize; i++)
-                {
-                    var slotEntry = Memory.ReadPtr(slotViewsBase + 0x20 + (0x8 * (uint)i));
-                    if (slotEntry == 0)
-                    {
-                        continue;
-                    }
-                    try
-                    {
-                        var dressesArray = Memory.ReadPtr(slotEntry + 0x40);
-                        if (dressesArray == 0)
-                        {
-                            continue;
-                        }
-                        var dressesArraySize = Memory.ReadValue<int>(dressesArray + 0x18);
-                        for (int j = 0; j < dressesArraySize; j++)
-                        {
-                            var dressesEntry = Memory.ReadPtr(dressesArray + 0x20 + (0x8 * (uint)j));
-                            if (dressesEntry == 0)
-                            {
-                                continue;
-                            }
-                            var rendererArray = Memory.ReadPtr(dressesEntry + 0x28);
-                            if (rendererArray == 0)
-                            {
-                                continue;
-                            }
-                            var rendererArraySize = Memory.ReadValue<int>(rendererArray + 0x18);
-                            for (int k = 0; k < rendererArraySize; k++)
-                            {
-                                var rendererEntry = Memory.ReadPtr(rendererArray + 0x20 + (0x8 * (uint)k));
-                                if (rendererEntry == 0)
-                                {
-                                    continue;
-                                }
-                                var gMaterials = Memory.ReadPtr(rendererEntry + 0x10);
-                                var gMaterialCount = Memory.ReadValue<int>(gMaterials + 0x158);
-                                if (gMaterialCount > 0 && gMaterialCount < 10)
-                                {
-                                    var gMaterialDictionaryBase = Memory.ReadPtr(gMaterials + 0x148);
-                                    for (int l = 0; l < gMaterialCount; l++)
-                                    {
-                                        try
-                                        {
-                                            var gMaterial = Memory.ReadPtr(gMaterialDictionaryBase + (0x50 * (uint)l));
-                                            Chams.SavePointer(gMaterialDictionaryBase + (0x50 * (uint)l), gMaterial);
-                                            Memory.WriteValue(gMaterialDictionaryBase + (0x50 * (uint)l), material);
-                                            continue;
-                                        }
-                                        catch
-                                        {
-                                            continue;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    catch
-                    {
-                        continue;
-                    }
-                }
-            }
-        }
-
-        //this should be not be callable if material cache is empty
         public void ChamsDisable()
         {
-            RestorePointers(); // works for 0 pointers but not for other materials
+            RestorePointers();
         }
 
-        private static List<PointerBackup> pointerBackups = new List<PointerBackup>();
+        private Dictionary<string, List<PointerBackup>> pointerBackups = new Dictionary<string, List<PointerBackup>>();
 
-        private static void SavePointer(ulong address, ulong originalValue)
+        private void SavePointer(ulong address, ulong originalValue, Player player)
         {
-            pointerBackups.Add(new PointerBackup { Address = address, OriginalValue = originalValue });
-        }
+            var key = player.Base.ToString();
 
-        public static void RestorePointers()
-        {
-            foreach (var backup in pointerBackups)
+            if (!pointerBackups.ContainsKey(key))
             {
-                Memory.WriteValue<ulong>(backup.Address, backup.OriginalValue);
+                pointerBackups[key] = new List<PointerBackup>();
             }
+
+            pointerBackups[key].Add(new PointerBackup { Address = address, OriginalValue = originalValue });
+        }
+
+        public void RestorePointers()
+        {
+            foreach (var backups in pointerBackups.Values)
+            {
+                foreach (var backup in backups)
+                {
+                    Memory.WriteValue<ulong>(backup.Address, backup.OriginalValue);
+                }
+            }
+
             pointerBackups.Clear();
+            PlayersWithChams.Clear();
+        }
+
+        public async Task RestorePointersForPlayerAsync(Player player)
+        {
+            var key = player.Base.ToString();
+
+            if (pointerBackups.ContainsKey(key))
+            {
+                foreach (var backup in pointerBackups[key])
+                {
+                    Memory.WriteValue<ulong>(backup.Address, backup.OriginalValue);
+                }
+
+                pointerBackups.Remove(key);
+                PlayersWithChams.Remove(key);
+            }
         }
     }
 

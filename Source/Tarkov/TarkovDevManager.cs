@@ -450,32 +450,8 @@ namespace eft_dma_radar
 
             return bestPrice;
         }
-
-        public static string GetMapName(string name)
-        {
-            switch(name)
-            {
-                case "factory4_day":
-                case "factory4_night":
-                    return "Factory";
-                case "bigmap":
-                    return "Customs";
-                case "RezervBase":
-                    return "Reserve";
-                case "TarkovStreets":
-                    return "Streets of Tarkov";
-                case "laboratory":
-                    return "The Lab";
-                case "Sandbox":
-                case "Sandbox_high":
-                    return "Ground Zero";
-                default:
-                    return name;
-            }
-        }
         #endregion
     }
-
     #region Classes
     /// <summary>
     /// New Class to hold Tarkov Items Data.

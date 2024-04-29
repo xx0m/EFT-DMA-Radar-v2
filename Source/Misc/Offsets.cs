@@ -5,6 +5,11 @@
         public const uint Base = 0x10; // to UnityListBase
         public const uint Count = 0x18; // int32
     }
+    public struct UnityDictionary
+    {
+        public const uint Base = 0x18; // to Base
+        public const uint Count = 0x40; // int32
+    }
     public struct UnityListBase
     {
         public const uint Start = 0x20; // start of list +(i * 0x8)

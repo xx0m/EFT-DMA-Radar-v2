@@ -6,6 +6,33 @@ namespace eft_dma_radar
     public class Config
     {
         [JsonIgnore]
+        private const string SettingsDirectory = "Configuration\\";
+
+        [JsonIgnore]
+        public LootFilterManager LootFilterManager
+        {
+            get => Program.LootFilterManager;
+        }
+
+        [JsonIgnore]
+        public List<LootFilterManager.Filter> Filters
+        {
+            get => LootFilterManager.Filters;
+        }
+
+        [JsonIgnore]
+        public Watchlist Watchlist
+        {
+            get => Program.Watchlist;
+        }
+
+        [JsonIgnore]
+        public List<Watchlist.Profile> Profiles
+        {
+            get => Watchlist.Profiles;
+        }
+
+        [JsonIgnore]
         private static readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions()
         {
             WriteIndented = true,
@@ -251,12 +278,6 @@ namespace eft_dma_radar
         public bool AutoLootRefreshEnabled { get; set; }
 
         /// <summary>
-        /// Allows storage of multiple loot filters.
-        /// </summary>
-        [JsonPropertyName("lootFilters")]
-        public List<LootFilter> Filters { get; set; }
-
-        /// <summary>
         /// Regular Thermal Vision Settings
         /// </summary>
         [JsonPropertyName("mainThermalSetting")]
@@ -272,7 +293,6 @@ namespace eft_dma_radar
         /// Allows storage of colors for ai scav, pscav etc.
         /// </summary>
         [JsonPropertyName("paintColors")]
-        //public List<PaintColor> PaintColors { get; set; }
         public Dictionary<string, PaintColor.Colors> PaintColors { get; set; }
 
         [JsonPropertyName("autoRefreshSettings")]
@@ -338,7 +358,6 @@ namespace eft_dma_radar
             MinLootValue = 90000;
             MinImportantLootValue = 300000;
             PrimaryTeammateId = null;
-            Filters = new List<LootFilter>();
 
             PaintColors = new Dictionary<string, PaintColor.Colors>
             {
@@ -363,7 +382,8 @@ namespace eft_dma_radar
                 ["ExfilClosedText"] = new PaintColor.Colors { A = 255, R = 255, G = 255, B = 255 },
                 ["ExfilClosedIcon"] = new PaintColor.Colors { A = 255, R = 255, G = 0, B = 0 },
                 ["TextOutline"] = new PaintColor.Colors { A = 255, R = 0, G = 0, B = 0 },
-                ["DeathMarker"] = new PaintColor.Colors { A = 255, R = 0, G = 0, B = 0 }
+                ["DeathMarker"] = new PaintColor.Colors { A = 255, R = 0, G = 0, B = 0 },
+                ["Chams"] = new PaintColor.Colors { A = 255, R = 255, G = 0, B = 0 }
             };
 
             NightVisionEnabled = false;
@@ -397,13 +417,13 @@ namespace eft_dma_radar
             {
                 ["Customs"] = 30,
                 ["Factory"] = 30,
-                ["GroundZero"] = 30,
+                ["Ground Zero"] = 30,
                 ["Interchange"] = 30,
                 ["Lighthouse"] = 30,
                 ["Reserve"] = 30,
                 ["Shoreline"] = 30,
                 ["Streets of Tarkov"] = 30,
-                ["Labs"] = 30,
+                ["The Lab"] = 30,
                 ["Woods"] = 30
             };
 
@@ -429,10 +449,16 @@ namespace eft_dma_radar
         {
             lock (_lock)
             {
+                if (!Directory.Exists(SettingsDirectory))
+                    Directory.CreateDirectory(SettingsDirectory);
+
                 try
                 {
-                    if (!File.Exists("Config.json")) throw new FileNotFoundException("Config.json does not exist!");
-                    var json = File.ReadAllText("Config.json");
+                    if (!File.Exists($"{SettingsDirectory}Settings.json"))
+                        throw new FileNotFoundException("Settings.json does not exist!");
+
+                    var json = File.ReadAllText($"{SettingsDirectory}Settings.json");
+
                     config = JsonSerializer.Deserialize<Config>(json);
                     return true;
                 }
@@ -451,9 +477,16 @@ namespace eft_dma_radar
         {
             lock (_lock)
             {
+                if (!Directory.Exists(SettingsDirectory))
+                    Directory.CreateDirectory(SettingsDirectory);
+
                 var json = JsonSerializer.Serialize<Config>(config, _jsonOptions);
-                File.WriteAllText("Config.json", json);
+                File.WriteAllText($"{SettingsDirectory}Settings.json", json);
             }
         }
+
+        #region Loot Filter Classes
+
+        #endregion
     }
 }

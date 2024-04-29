@@ -1,5 +1,6 @@
 ﻿using SkiaSharp;
 using System.Numerics;
+using static eft_dma_radar.Config;
 
 namespace eft_dma_radar
 {
@@ -112,25 +113,8 @@ namespace eft_dma_radar
         /// <summary>
         /// Ghetto helper method to get the Color from a PaintColor object by Key & return a new Vector4 object based on it
         /// </summary>
-        public static Vector4 Vector4FromPlayerPaintColor(Player player)
+        public static Vector4 Vector4FromPaintColor(string key)
         {
-            var key = player.Type switch
-            {
-                PlayerType.LocalPlayer => "LocalPlayer",
-                PlayerType.Teammate => "Teammate",
-                PlayerType.BEAR => "BEAR",
-                PlayerType.USEC => "USEC",
-                PlayerType.SpecialPlayer => "Special",
-                PlayerType.AIScav => "AIScav",
-                PlayerType.AIBoss => "Boss",
-                PlayerType.AIOfflineScav => "AIScav",
-                PlayerType.AIRaider or PlayerType.AIBossGuard or PlayerType.AIRogue or PlayerType.AIBossFollower => "AIRaider",
-                PlayerType.PScav => "PScav",
-
-                // default to ai scav
-                _ => "AIScav",
-            };
-
             var col = Program.Config.PaintColors[key];
             var r = (float)col.R / 255f;
             var g = (float)col.G / 255f;
@@ -144,7 +128,7 @@ namespace eft_dma_radar
         /// </summary>
         public static SKPaint GetEntityPaint(LootableObject item)
         {
-            bool isFiltered = !item.Color.Equals(new LootFilter.Colors { R = 0, G = 0, B = 0, A = 0 });
+            bool isFiltered = !item.Color.Equals(new LootFilterManager.Filter.Colors { R = 0, G = 0, B = 0, A = 0 });
             SKPaint paintToUse = SKPaints.LootPaint.Clone();
 
             if (isFiltered)
@@ -169,7 +153,7 @@ namespace eft_dma_radar
         /// </summary>
         public static SKPaint GetDeathMarkerPaint(LootCorpse corpse)
         {
-            bool isFiltered = !corpse.Color.Equals(new LootFilter.Colors { R = 0, G = 0, B = 0, A = 0 });
+            bool isFiltered = !corpse.Color.Equals(new LootFilterManager.Filter.Colors { R = 0, G = 0, B = 0, A = 0 });
             SKPaint paintToUse = SKPaints.DeathMarker.Clone();
 
             if (isFiltered)
@@ -185,6 +169,15 @@ namespace eft_dma_radar
             {
                 paintToUse.Color = Extensions.SKColorFromPaintColor("DeathMarker");
             }
+
+            return paintToUse;
+        }
+
+        public static SKPaint GetDeathMarkerPaint()
+        {
+            SKPaint paintToUse = SKPaints.DeathMarker.Clone();
+
+            paintToUse.Color = Extensions.SKColorFromPaintColor("DeathMarker");
 
             return paintToUse;
         }
@@ -257,7 +250,7 @@ namespace eft_dma_radar
         /// </summary>
         public static SKPaint GetTextPaint(LootableObject item)
         {
-            bool isFiltered = !item.Color.Equals(new LootFilter.Colors { R = 0, G = 0, B = 0, A = 0 });
+            bool isFiltered = !item.Color.Equals(new LootFilterManager.Filter.Colors { R = 0, G = 0, B = 0, A = 0 });
             SKPaint paintToUse = SKPaints.LootText.Clone();
 
             if (isFiltered)
@@ -279,7 +272,7 @@ namespace eft_dma_radar
 
         public static SKPaint GetTextPaint(GearItem item)
         {
-            bool isFiltered = !item.Color.Equals(new LootFilter.Colors { R = 0, G = 0, B = 0, A = 0 });
+            bool isFiltered = !item.Color.Equals(new LootFilterManager.Filter.Colors { R = 0, G = 0, B = 0, A = 0 });
             SKPaint paintToUse = SKPaints.LootText.Clone();
 
             if (isFiltered)

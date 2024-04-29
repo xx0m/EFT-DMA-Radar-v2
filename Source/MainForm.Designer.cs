@@ -90,7 +90,15 @@ namespace eft_dma_radar
             numTimeOfDay = new NumericUpDown();
             btnLockTimeOfDay = new CheckBox();
             numThreadSpinDelay = new NumericUpDown();
+            btnCancelEditWatchlistProfile = new Button();
+            btnEditSaveWatchlistProfile = new Button();
+            cboWatchlistProfile = new ComboBox();
+            btnRemoveCancelWatchlist = new Button();
+            btnEditSaveWatchlistEntry = new Button();
+            btnAddWatchlistEntry = new Button();
+            btnRefreshPlayerlist = new Button();
             tabLootFilter = new TabPage();
+            lblItemToSearch = new Label();
             lblActiveFilter = new Label();
             cboLootItems = new ComboBox();
             lstViewLootFilter = new ListView();
@@ -103,6 +111,8 @@ namespace eft_dma_radar
             tabSettings = new TabPage();
             grpConfig = new GroupBox();
             grpColors = new GroupBox();
+            picChamsColor = new PictureBox();
+            lblPlayerChams = new Label();
             picDeathMarkerColor = new PictureBox();
             lblDeathMarkerColor = new Label();
             picTextOutlineColor = new PictureBox();
@@ -199,6 +209,32 @@ namespace eft_dma_radar
             txtMapSetupX = new TextBox();
             lblMapCoords = new Label();
             tabControl = new TabControl();
+            tabWatchlist = new TabPage();
+            grpWatchlistPlayerlist = new GroupBox();
+            lstWatchlistPlayerList = new ListBox();
+            btnAddPlayerToWatchlist = new Button();
+            grpWatchlistGeneralSettings = new GroupBox();
+            lblSelectedWatchlistProfile = new Label();
+            grpWatchlistPlayerManagement = new GroupBox();
+            lblWatchlistStreamerName = new Label();
+            txtWatchlistPlatformUsername = new TextBox();
+            rdbYoutube = new RadioButton();
+            rdbTwitch = new RadioButton();
+            chkWatchlistIsStreamer = new CheckBox();
+            lblWatchlistTag = new Label();
+            txtWatchlistTag = new TextBox();
+            lblWatchlistAccID = new Label();
+            txtWatchlistAccountID = new TextBox();
+            grpWatchlistProfileManagement = new GroupBox();
+            lstWatchlistProfiles = new ListBox();
+            btnAddWatchlistProfile = new Button();
+            btnRemoveWatchlistProfile = new Button();
+            label4 = new Label();
+            txtWatchlistProfileName = new TextBox();
+            lstViewWatchlistEntries = new ListView();
+            colWatchlistAccID = new ColumnHeader();
+            colWatchlistTag = new ColumnHeader();
+            colWatchlistPlatformName = new ColumnHeader();
             ((System.ComponentModel.ISupportInitialize)trkJumpPower).BeginInit();
             ((System.ComponentModel.ISupportInitialize)trkThrowPower).BeginInit();
             ((System.ComponentModel.ISupportInitialize)trkMagDrills).BeginInit();
@@ -217,6 +253,7 @@ namespace eft_dma_radar
             tabSettings.SuspendLayout();
             grpConfig.SuspendLayout();
             grpColors.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)picChamsColor).BeginInit();
             ((System.ComponentModel.ISupportInitialize)picDeathMarkerColor).BeginInit();
             ((System.ComponentModel.ISupportInitialize)picTextOutlineColor).BeginInit();
             ((System.ComponentModel.ISupportInitialize)picExfilClosedIconColor).BeginInit();
@@ -255,6 +292,11 @@ namespace eft_dma_radar
             tabRadar.SuspendLayout();
             grpMapSetup.SuspendLayout();
             tabControl.SuspendLayout();
+            tabWatchlist.SuspendLayout();
+            grpWatchlistPlayerlist.SuspendLayout();
+            grpWatchlistGeneralSettings.SuspendLayout();
+            grpWatchlistPlayerManagement.SuspendLayout();
+            grpWatchlistProfileManagement.SuspendLayout();
             SuspendLayout();
             // 
             // colDialog
@@ -263,16 +305,16 @@ namespace eft_dma_radar
             // 
             // txtItemFilter
             // 
-            txtItemFilter.Location = new Point(374, 6);
+            txtItemFilter.Location = new Point(466, 6);
             txtItemFilter.Name = "txtItemFilter";
-            txtItemFilter.Size = new Size(228, 23);
+            txtItemFilter.Size = new Size(226, 23);
             txtItemFilter.TabIndex = 2;
             toolTip.SetToolTip(txtItemFilter, "The item to search for");
             txtItemFilter.KeyDown += txtItemFilter_KeyDown;
             // 
             // btnLootFilterAddItem
             // 
-            btnLootFilterAddItem.Location = new Point(608, 6);
+            btnLootFilterAddItem.Location = new Point(698, 6);
             btnLootFilterAddItem.Name = "btnLootFilterAddItem";
             btnLootFilterAddItem.Size = new Size(75, 23);
             btnLootFilterAddItem.TabIndex = 3;
@@ -283,7 +325,7 @@ namespace eft_dma_radar
             // 
             // btnLootFilterRemoveItem
             // 
-            btnLootFilterRemoveItem.Location = new Point(689, 6);
+            btnLootFilterRemoveItem.Location = new Point(779, 6);
             btnLootFilterRemoveItem.Name = "btnLootFilterRemoveItem";
             btnLootFilterRemoveItem.Size = new Size(75, 23);
             btnLootFilterRemoveItem.TabIndex = 4;
@@ -296,17 +338,17 @@ namespace eft_dma_radar
             // 
             cboFilters.DropDownStyle = ComboBoxStyle.DropDownList;
             cboFilters.FormattingEnabled = true;
-            cboFilters.Location = new Point(830, 6);
+            cboFilters.Location = new Point(920, 6);
             cboFilters.Name = "cboFilters";
             cboFilters.Size = new Size(175, 23);
             cboFilters.TabIndex = 5;
             toolTip.SetToolTip(cboFilters, "The loot filter to view/modify");
-            cboFilters.SelectedValueChanged += cboFilters_SelectedValueChanged;
+            cboFilters.SelectedIndexChanged += cboFilters_SelectedIndexChanged;
             // 
             // chkLootFilterActive
             // 
             chkLootFilterActive.AutoSize = true;
-            chkLootFilterActive.Location = new Point(1011, 8);
+            chkLootFilterActive.Location = new Point(1101, 8);
             chkLootFilterActive.Name = "chkLootFilterActive";
             chkLootFilterActive.Size = new Size(59, 19);
             chkLootFilterActive.TabIndex = 7;
@@ -500,7 +542,7 @@ namespace eft_dma_radar
             chkNoRecoilSway.Size = new Size(109, 19);
             chkNoRecoilSway.TabIndex = 25;
             chkNoRecoilSway.Text = "No Recoil/Sway";
-            toolTip.SetToolTip(chkNoRecoilSway, "Removes weapon recoil");
+            toolTip.SetToolTip(chkNoRecoilSway, "Removes weapon recoil & sway");
             chkNoRecoilSway.UseVisualStyleBackColor = true;
             chkNoRecoilSway.CheckedChanged += chkNoRecoilSway_CheckedChanged;
             // 
@@ -550,10 +592,10 @@ namespace eft_dma_radar
             chkChams.AutoSize = true;
             chkChams.Location = new Point(6, 22);
             chkChams.Name = "chkChams";
-            chkChams.Size = new Size(142, 19);
+            chkChams.Size = new Size(95, 19);
             chkChams.TabIndex = 22;
-            chkChams.Text = "Chams (Offline - WIP)";
-            toolTip.SetToolTip(chkChams, "Enables chams on players [dont use lol]");
+            chkChams.Text = "Chams (WIP)";
+            toolTip.SetToolTip(chkChams, "Enables chams on players");
             chkChams.UseVisualStyleBackColor = true;
             chkChams.CheckedChanged += chkChams_CheckedChanged;
             // 
@@ -930,7 +972,7 @@ namespace eft_dma_radar
             // 
             // numTimeOfDay
             // 
-            numTimeOfDay.Location = new Point(245, 20);
+            numTimeOfDay.Location = new Point(204, 18);
             numTimeOfDay.Maximum = new decimal(new int[] { 24, 0, 0, 0 });
             numTimeOfDay.Name = "numTimeOfDay";
             numTimeOfDay.Size = new Size(36, 23);
@@ -942,7 +984,7 @@ namespace eft_dma_radar
             // btnLockTimeOfDay
             // 
             btnLockTimeOfDay.AutoSize = true;
-            btnLockTimeOfDay.Location = new Point(154, 22);
+            btnLockTimeOfDay.Location = new Point(110, 20);
             btnLockTimeOfDay.Name = "btnLockTimeOfDay";
             btnLockTimeOfDay.Size = new Size(88, 19);
             btnLockTimeOfDay.TabIndex = 41;
@@ -963,8 +1005,88 @@ namespace eft_dma_radar
             numThreadSpinDelay.Value = new decimal(new int[] { 100, 0, 0, 0 });
             numThreadSpinDelay.ValueChanged += numThreadSpinDelay_ValueChanged;
             // 
+            // btnCancelEditWatchlistProfile
+            // 
+            btnCancelEditWatchlistProfile.Location = new Point(331, 51);
+            btnCancelEditWatchlistProfile.Name = "btnCancelEditWatchlistProfile";
+            btnCancelEditWatchlistProfile.Size = new Size(71, 23);
+            btnCancelEditWatchlistProfile.TabIndex = 13;
+            btnCancelEditWatchlistProfile.Text = "Cancel";
+            toolTip.SetToolTip(btnCancelEditWatchlistProfile, "Cancels changes to the current watchlist filter");
+            btnCancelEditWatchlistProfile.UseVisualStyleBackColor = true;
+            btnCancelEditWatchlistProfile.Visible = false;
+            btnCancelEditWatchlistProfile.Click += btnCancelEditWatchlistProfile_Click;
+            // 
+            // btnEditSaveWatchlistProfile
+            // 
+            btnEditSaveWatchlistProfile.Location = new Point(269, 51);
+            btnEditSaveWatchlistProfile.Name = "btnEditSaveWatchlistProfile";
+            btnEditSaveWatchlistProfile.Size = new Size(56, 23);
+            btnEditSaveWatchlistProfile.TabIndex = 12;
+            btnEditSaveWatchlistProfile.Text = "Edit";
+            toolTip.SetToolTip(btnEditSaveWatchlistProfile, "Edits / Saves the current watchlist profile");
+            btnEditSaveWatchlistProfile.UseVisualStyleBackColor = true;
+            btnEditSaveWatchlistProfile.Click += btnEditSaveWatchlistProfile_Click;
+            // 
+            // cboWatchlistProfile
+            // 
+            cboWatchlistProfile.DropDownStyle = ComboBoxStyle.DropDownList;
+            cboWatchlistProfile.FormattingEnabled = true;
+            cboWatchlistProfile.Location = new Point(107, 22);
+            cboWatchlistProfile.Name = "cboWatchlistProfile";
+            cboWatchlistProfile.Size = new Size(127, 23);
+            cboWatchlistProfile.TabIndex = 12;
+            toolTip.SetToolTip(cboWatchlistProfile, "The watchlist profile to view/modify");
+            cboWatchlistProfile.SelectedIndexChanged += cboWatchlistProfile_SelectedIndexChanged;
+            // 
+            // btnRemoveCancelWatchlist
+            // 
+            btnRemoveCancelWatchlist.Location = new Point(224, 129);
+            btnRemoveCancelWatchlist.Name = "btnRemoveCancelWatchlist";
+            btnRemoveCancelWatchlist.Size = new Size(75, 23);
+            btnRemoveCancelWatchlist.TabIndex = 15;
+            btnRemoveCancelWatchlist.Text = "Remove";
+            toolTip.SetToolTip(btnRemoveCancelWatchlist, "Removes the selected entry from the active watchlist profile");
+            btnRemoveCancelWatchlist.UseVisualStyleBackColor = true;
+            btnRemoveCancelWatchlist.Visible = false;
+            btnRemoveCancelWatchlist.Click += btnRemoveCancelWatchlist_Click;
+            // 
+            // btnEditSaveWatchlistEntry
+            // 
+            btnEditSaveWatchlistEntry.Location = new Point(124, 129);
+            btnEditSaveWatchlistEntry.Name = "btnEditSaveWatchlistEntry";
+            btnEditSaveWatchlistEntry.Size = new Size(75, 23);
+            btnEditSaveWatchlistEntry.TabIndex = 14;
+            btnEditSaveWatchlistEntry.Text = "Edit";
+            toolTip.SetToolTip(btnEditSaveWatchlistEntry, "Edits/saves the current profile for the active watchlist profile");
+            btnEditSaveWatchlistEntry.UseVisualStyleBackColor = true;
+            btnEditSaveWatchlistEntry.Click += btnEditSaveWatchlistEntry_Click;
+            // 
+            // btnAddWatchlistEntry
+            // 
+            btnAddWatchlistEntry.Location = new Point(240, 21);
+            btnAddWatchlistEntry.Name = "btnAddWatchlistEntry";
+            btnAddWatchlistEntry.Size = new Size(75, 23);
+            btnAddWatchlistEntry.TabIndex = 15;
+            btnAddWatchlistEntry.Text = "Add Entry";
+            toolTip.SetToolTip(btnAddWatchlistEntry, "Adds a new entry to the active watchlist profile");
+            btnAddWatchlistEntry.UseVisualStyleBackColor = true;
+            btnAddWatchlistEntry.Click += btnAddWatchlistEntry_Click;
+            // 
+            // btnRefreshPlayerlist
+            // 
+            btnRefreshPlayerlist.Location = new Point(6, 484);
+            btnRefreshPlayerlist.Name = "btnRefreshPlayerlist";
+            btnRefreshPlayerlist.Size = new Size(76, 23);
+            btnRefreshPlayerlist.TabIndex = 15;
+            btnRefreshPlayerlist.Text = "Refresh List";
+            toolTip.SetToolTip(btnRefreshPlayerlist, "Fills the list with players to add onto the watchlist");
+            btnRefreshPlayerlist.UseVisualStyleBackColor = true;
+            btnRefreshPlayerlist.Click += btnRefreshPlayerlist_Click;
+            // 
             // tabLootFilter
             // 
+            tabLootFilter.Controls.Add(lblItemToSearch);
             tabLootFilter.Controls.Add(chkLootFilterActive);
             tabLootFilter.Controls.Add(lblActiveFilter);
             tabLootFilter.Controls.Add(cboFilters);
@@ -981,10 +1103,19 @@ namespace eft_dma_radar
             tabLootFilter.Text = "Loot Filter";
             tabLootFilter.UseVisualStyleBackColor = true;
             // 
+            // lblItemToSearch
+            // 
+            lblItemToSearch.AutoSize = true;
+            lblItemToSearch.Location = new Point(374, 10);
+            lblItemToSearch.Name = "lblItemToSearch";
+            lblItemToSearch.Size = new Size(86, 15);
+            lblItemToSearch.TabIndex = 18;
+            lblItemToSearch.Text = "Item to Search:";
+            // 
             // lblActiveFilter
             // 
             lblActiveFilter.AutoSize = true;
-            lblActiveFilter.Location = new Point(780, 10);
+            lblActiveFilter.Location = new Point(870, 10);
             lblActiveFilter.Name = "lblActiveFilter";
             lblActiveFilter.Size = new Size(44, 15);
             lblActiveFilter.TabIndex = 6;
@@ -998,6 +1129,7 @@ namespace eft_dma_radar
             cboLootItems.Name = "cboLootItems";
             cboLootItems.Size = new Size(360, 23);
             cboLootItems.TabIndex = 1;
+            toolTip.SetToolTip(cboLootItems, "The item to add to the loot filter");
             // 
             // lstViewLootFilter
             // 
@@ -1087,6 +1219,8 @@ namespace eft_dma_radar
             // 
             // grpColors
             // 
+            grpColors.Controls.Add(picChamsColor);
+            grpColors.Controls.Add(lblPlayerChams);
             grpColors.Controls.Add(picDeathMarkerColor);
             grpColors.Controls.Add(lblDeathMarkerColor);
             grpColors.Controls.Add(picTextOutlineColor);
@@ -1135,6 +1269,25 @@ namespace eft_dma_radar
             grpColors.TabIndex = 28;
             grpColors.TabStop = false;
             grpColors.Text = "Colors";
+            // 
+            // picChamsColor
+            // 
+            picChamsColor.BackColor = Color.Transparent;
+            picChamsColor.Location = new Point(108, 516);
+            picChamsColor.Name = "picChamsColor";
+            picChamsColor.Size = new Size(47, 18);
+            picChamsColor.TabIndex = 57;
+            picChamsColor.TabStop = false;
+            picChamsColor.Click += picChamsColor_Click;
+            // 
+            // lblPlayerChams
+            // 
+            lblPlayerChams.AutoSize = true;
+            lblPlayerChams.Location = new Point(55, 516);
+            lblPlayerChams.Name = "lblPlayerChams";
+            lblPlayerChams.Size = new Size(47, 15);
+            lblPlayerChams.TabIndex = 56;
+            lblPlayerChams.Text = "Chams:";
             // 
             // picDeathMarkerColor
             // 
@@ -1574,6 +1727,7 @@ namespace eft_dma_radar
             btnAddNewFilter.Size = new Size(22, 23);
             btnAddNewFilter.TabIndex = 9;
             btnAddNewFilter.Text = "✚";
+            toolTip.SetToolTip(btnAddNewFilter, "Creates a new loot filter profile");
             btnAddNewFilter.UseVisualStyleBackColor = true;
             btnAddNewFilter.Click += btnAddNewFilter_Click;
             // 
@@ -1584,6 +1738,7 @@ namespace eft_dma_radar
             btnRemoveFilter.Size = new Size(22, 23);
             btnRemoveFilter.TabIndex = 8;
             btnRemoveFilter.Text = "✖";
+            toolTip.SetToolTip(btnRemoveFilter, "Removes the selected loot filter profile");
             btnRemoveFilter.UseVisualStyleBackColor = true;
             btnRemoveFilter.Click += btnRemoveFilter_Click;
             // 
@@ -1632,6 +1787,7 @@ namespace eft_dma_radar
             txtLootFilterEditName.Name = "txtLootFilterEditName";
             txtLootFilterEditName.Size = new Size(133, 23);
             txtLootFilterEditName.TabIndex = 1;
+            toolTip.SetToolTip(txtLootFilterEditName, "The name of the loot filter profile");
             // 
             // picLootFilterEditColor
             // 
@@ -1681,6 +1837,7 @@ namespace eft_dma_radar
             cboRefreshMap.Name = "cboRefreshMap";
             cboRefreshMap.Size = new Size(121, 23);
             cboRefreshMap.TabIndex = 37;
+            toolTip.SetToolTip(cboRefreshMap, "The map to adjust the auto refresh delay on");
             cboRefreshMap.SelectedIndexChanged += cboRefreshMap_SelectedIndexChanged;
             // 
             // grpLootValues
@@ -1978,6 +2135,7 @@ namespace eft_dma_radar
             chkSearchSpeed.TabIndex = 42;
             chkSearchSpeed.Text = "Fast Search";
             chkSearchSpeed.UseVisualStyleBackColor = true;
+            chkSearchSpeed.Visible = false;
             chkSearchSpeed.CheckedChanged += chkSearchSpeed_CheckedChanged;
             // 
             // grpGearFeatures
@@ -2140,6 +2298,7 @@ namespace eft_dma_radar
             tabControl.Controls.Add(tabRadar);
             tabControl.Controls.Add(tabSettings);
             tabControl.Controls.Add(tabPlayerLoadouts);
+            tabControl.Controls.Add(tabWatchlist);
             tabControl.Controls.Add(tabLootFilter);
             tabControl.Dock = DockStyle.Fill;
             tabControl.Location = new Point(0, 0);
@@ -2147,6 +2306,286 @@ namespace eft_dma_radar
             tabControl.SelectedIndex = 0;
             tabControl.Size = new Size(1176, 770);
             tabControl.TabIndex = 8;
+            // 
+            // tabWatchlist
+            // 
+            tabWatchlist.Controls.Add(grpWatchlistPlayerlist);
+            tabWatchlist.Controls.Add(grpWatchlistGeneralSettings);
+            tabWatchlist.Controls.Add(grpWatchlistPlayerManagement);
+            tabWatchlist.Controls.Add(grpWatchlistProfileManagement);
+            tabWatchlist.Controls.Add(lstViewWatchlistEntries);
+            tabWatchlist.Location = new Point(4, 24);
+            tabWatchlist.Name = "tabWatchlist";
+            tabWatchlist.Padding = new Padding(3);
+            tabWatchlist.Size = new Size(1168, 742);
+            tabWatchlist.TabIndex = 5;
+            tabWatchlist.Text = "Watchlist";
+            tabWatchlist.UseVisualStyleBackColor = true;
+            // 
+            // grpWatchlistPlayerlist
+            // 
+            grpWatchlistPlayerlist.Controls.Add(lstWatchlistPlayerList);
+            grpWatchlistPlayerlist.Controls.Add(btnRefreshPlayerlist);
+            grpWatchlistPlayerlist.Controls.Add(btnAddPlayerToWatchlist);
+            grpWatchlistPlayerlist.Location = new Point(948, 6);
+            grpWatchlistPlayerlist.Name = "grpWatchlistPlayerlist";
+            grpWatchlistPlayerlist.Size = new Size(214, 513);
+            grpWatchlistPlayerlist.TabIndex = 31;
+            grpWatchlistPlayerlist.TabStop = false;
+            grpWatchlistPlayerlist.Text = "Match List";
+            // 
+            // lstWatchlistPlayerList
+            // 
+            lstWatchlistPlayerList.DisplayMember = "Name";
+            lstWatchlistPlayerList.FormattingEnabled = true;
+            lstWatchlistPlayerList.ItemHeight = 15;
+            lstWatchlistPlayerList.Location = new Point(6, 24);
+            lstWatchlistPlayerList.Name = "lstWatchlistPlayerList";
+            lstWatchlistPlayerList.Size = new Size(202, 454);
+            lstWatchlistPlayerList.TabIndex = 15;
+            // 
+            // btnAddPlayerToWatchlist
+            // 
+            btnAddPlayerToWatchlist.Location = new Point(88, 484);
+            btnAddPlayerToWatchlist.Name = "btnAddPlayerToWatchlist";
+            btnAddPlayerToWatchlist.Size = new Size(120, 23);
+            btnAddPlayerToWatchlist.TabIndex = 32;
+            btnAddPlayerToWatchlist.Text = "Add to Watchlist";
+            toolTip.SetToolTip(btnAddPlayerToWatchlist, "Adds the selected player to the watchlist with a default tag");
+            btnAddPlayerToWatchlist.UseVisualStyleBackColor = true;
+            btnAddPlayerToWatchlist.Click += btnAddPlayerToWatchlist_Click;
+            // 
+            // grpWatchlistGeneralSettings
+            // 
+            grpWatchlistGeneralSettings.Controls.Add(btnAddWatchlistEntry);
+            grpWatchlistGeneralSettings.Controls.Add(lblSelectedWatchlistProfile);
+            grpWatchlistGeneralSettings.Controls.Add(cboWatchlistProfile);
+            grpWatchlistGeneralSettings.Location = new Point(534, 6);
+            grpWatchlistGeneralSettings.Name = "grpWatchlistGeneralSettings";
+            grpWatchlistGeneralSettings.Size = new Size(408, 56);
+            grpWatchlistGeneralSettings.TabIndex = 30;
+            grpWatchlistGeneralSettings.TabStop = false;
+            grpWatchlistGeneralSettings.Text = "General Settings";
+            // 
+            // lblSelectedWatchlistProfile
+            // 
+            lblSelectedWatchlistProfile.AutoSize = true;
+            lblSelectedWatchlistProfile.Location = new Point(10, 25);
+            lblSelectedWatchlistProfile.Name = "lblSelectedWatchlistProfile";
+            lblSelectedWatchlistProfile.Size = new Size(91, 15);
+            lblSelectedWatchlistProfile.TabIndex = 13;
+            lblSelectedWatchlistProfile.Text = "Selected Profile:";
+            // 
+            // grpWatchlistPlayerManagement
+            // 
+            grpWatchlistPlayerManagement.Controls.Add(lblWatchlistStreamerName);
+            grpWatchlistPlayerManagement.Controls.Add(txtWatchlistPlatformUsername);
+            grpWatchlistPlayerManagement.Controls.Add(rdbYoutube);
+            grpWatchlistPlayerManagement.Controls.Add(rdbTwitch);
+            grpWatchlistPlayerManagement.Controls.Add(chkWatchlistIsStreamer);
+            grpWatchlistPlayerManagement.Controls.Add(btnRemoveCancelWatchlist);
+            grpWatchlistPlayerManagement.Controls.Add(lblWatchlistTag);
+            grpWatchlistPlayerManagement.Controls.Add(btnEditSaveWatchlistEntry);
+            grpWatchlistPlayerManagement.Controls.Add(txtWatchlistTag);
+            grpWatchlistPlayerManagement.Controls.Add(lblWatchlistAccID);
+            grpWatchlistPlayerManagement.Controls.Add(txtWatchlistAccountID);
+            grpWatchlistPlayerManagement.Location = new Point(534, 68);
+            grpWatchlistPlayerManagement.Name = "grpWatchlistPlayerManagement";
+            grpWatchlistPlayerManagement.Size = new Size(408, 158);
+            grpWatchlistPlayerManagement.TabIndex = 29;
+            grpWatchlistPlayerManagement.TabStop = false;
+            grpWatchlistPlayerManagement.Text = "Player Management";
+            // 
+            // lblWatchlistStreamerName
+            // 
+            lblWatchlistStreamerName.AutoSize = true;
+            lblWatchlistStreamerName.Location = new Point(6, 103);
+            lblWatchlistStreamerName.Name = "lblWatchlistStreamerName";
+            lblWatchlistStreamerName.Size = new Size(112, 15);
+            lblWatchlistStreamerName.TabIndex = 24;
+            lblWatchlistStreamerName.Text = "Platform Username:";
+            // 
+            // txtWatchlistPlatformUsername
+            // 
+            txtWatchlistPlatformUsername.Enabled = false;
+            txtWatchlistPlatformUsername.Location = new Point(124, 100);
+            txtWatchlistPlatformUsername.Name = "txtWatchlistPlatformUsername";
+            txtWatchlistPlatformUsername.Size = new Size(175, 23);
+            txtWatchlistPlatformUsername.TabIndex = 23;
+            toolTip.SetToolTip(txtWatchlistPlatformUsername, "The twitch/youtube username (only include username, no URL)");
+            // 
+            // rdbYoutube
+            // 
+            rdbYoutube.AutoSize = true;
+            rdbYoutube.Enabled = false;
+            rdbYoutube.Location = new Point(268, 75);
+            rdbYoutube.Name = "rdbYoutube";
+            rdbYoutube.Size = new Size(71, 19);
+            rdbYoutube.TabIndex = 22;
+            rdbYoutube.TabStop = true;
+            rdbYoutube.Text = "YouTube";
+            toolTip.SetToolTip(rdbYoutube, "Do they stream on YouTube?");
+            rdbYoutube.UseVisualStyleBackColor = true;
+            // 
+            // rdbTwitch
+            // 
+            rdbTwitch.AutoSize = true;
+            rdbTwitch.Enabled = false;
+            rdbTwitch.Location = new Point(203, 75);
+            rdbTwitch.Name = "rdbTwitch";
+            rdbTwitch.Size = new Size(59, 19);
+            rdbTwitch.TabIndex = 21;
+            rdbTwitch.TabStop = true;
+            rdbTwitch.Text = "Twitch";
+            toolTip.SetToolTip(rdbTwitch, "Do they stream on Twitch?");
+            rdbTwitch.UseVisualStyleBackColor = true;
+            // 
+            // chkWatchlistIsStreamer
+            // 
+            chkWatchlistIsStreamer.AutoSize = true;
+            chkWatchlistIsStreamer.Enabled = false;
+            chkWatchlistIsStreamer.Location = new Point(124, 76);
+            chkWatchlistIsStreamer.Name = "chkWatchlistIsStreamer";
+            chkWatchlistIsStreamer.Size = new Size(73, 19);
+            chkWatchlistIsStreamer.TabIndex = 20;
+            chkWatchlistIsStreamer.Text = "Streamer";
+            toolTip.SetToolTip(chkWatchlistIsStreamer, "Are they a streamer?");
+            chkWatchlistIsStreamer.UseVisualStyleBackColor = true;
+            // 
+            // lblWatchlistTag
+            // 
+            lblWatchlistTag.AutoSize = true;
+            lblWatchlistTag.Location = new Point(90, 49);
+            lblWatchlistTag.Name = "lblWatchlistTag";
+            lblWatchlistTag.Size = new Size(28, 15);
+            lblWatchlistTag.TabIndex = 19;
+            lblWatchlistTag.Text = "Tag:";
+            // 
+            // txtWatchlistTag
+            // 
+            txtWatchlistTag.Enabled = false;
+            txtWatchlistTag.Location = new Point(124, 46);
+            txtWatchlistTag.Name = "txtWatchlistTag";
+            txtWatchlistTag.Size = new Size(175, 23);
+            txtWatchlistTag.TabIndex = 18;
+            toolTip.SetToolTip(txtWatchlistTag, "The tag/name/reason to give them");
+            // 
+            // lblWatchlistAccID
+            // 
+            lblWatchlistAccID.AutoSize = true;
+            lblWatchlistAccID.Location = new Point(49, 19);
+            lblWatchlistAccID.Name = "lblWatchlistAccID";
+            lblWatchlistAccID.Size = new Size(69, 15);
+            lblWatchlistAccID.TabIndex = 17;
+            lblWatchlistAccID.Text = "Account ID:";
+            // 
+            // txtWatchlistAccountID
+            // 
+            txtWatchlistAccountID.Enabled = false;
+            txtWatchlistAccountID.Location = new Point(124, 16);
+            txtWatchlistAccountID.Name = "txtWatchlistAccountID";
+            txtWatchlistAccountID.Size = new Size(175, 23);
+            txtWatchlistAccountID.TabIndex = 16;
+            toolTip.SetToolTip(txtWatchlistAccountID, "The AccountID (AID) of the user to add");
+            // 
+            // grpWatchlistProfileManagement
+            // 
+            grpWatchlistProfileManagement.Controls.Add(lstWatchlistProfiles);
+            grpWatchlistProfileManagement.Controls.Add(btnCancelEditWatchlistProfile);
+            grpWatchlistProfileManagement.Controls.Add(btnEditSaveWatchlistProfile);
+            grpWatchlistProfileManagement.Controls.Add(btnAddWatchlistProfile);
+            grpWatchlistProfileManagement.Controls.Add(btnRemoveWatchlistProfile);
+            grpWatchlistProfileManagement.Controls.Add(label4);
+            grpWatchlistProfileManagement.Controls.Add(txtWatchlistProfileName);
+            grpWatchlistProfileManagement.Location = new Point(537, 232);
+            grpWatchlistProfileManagement.Name = "grpWatchlistProfileManagement";
+            grpWatchlistProfileManagement.Size = new Size(408, 287);
+            grpWatchlistProfileManagement.TabIndex = 28;
+            grpWatchlistProfileManagement.TabStop = false;
+            grpWatchlistProfileManagement.Text = "Profiles";
+            // 
+            // lstWatchlistProfiles
+            // 
+            lstWatchlistProfiles.DisplayMember = "Name";
+            lstWatchlistProfiles.FormattingEnabled = true;
+            lstWatchlistProfiles.ItemHeight = 15;
+            lstWatchlistProfiles.Location = new Point(6, 22);
+            lstWatchlistProfiles.Name = "lstWatchlistProfiles";
+            lstWatchlistProfiles.Size = new Size(168, 259);
+            lstWatchlistProfiles.TabIndex = 14;
+            lstWatchlistProfiles.SelectedIndexChanged += lstWatchlistProfiles_SelectedIndexChanged;
+            // 
+            // btnAddWatchlistProfile
+            // 
+            btnAddWatchlistProfile.Location = new Point(180, 229);
+            btnAddWatchlistProfile.Name = "btnAddWatchlistProfile";
+            btnAddWatchlistProfile.Size = new Size(22, 23);
+            btnAddWatchlistProfile.TabIndex = 9;
+            btnAddWatchlistProfile.Text = "✚";
+            toolTip.SetToolTip(btnAddWatchlistProfile, "Creates a new watchlist profile");
+            btnAddWatchlistProfile.UseVisualStyleBackColor = true;
+            btnAddWatchlistProfile.Click += btnAddWatchlistProfile_Click;
+            // 
+            // btnRemoveWatchlistProfile
+            // 
+            btnRemoveWatchlistProfile.Location = new Point(180, 258);
+            btnRemoveWatchlistProfile.Name = "btnRemoveWatchlistProfile";
+            btnRemoveWatchlistProfile.Size = new Size(22, 23);
+            btnRemoveWatchlistProfile.TabIndex = 8;
+            btnRemoveWatchlistProfile.Text = "✖";
+            toolTip.SetToolTip(btnRemoveWatchlistProfile, "Removes the selected watchlist profile");
+            btnRemoveWatchlistProfile.UseVisualStyleBackColor = true;
+            btnRemoveWatchlistProfile.Click += btnRemoveWatchlistProfile_Click;
+            // 
+            // label4
+            // 
+            label4.AutoSize = true;
+            label4.Location = new Point(221, 24);
+            label4.Name = "label4";
+            label4.Size = new Size(42, 15);
+            label4.TabIndex = 2;
+            label4.Text = "Name:";
+            // 
+            // txtWatchlistProfileName
+            // 
+            txtWatchlistProfileName.Enabled = false;
+            txtWatchlistProfileName.Location = new Point(269, 21);
+            txtWatchlistProfileName.Name = "txtWatchlistProfileName";
+            txtWatchlistProfileName.Size = new Size(133, 23);
+            txtWatchlistProfileName.TabIndex = 1;
+            toolTip.SetToolTip(txtWatchlistProfileName, "The name of the watchlist profile");
+            // 
+            // lstViewWatchlistEntries
+            // 
+            lstViewWatchlistEntries.AutoArrange = false;
+            lstViewWatchlistEntries.Columns.AddRange(new ColumnHeader[] { colWatchlistAccID, colWatchlistTag, colWatchlistPlatformName });
+            lstViewWatchlistEntries.Dock = DockStyle.Left;
+            lstViewWatchlistEntries.FullRowSelect = true;
+            lstViewWatchlistEntries.GridLines = true;
+            lstViewWatchlistEntries.HeaderStyle = ColumnHeaderStyle.Nonclickable;
+            lstViewWatchlistEntries.Location = new Point(3, 3);
+            lstViewWatchlistEntries.MultiSelect = false;
+            lstViewWatchlistEntries.Name = "lstViewWatchlistEntries";
+            lstViewWatchlistEntries.Size = new Size(525, 736);
+            lstViewWatchlistEntries.TabIndex = 7;
+            lstViewWatchlistEntries.UseCompatibleStateImageBehavior = false;
+            lstViewWatchlistEntries.View = View.Details;
+            lstViewWatchlistEntries.SelectedIndexChanged += lstViewWatchlistEntries_SelectedIndexChanged;
+            // 
+            // colWatchlistAccID
+            // 
+            colWatchlistAccID.Text = "Account ID";
+            colWatchlistAccID.Width = 120;
+            // 
+            // colWatchlistTag
+            // 
+            colWatchlistTag.Text = "Tag";
+            colWatchlistTag.Width = 200;
+            // 
+            // colWatchlistPlatformName
+            // 
+            colWatchlistPlatformName.Text = "Platform Username";
+            colWatchlistPlatformName.Width = 200;
             // 
             // frmMain
             // 
@@ -2177,6 +2616,7 @@ namespace eft_dma_radar
             grpConfig.ResumeLayout(false);
             grpColors.ResumeLayout(false);
             grpColors.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)picChamsColor).EndInit();
             ((System.ComponentModel.ISupportInitialize)picDeathMarkerColor).EndInit();
             ((System.ComponentModel.ISupportInitialize)picTextOutlineColor).EndInit();
             ((System.ComponentModel.ISupportInitialize)picExfilClosedIconColor).EndInit();
@@ -2226,6 +2666,14 @@ namespace eft_dma_radar
             grpMapSetup.ResumeLayout(false);
             grpMapSetup.PerformLayout();
             tabControl.ResumeLayout(false);
+            tabWatchlist.ResumeLayout(false);
+            grpWatchlistPlayerlist.ResumeLayout(false);
+            grpWatchlistGeneralSettings.ResumeLayout(false);
+            grpWatchlistGeneralSettings.PerformLayout();
+            grpWatchlistPlayerManagement.ResumeLayout(false);
+            grpWatchlistPlayerManagement.PerformLayout();
+            grpWatchlistProfileManagement.ResumeLayout(false);
+            grpWatchlistProfileManagement.PerformLayout();
             ResumeLayout(false);
         }
 
@@ -2398,6 +2846,42 @@ namespace eft_dma_radar
         private CheckBox chkSearchSpeed;
         private Label lblThreadSpinDelay;
         private NumericUpDown numThreadSpinDelay;
+        private TabPage tabWatchlist;
+        private ListView lstViewWatchlistEntries;
+        private ColumnHeader colWatchlistAccID;
+        private ColumnHeader colWatchlistTag;
+        private GroupBox grpWatchlistPlayerManagement;
+        private GroupBox grpWatchlistProfileManagement;
+        private ListBox lstWatchlistProfiles;
+        private Button btnCancelEditWatchlistProfile;
+        private Button btnEditSaveWatchlistProfile;
+        private Button btnAddWatchlistProfile;
+        private Button btnRemoveWatchlistProfile;
+        private Label label4;
+        private TextBox txtWatchlistProfileName;
+        private Label lblWatchlistTag;
+        private TextBox txtWatchlistTag;
+        private Label lblWatchlistAccID;
+        private TextBox txtWatchlistAccountID;
+        private GroupBox grpWatchlistGeneralSettings;
+        private Label lblSelectedWatchlistProfile;
+        private ComboBox cboWatchlistProfile;
+        private Button btnRemoveCancelWatchlist;
+        private Button btnEditSaveWatchlistEntry;
+        private Label lblWatchlistStreamerName;
+        private TextBox txtWatchlistPlatformUsername;
+        private RadioButton rdbYoutube;
+        private RadioButton rdbTwitch;
+        private CheckBox chkWatchlistIsStreamer;
+        private ColumnHeader colWatchlistPlatformName;
+        private GroupBox grpWatchlistPlayerlist;
+        private Button btnAddPlayerToWatchlist;
+        private Button btnAddWatchlistEntry;
+        private Button btnRefreshPlayerlist;
+        private ListBox lstWatchlistPlayerList;
+        private PictureBox picChamsColor;
+        private Label lblPlayerChams;
+        private Label lblItemToSearch;
     }
 }
 

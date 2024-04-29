@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Text.Json.Serialization;
 
 namespace eft_dma_radar
 {
@@ -9,6 +10,8 @@ namespace eft_dma_radar
         private static readonly Mutex _mutex;
         private static readonly bool _singleton;
         private static readonly Config _config;
+        private static readonly LootFilterManager _lootFilterManager;
+        private static readonly Watchlist _watchlist;
         private static readonly object _logLock = new();
         private static readonly StreamWriter _log;
 
@@ -20,11 +23,32 @@ namespace eft_dma_radar
             get => _config;
         }
 
+        public static Watchlist Watchlist
+        {
+            get => _watchlist;
+        }
+
+
+        public static LootFilterManager LootFilterManager
+        {
+            get => _lootFilterManager;
+        }
+
+
         #region Static Constructor
         static Program()
         {
             _mutex = new Mutex(true, "9A19103F-16F7-4668-BE54-9A1E7A4F7556", out _singleton);
-            if (Config.TryLoadConfig(out _config) is not true) _config = new Config();
+
+            if (Config.TryLoadConfig(out _config) is not true)
+                _config = new Config();
+
+            if (eft_dma_radar.LootFilterManager.TryLoadLootFilterManager(out _lootFilterManager) is not true)
+                _lootFilterManager = new LootFilterManager();
+
+            if (Watchlist.TryLoadWatchlist(out _watchlist) is not true)
+                _watchlist = new Watchlist();
+
             if (_config.LoggingEnabled)
             {
                 _log = File.AppendText("log.txt");

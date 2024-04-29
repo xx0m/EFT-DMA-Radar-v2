@@ -48,9 +48,38 @@ namespace eft_dma_radar
         {
             get => _game?.IsScav ?? false;
         }
+
         public static string MapName
         {
             get => _game?.MapName;
+        }
+
+        public static string MapNameFormatted
+        {
+            get
+            {
+                var name = Memory.MapName;
+
+                switch (name)
+                {
+                    case "factory4_day":
+                    case "factory4_night":
+                        return "Factory";
+                    case "bigmap":
+                        return "Customs";
+                    case "RezervBase":
+                        return "Reserve";
+                    case "TarkovStreets":
+                        return "Streets of Tarkov";
+                    case "laboratory":
+                        return "The Lab";
+                    case "Sandbox":
+                    case "Sandbox_high":
+                        return "Ground Zero";
+                    default:
+                        return name;
+                }
+            }
         }
         public static ReadOnlyDictionary<string, Player> Players
         {
@@ -91,6 +120,10 @@ namespace eft_dma_radar
         public static Chams Chams
         {
             get => _game?.Chams;
+        }
+        public static ReadOnlyCollection<PlayerCorpse> Corpses
+        {
+            get => _game?.Corpses;
         }
 
         public static Player LocalPlayer

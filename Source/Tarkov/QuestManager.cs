@@ -63,7 +63,6 @@ namespace eft_dma_radar
                         TarkovDevManager.AllTasks.TryGetValue(questID, out var task);
                         if (task is not null)
                         {
-                            //Console.WriteLine($"Quest: {task.Name} is started ID: {questID}");
                             var objectives = task.Objectives;
                             foreach (var objective in objectives)
                             {
@@ -115,17 +114,10 @@ namespace eft_dma_radar
                                 }
                             }
                         }
-                        else
-                        {
-                            Console.WriteLine($"Quest: {questID} is not in the list");
-                        }
                         continue;
                     }
                 }
-                catch
-                {
-                    Console.WriteLine($"Quest: {questID} is not in the list");
-                }
+                catch {}
             }
             QuestZones = new(questZones); // update readonly ref
             QuestItems = new(questItems); // update readonly ref

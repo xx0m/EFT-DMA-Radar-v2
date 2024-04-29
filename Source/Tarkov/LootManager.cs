@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace eft_dma_radar
@@ -63,7 +64,7 @@ namespace eft_dma_radar
             
             this.hasCachedItems = false;
 
-            this.CurrentMapName = TarkovDevManager.GetMapName(Memory.MapName);
+            this.CurrentMapName = Memory.MapNameFormatted;
 
             if (this._config.AutoLootRefreshEnabled)
             {
@@ -539,7 +540,7 @@ namespace eft_dma_radar
         {
             var corpse = new LootCorpse
             {
-                Name = "Corpse" + (name is not null ? $" {name}" : ""),
+                Name = "Corpse" + (!string.IsNullOrEmpty(name) ? $" {name}" : ""),
                 Position = position,
                 InteractiveClass = interactiveClass,
                 Slots = slots,
@@ -632,148 +633,141 @@ namespace eft_dma_radar
 
             var itemIdColorPairs = orderedActiveFilters
                 .SelectMany(filter => filter.Items.Select(itemId => new { ItemId = itemId, Color = filter.Color }))
-                .ToDictionary(pair => pair.ItemId, pair => pair.Color);
+                .GroupBy(pair => pair.ItemId)
+                .ToDictionary(group => group.Key, group => group.FirstOrDefault().Color);
+
 
             var filteredItems = new ConcurrentBag<LootableObject>();
 
             // Add loose loot
-            //await Task.Run(() =>
-            //{
-                Parallel.ForEach(loot.OfType<LootItem>(), Program.Config.ParallelOptions, (lootItem) =>
+            Parallel.ForEach(loot.OfType<LootItem>(), Program.Config.ParallelOptions, (lootItem) =>
+            {
+                var isValuable = lootItem.Value > _config.MinLootValue;
+                var isImportant = lootItem.Value > _config.MinImportantLootValue;
+                var isFiltered = itemIdColorPairs.ContainsKey(lootItem.ID);
+
+                if (isFiltered || isImportant)
                 {
-                    var isValuable = lootItem.Value > _config.MinLootValue;
-                    var isImportant = lootItem.Value > _config.MinImportantLootValue;
-                    var isFiltered = itemIdColorPairs.ContainsKey(lootItem.ID);
+                    lootItem.Important = true;
+
+                    if (isFiltered)
+                        lootItem.Color = itemIdColorPairs[lootItem.ID];
+                }
+
+                if (isFiltered || isValuable || lootItem.AlwaysShow)
+                    filteredItems.Add(lootItem);
+            });
+
+            // Add containers
+            Parallel.ForEach(loot.OfType<LootContainer>(), Program.Config.ParallelOptions, (container) =>
+            {
+                var tempContainer = new LootContainer(container);
+                var hasImportantOrFilteredItems = false;
+
+                foreach (var item in tempContainer.Items)
+                {
+                    var isImportant = item.Value > _config.MinImportantLootValue;
+                    var isFiltered = itemIdColorPairs.ContainsKey(item.ID);
 
                     if (isFiltered || isImportant)
                     {
-                        lootItem.Important = true;
+                        item.Important = true;
+                        tempContainer.Important = true;
+                        hasImportantOrFilteredItems = true;
 
                         if (isFiltered)
-                            lootItem.Color = itemIdColorPairs[lootItem.ID];
+                            item.Color = itemIdColorPairs[item.ID];
                     }
+                }
 
-                    if (isFiltered || isValuable || lootItem.AlwaysShow)
-                        filteredItems.Add(lootItem);
-                });
-            //});
-
-            // Add containers
-            //await Task.Run(() =>
-            //{
-                Parallel.ForEach(loot.OfType<LootContainer>(), Program.Config.ParallelOptions, (container) =>
+                if (hasImportantOrFilteredItems)
                 {
-                    var tempContainer = new LootContainer(container);
-                    var hasImportantOrFilteredItems = false;
+                    var firstMatchingItem = tempContainer.Items
+                        .FirstOrDefault(item => itemIdColorPairs.ContainsKey(item.ID));
 
-                    foreach (var item in tempContainer.Items)
-                    {
-                        var isImportant = item.Value > _config.MinImportantLootValue;
-                        var isFiltered = itemIdColorPairs.ContainsKey(item.ID);
+                    if (firstMatchingItem is not null)
+                        tempContainer.Color = firstMatchingItem.Color;
+                }
 
-                        if (isFiltered || isImportant)
-                        {
-                            item.Important = true;
-                            tempContainer.Important = true;
-                            hasImportantOrFilteredItems = true;
-
-                            if (isFiltered)
-                                item.Color = itemIdColorPairs[item.ID];
-                        }
-                    }
-
-                    if (hasImportantOrFilteredItems)
-                    {
-                        var firstMatchingItem = tempContainer.Items
-                            .FirstOrDefault(item => itemIdColorPairs.ContainsKey(item.ID));
-
-                        if (firstMatchingItem is not null)
-                            tempContainer.Color = firstMatchingItem.Color;
-                    }
-
-                    if (tempContainer.Items.Any(item => item.Value > _config.MinLootValue) || tempContainer.Important || tempContainer.AlwaysShow)
-                        filteredItems.Add(tempContainer);
-                });
-            //});
+                if (tempContainer.Items.Any(item => item.Value > _config.MinLootValue) || tempContainer.Important || tempContainer.AlwaysShow)
+                    filteredItems.Add(tempContainer);
+            });
 
             // Add corpses
-            //await Task.Run(() =>
-            //{
-                Parallel.ForEach(loot.OfType<LootCorpse>(), Program.Config.ParallelOptions, (corpse) =>
+            Parallel.ForEach(loot.OfType<LootCorpse>(), Program.Config.ParallelOptions, (corpse) =>
+            {
+                var tempCorpse = new LootCorpse(corpse);
+                LootItem lowestOrderLootItem = null;
+                GearItem lowestOrderGearItem = null;
+
+                foreach (var gearItem in tempCorpse.Items)
                 {
-                    var tempCorpse = new LootCorpse(corpse);
-                    LootItem lowestOrderLootItem = null;
-                    GearItem lowestOrderGearItem = null;
+                    var isGearImportant = gearItem.TotalValue > _config.MinImportantLootValue;
+                    var isGearFiltered = itemIdColorPairs.ContainsKey(gearItem.ID);
 
-                    foreach (var gearItem in tempCorpse.Items)
+                    if (isGearImportant || isGearFiltered)
                     {
-                        var isGearImportant = gearItem.TotalValue > _config.MinImportantLootValue;
-                        var isGearFiltered = itemIdColorPairs.ContainsKey(gearItem.ID);
+                        gearItem.Important = true;
+                        tempCorpse.Important = true;
 
-                        if (isGearImportant || isGearFiltered)
+                        if (isGearFiltered)
                         {
-                            gearItem.Important = true;
-                            tempCorpse.Important = true;
+                            gearItem.Color = itemIdColorPairs[gearItem.ID];
 
-                            if (isGearFiltered)
+                            var gearItemFilter = orderedActiveFilters.FirstOrDefault(filter => filter.Items.Contains(gearItem.ID));
+                            if (gearItemFilter is not null && (lowestOrderGearItem is null || gearItemFilter.Order < orderedActiveFilters.First(filter => filter.Items.Contains(lowestOrderGearItem.ID)).Order))
                             {
-                                gearItem.Color = itemIdColorPairs[gearItem.ID];
-
-                                var gearItemFilter = orderedActiveFilters.FirstOrDefault(filter => filter.Items.Contains(gearItem.ID));
-                                if (gearItemFilter is not null && (lowestOrderGearItem is null || gearItemFilter.Order < orderedActiveFilters.First(filter => filter.Items.Contains(lowestOrderGearItem.ID)).Order))
-                                {
-                                    lowestOrderGearItem = gearItem;
-                                }
+                                lowestOrderGearItem = gearItem;
                             }
+                        }
 
-                            foreach (var lootItem in gearItem.Loot)
+                        foreach (var lootItem in gearItem.Loot)
+                        {
+                            var isLootImportant = lootItem.Value > _config.MinImportantLootValue;
+                            var isLootFiltered = itemIdColorPairs.ContainsKey(lootItem.ID);
+
+                            if (isLootImportant || isLootFiltered)
                             {
-                                var isLootImportant = lootItem.Value > _config.MinImportantLootValue;
-                                var isLootFiltered = itemIdColorPairs.ContainsKey(lootItem.ID);
+                                lootItem.Important = true;
+                                gearItem.Important = true;
+                                tempCorpse.Important = true;
 
-                                if (isLootImportant || isLootFiltered)
+                                if (isLootFiltered)
                                 {
-                                    lootItem.Important = true;
-                                    gearItem.Important = true;
-                                    tempCorpse.Important = true;
+                                    lootItem.Color = itemIdColorPairs[lootItem.ID];
 
-                                    if (isLootFiltered)
+                                    var lootItemFilter = orderedActiveFilters.FirstOrDefault(filter => filter.Items.Contains(lootItem.ID));
+                                    if (lootItemFilter is not null && (lowestOrderLootItem is null || lootItemFilter.Order < orderedActiveFilters.First(filter => filter.Items.Contains(lowestOrderLootItem.ID)).Order))
                                     {
-                                        lootItem.Color = itemIdColorPairs[lootItem.ID];
-
-                                        var lootItemFilter = orderedActiveFilters.FirstOrDefault(filter => filter.Items.Contains(lootItem.ID));
-                                        if (lootItemFilter is not null && (lowestOrderLootItem is null || lootItemFilter.Order < orderedActiveFilters.First(filter => filter.Items.Contains(lowestOrderLootItem.ID)).Order))
-                                        {
-                                            lowestOrderLootItem = lootItem;
-                                        }
+                                        lowestOrderLootItem = lootItem;
                                     }
                                 }
                             }
-
-                            if (lowestOrderLootItem is not null)
-                            {
-                                gearItem.Color = lowestOrderLootItem.Color;
-                            }
                         }
 
-                        if (lowestOrderLootItem is not null && (lowestOrderGearItem is null ||
-                            orderedActiveFilters.First(filter => filter.Items.Contains(lowestOrderLootItem.ID)).Order <
-                            orderedActiveFilters.First(filter => filter.Items.Contains(lowestOrderGearItem.ID)).Order))
+                        if (lowestOrderLootItem is not null)
                         {
-                            tempCorpse.Color = lowestOrderLootItem.Color;
-                        }
-                        else if (lowestOrderGearItem is not null)
-                        {
-                            tempCorpse.Color = lowestOrderGearItem.Color;
-                        }
-
-                        if (tempCorpse.Value > _config.MinCorpseValue || tempCorpse.Important)
-                        {
-                            filteredItems.Add(tempCorpse);
+                            gearItem.Color = lowestOrderLootItem.Color;
                         }
                     }
-                });
-            //});
+
+                    if (lowestOrderLootItem is not null && (lowestOrderGearItem is null ||
+                        orderedActiveFilters.First(filter => filter.Items.Contains(lowestOrderLootItem.ID)).Order <
+                        orderedActiveFilters.First(filter => filter.Items.Contains(lowestOrderGearItem.ID)).Order))
+                    {
+                        tempCorpse.Color = lowestOrderLootItem.Color;
+                    }
+                    else if (lowestOrderGearItem is not null)
+                    {
+                        tempCorpse.Color = lowestOrderGearItem.Color;
+                    }
+
+                    if (tempCorpse.Value > _config.MinCorpseValue || tempCorpse.Important)
+                    {
+                        filteredItems.Add(tempCorpse);
+                    }
+                }
+            });
 
             this.Filter = new ConcurrentBag<LootableObject>(filteredItems);
         }
@@ -852,69 +846,72 @@ namespace eft_dma_radar
 
             scatterReadMap.Execute();
 
-            //for (int i = 0; i < gridsArrayCount; i++)
-                Parallel.For(0, gridsArrayCount, i =>
+            Parallel.For(0, gridsArrayCount, i =>
+            {
+                if (!scatterReadMap.Results[i][0].TryGetResult<ulong>(out var grid))
+                    return;
+                if (!scatterReadMap.Results[i][1].TryGetResult<ulong>(out var gridEnumerableClass))
+                    return;
+                if (!scatterReadMap.Results[i][2].TryGetResult<ulong>(out var itemListPtr))
+                    return;
+                if (!scatterReadMap.Results[i][3].TryGetResult<int>(out var itemListCount))
+                    return;
+                if (!scatterReadMap.Results[i][4].TryGetResult<ulong>(out var arrayBase))
+                    return;
+
+                var innerScatterReadMap = new ScatterReadMap(itemListCount);
+                var innerRound1 = innerScatterReadMap.AddRound();
+                var innerRound2 = innerScatterReadMap.AddRound();
+                var innerRound3 = innerScatterReadMap.AddRound();
+
+                for (int j = 0; j < itemListCount; j++)
                 {
-                    if (!scatterReadMap.Results[i][0].TryGetResult<ulong>(out var grid))
+                    var childItem = innerRound1.AddEntry<ulong>(j, 0, arrayBase, null, Offsets.UnityListBase.Start + ((uint)j * 0x08));
+                    var childItemTemplate = innerRound2.AddEntry<ulong>(j, 1, childItem, null, Offsets.LootItemBase.ItemTemplate);
+                    var childGridsArrayPtr = innerRound2.AddEntry<ulong>(j, 2, childItem, null, Offsets.LootItemBase.Grids);
+                    var childItemIdPtr = innerRound3.AddEntry<ulong>(j, 3, childItemTemplate, null, Offsets.ItemTemplate.BsgId);
+                }
+
+                innerScatterReadMap.Execute();
+
+                Parallel.For(0, itemListCount, j =>
+                {
+                    if (!innerScatterReadMap.Results[j][0].TryGetResult<ulong>(out var childItem))
                         return;
-                    if (!scatterReadMap.Results[i][1].TryGetResult<ulong>(out var gridEnumerableClass))
+                    if (!innerScatterReadMap.Results[j][1].TryGetResult<ulong>(out var childItemTemplate))
                         return;
-                    if (!scatterReadMap.Results[i][2].TryGetResult<ulong>(out var itemListPtr))
-                        return;
-                    if (!scatterReadMap.Results[i][3].TryGetResult<int>(out var itemListCount))
-                        return;
-                    if (!scatterReadMap.Results[i][4].TryGetResult<ulong>(out var arrayBase))
+                    if (!innerScatterReadMap.Results[j][3].TryGetResult<ulong>(out var childItemIdPtr))
                         return;
 
-                    var innerScatterReadMap = new ScatterReadMap(itemListCount);
-                    var innerRound1 = innerScatterReadMap.AddRound();
-                    var innerRound2 = innerScatterReadMap.AddRound();
-                    var innerRound3 = innerScatterReadMap.AddRound();
+                    var childItemId = Memory.ReadUnityString(childItemIdPtr);
 
-                    for (int j = 0; j < itemListCount; j++)
+                    if (childItemId is null)
+                        return;
+
+                    childItemId = childItemId.Replace("\\0", "");
+
+                    if (TarkovDevManager.AllItems.TryGetValue(childItemId, out var childLootItem))
                     {
-                        var childItem = innerRound1.AddEntry<ulong>(j, 0, arrayBase, null, Offsets.UnityListBase.Start + ((uint)j * 0x08));
-                        var childItemTemplate = innerRound2.AddEntry<ulong>(j, 1, childItem, null, Offsets.LootItemBase.ItemTemplate);
-                        var childGridsArrayPtr = innerRound2.AddEntry<ulong>(j, 2, childItem, null, Offsets.LootItemBase.Grids);
-                        var childItemIdPtr = innerRound3.AddEntry<ulong>(j, 3, childItemTemplate, null, Offsets.ItemTemplate.BsgId);
+                        var newItem = new LootItem
+                        {
+                            Name = childLootItem.Name,
+                            ID = childItemId,
+                            AlwaysShow = childLootItem.AlwaysShow,
+                            Important = childLootItem.Important,
+                            Position = position,
+                            Item = childLootItem.Item,
+                            Value = TarkovDevManager.GetItemValue(childLootItem.Item)
+                        };
+
+                        cachedLootItems.Add(newItem);
                     }
 
-                    innerScatterReadMap.Execute();
+                    if (!innerScatterReadMap.Results[j][2].TryGetResult<ulong>(out var childGridsArrayPtr))
+                        return;
 
-                    //for (int j = 0; j < itemListCount; j++)
-                    Parallel.For(0, itemListCount, j =>
-                    {
-                        if (!innerScatterReadMap.Results[j][0].TryGetResult<ulong>(out var childItem))
-                            return;
-                        if (!innerScatterReadMap.Results[j][1].TryGetResult<ulong>(out var childItemTemplate))
-                            return;
-                        if (!innerScatterReadMap.Results[j][3].TryGetResult<ulong>(out var childItemIdPtr))
-                            return;
-
-                        var childItemId = Memory.ReadUnityString(childItemIdPtr).Replace("\\0", "");
-
-                        if (TarkovDevManager.AllItems.TryGetValue(childItemId, out var childLootItem))
-                        {
-                            var newItem = new LootItem
-                            {
-                                Name = childLootItem.Name,
-                                ID = childItemId,
-                                AlwaysShow = childLootItem.AlwaysShow,
-                                Important = childLootItem.Important,
-                                Position = position,
-                                Item = childLootItem.Item,
-                                Value = TarkovDevManager.GetItemValue(childLootItem.Item)
-                            };
-
-                            cachedLootItems.Add(newItem);
-                        }
-
-                        if (!innerScatterReadMap.Results[j][2].TryGetResult<ulong>(out var childGridsArrayPtr))
-                            return;
-
-                        this.GetItemsInGrid(childGridsArrayPtr, position, cachedLootItems, recurseDepth + 1);
-                    });
+                    this.GetItemsInGrid(childGridsArrayPtr, position, cachedLootItems, recurseDepth + 1);
                 });
+            });
         }
 
         private void GetItemsInSlots(ulong slotItemBase, Vector3 position, List<GearItem> gearItems)
@@ -948,7 +945,6 @@ namespace eft_dma_radar
 
             scatterReadMap.Execute();
 
-            //Parallel.For(0, slotDict.Count, Program.Config.ParallelOptions, i =>
             Parallel.For(0, slotDict.Count, i =>
             {
                 if (!scatterReadMap.Results[i][0].TryGetResult<ulong>(out var containedItem))
@@ -1042,7 +1038,6 @@ namespace eft_dma_radar
 
             scatterReadMap.Execute();
 
-            //Parallel.For(0, slotDict.Count, Program.Config.ParallelOptions, i =>
             Parallel.For(0, slotDict.Count, i =>
             {
                 if (!scatterReadMap.Results[i][0].TryGetResult<ulong>(out var containedItem))
@@ -1052,42 +1047,44 @@ namespace eft_dma_radar
                 if (!scatterReadMap.Results[i][4].TryGetResult<ulong>(out var idPtr))
                     return;
 
-                var id = Memory.ReadUnityString(idPtr);
-                var slotName = slotNames[i];
-
-                SlotCacheEntry cacheEntry = this.slotCache.GetOrAdd(slotItemBase, _ => new SlotCacheEntry());
-
-                if (cacheEntry.CachedLootItems.TryGetValue(slotName, out var cachedLootItem))
+                try
                 {
-                    loot.Add(cachedLootItem);
-                }
-                else
-                {
-                    if (TarkovDevManager.AllItems.TryGetValue(id, out LootItem lootItem))
+                    var id = Memory.ReadUnityString(idPtr);
+                    var slotName = slotNames[i];
+
+                    SlotCacheEntry cacheEntry = this.slotCache.GetOrAdd(slotItemBase, _ => new SlotCacheEntry());
+
+                    if (cacheEntry.CachedLootItems.TryGetValue(slotName, out var cachedLootItem))
                     {
-                        var newLootItem = new LootItem
-                        {
-                            ID = id,
-                            Name = lootItem.Item.name,
-                            AlwaysShow = lootItem.AlwaysShow,
-                            Important = lootItem.Important,
-                            Position = position,
-                            Item = lootItem.Item,
-                            Value = TarkovDevManager.GetItemValue(lootItem.Item)
-                        };
-
-                        loot.Add(newLootItem);
-                        cacheEntry.CachedLootItems[slotName] = newLootItem;
+                        loot.Add(cachedLootItem);
                     }
+                    else
+                    {
+                        if (TarkovDevManager.AllItems.TryGetValue(id, out LootItem lootItem))
+                        {
+                            var newLootItem = new LootItem
+                            {
+                                ID = id,
+                                Name = lootItem.Item.name,
+                                AlwaysShow = lootItem.AlwaysShow,
+                                Important = lootItem.Important,
+                                Position = position,
+                                Item = lootItem.Item,
+                                Value = TarkovDevManager.GetItemValue(lootItem.Item)
+                            };
+
+                            loot.Add(newLootItem);
+                            cacheEntry.CachedLootItems[slotName] = newLootItem;
+                        }
+                    }
+
+                    if (scatterReadMap.Results[i][2].TryGetResult<ulong>(out var slots))
+                        this.GetItemsInSlots(slots, position, loot, recurseDepth + 1);
+
+                    if (scatterReadMap.Results[i][3].TryGetResult<ulong>(out var grids))
+                        this.GetItemsInGrid(grids, position, loot);
                 }
-
-                if (scatterReadMap.Results[i][2].TryGetResult<ulong>(out var slots))
-                    this.GetItemsInSlots(slots, position, loot, recurseDepth + 1);
-
-                if (scatterReadMap.Results[i][3].TryGetResult<ulong>(out var grids))
-                    this.GetItemsInGrid(grids, position, loot);
-
-                //this.ProcessNestedItems(loot, containedItem, position, recurseDepth + 1);
+                catch { return; }
             });
         }
 
@@ -1330,7 +1327,7 @@ namespace eft_dma_radar
         public int Value { get; set; }
         public Vector3 Position { get; set; }
         public Vector2 ZoomedPosition { get; set; } = new();
-        public LootFilter.Colors Color { get; set; }
+        public LootFilterManager.Filter.Colors Color { get; set; }
     }
 
     public class LootItem : LootableObject
@@ -1472,26 +1469,6 @@ namespace eft_dma_radar
         public ulong Slots;
         public Vector3 Position;
         public string PlayerName;
-    }
-
-    /// <summary>
-    /// Class to help handle filter lists/profiles for the loot filter
-    /// </summary>
-    public class LootFilter
-    {
-        public List<string>? Items { get; set; }
-        public Colors Color { get; set; }
-        public bool IsActive { get; set; }
-        public int Order { get; set; }
-        public string Name { get; set; }
-
-        public struct Colors
-        {
-            public byte A { get; set; }
-            public byte R { get; set; }
-            public byte G { get; set; }
-            public byte B { get; set; }
-        }
     }
     #endregion
 }

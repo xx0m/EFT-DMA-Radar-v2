@@ -124,7 +124,7 @@ namespace eft_dma_radar
                         continue;
                     if (!scatterMap.Results[i][4].TryGetResult<string>(out var className))
                         continue;
-                    
+
                     ScatterReadEntry<ulong> p2;
 
                     if (className == "ClientPlayer" || className == "LocalPlayer" || className == "HideoutPlayer")
@@ -150,10 +150,10 @@ namespace eft_dma_radar
                         continue;
                     if (!scatterMap2.Results[i][1].TryGetResult<ulong>(out var profilePtr))
                         continue;
-                    if (!scatterMap2.Results[i][2].TryGetResult<ulong>(out var profileIDPtr))
+                    if (!scatterMap2.Results[i][2].TryGetResult<ulong>(out var playerID))
                         continue;
 
-                    var profileID = Memory.ReadUnityString(profileIDPtr);
+                    var profileID = Memory.ReadUnityString(playerID);
 
                     if (string.IsNullOrEmpty(profileID) || profileID.Length != 24 && profileID.Length != 36 || className.Length < 0)
                     {
@@ -168,12 +168,12 @@ namespace eft_dma_radar
                         if (player.ErrorCount > 50)
                         {
                             Program.Log($"Existing player '{player.Name}' being reallocated due to excessive errors...");
-                            this.reallocatePlayer(profileID, playerBase, profileIDPtr);
+                            reallocatePlayer(profileID, playerBase, profilePtr);
                         }
                         else if (player.Base != playerBase)
                         {
                             Program.Log($"Existing player '{player.Name}' being reallocated due to new base address...");
-                            this.reallocatePlayer(profileID, playerBase, profileIDPtr);
+                            reallocatePlayer(profileID, playerBase, profilePtr);
                         }
                         else
                         {
@@ -187,7 +187,7 @@ namespace eft_dma_radar
                     {
                         try
                         {
-                            var newPlayer = new Player(playerBase, profilePtr, null, className);
+                            var newPlayer = new Player(playerBase, profilePtr, profileID, null, className);
 
                             if (string.IsNullOrEmpty(newPlayer.Name))
                                 throw new Exception($"Error setting name for profile '{newPlayer.Profile}' ({newPlayer.Name})");
@@ -241,6 +241,19 @@ namespace eft_dma_radar
             finally
             {
                 this._regSw.Restart();
+            }
+
+            void reallocatePlayer(string profileID, ulong playerBase, ulong profilePtr)
+            {
+                try
+                {
+                    this._players[profileID] = new Player(playerBase, profilePtr, profileID, this._players[profileID].Position);
+                    Program.Log($"Player '{this._players[profileID].Name}' Re-Allocated successfully.");
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception($"ERROR re-allocating player: ", ex);
+                }
             }
         }
 
@@ -328,6 +341,19 @@ namespace eft_dma_radar
                         {
                             Program.Log($"{player.Name} died => {corpsePtr}");
                             player.IsAlive = false;
+
+                            if (Program.Config.ChamsEnabled)
+                            {
+
+                                Task.Run(async () =>
+                                {
+                                    //await Memory.Chams.RestorePointersForPlayer(player);
+                                    await Memory.Chams.RestorePointersForPlayerAsync(player);
+
+                                    Memory.Chams.SetPlayerBodyChams(player, Memory.Chams.ThermalMaterial);
+                                });
+                            }
+
                         }
 
                         player.IsActive = false;
@@ -398,19 +424,6 @@ namespace eft_dma_radar
             catch (Exception ex)
             {
                 Program.Log($"CRITICAL ERROR - UpdateAllPlayers Loop FAILED: {ex}");
-            }
-        }
-
-        private void reallocatePlayer(string id, ulong playerBase, ulong profileID)
-        {
-            try
-            {
-                this._players[id] = new Player(playerBase, profileID, this._players[id].Position);
-                Program.Log($"Player '{this._players[id].Name}' Re-Allocated successfully.");
-            }
-            catch (Exception ex)
-            {
-                throw new Exception($"ERROR re-allocating player: ", ex);
             }
         }
         #endregion

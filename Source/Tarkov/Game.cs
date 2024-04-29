@@ -18,6 +18,7 @@ namespace eft_dma_radar
         private QuestManager _questManager;
         private Toolbox _toolbox;
         private Chams _chams;
+        private CorpseManager _corpseManager;
         private ulong _localGameWorld;
         private readonly ulong _unityBase;
         private bool _inHideout = false;
@@ -101,11 +102,21 @@ namespace eft_dma_radar
         {
             get => _chams;
         }
+        public CorpseManager CorpseManager
+        {
+            get => _corpseManager;
+        }
+        public ReadOnlyCollection<PlayerCorpse> Corpses
+        {
+            get => _corpseManager?.Corpses;
+        }
         #endregion
 
         /// <summary>
         /// Game Constructor.
         /// </summary>
+        private static readonly object logLock = new();
+        private readonly StreamWriter debuglog;
         public Game(ulong unityBase)
         {
             _unityBase = unityBase;
@@ -126,14 +137,17 @@ namespace eft_dma_radar
             }
             catch (DMAShutdown)
             {
+                Memory.Chams?.ChamsDisable();
                 HandleDMAShutdown();
             }
             catch (RaidEnded e)
             {
+                Memory.Chams?.ChamsDisable();
                 HandleRaidEnded(e);
             }
             catch (Exception ex)
             {
+                Memory.Chams?.ChamsDisable();
                 HandleUnexpectedException(ex);
             }
         }
@@ -391,7 +405,7 @@ namespace eft_dma_radar
                     }
                     catch (Exception ex)
                     {
-                        Program.Log($"ERROR loading LootEngine: {ex}");
+                        Program.Log($"ERROR loading LootManager: {ex}");
                     }
                     this._loadingLoot = false;
                 }
@@ -489,6 +503,19 @@ namespace eft_dma_radar
                         Program.Log($"ERROR loading QuestManager: {ex}");
                     }
                 }
+
+                if (this._corpseManager is null)
+                {
+                    try
+                    {
+                        this._corpseManager = new CorpseManager(this._localGameWorld);
+                    }
+                    catch (Exception ex)
+                    {
+                        Program.Log($"ERROR loading CorpseManager: {ex}");
+                    }
+                }
+                else this._corpseManager.Refresh();
             }
         }
 

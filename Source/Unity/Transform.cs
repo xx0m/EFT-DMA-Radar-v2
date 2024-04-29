@@ -55,6 +55,9 @@ namespace eft_dma_radar
                     vertices = (List<Vector128<float>>)obj[1];
                 }
 
+				if (indices is null || vertices is null)
+					throw new Exception("Invalid Position!");
+
                 var index = indices[HierarchyIndex]; // Indices + 4 * capacity   (was index_relation)
                 if (_isPlayerTransform) if (index != 0) throw new Exception("Invalid index!");
 

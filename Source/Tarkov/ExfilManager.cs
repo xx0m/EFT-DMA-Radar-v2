@@ -218,7 +218,7 @@ namespace eft_dma_radar
 
         public void UpdateName()
         {
-            var name = TarkovDevManager.GetMapName(Memory.MapName);
+            var name = Memory.MapNameFormatted;
 
             if (TarkovDevManager.AllMaps.TryGetValue(name, out var map))
             {

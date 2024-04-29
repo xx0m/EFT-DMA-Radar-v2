@@ -306,9 +306,9 @@
                         {
                             this._chams.ChamsEnable();
                         }
-                        else if (!this._config.ChamsEnabled)
+                        else if (!this._config.ChamsEnabled && this._chams.PlayersWithChamsCount > 0)
                         {
-                            //this._chams.ClearChams();
+                            this._chams.ChamsDisable();
                         }
                     }
                 }

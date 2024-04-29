@@ -3,6 +3,8 @@ using System.Numerics;
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Text;
+using static eft_dma_radar.Config;
+using Offsets;
 
 namespace eft_dma_radar
 {
@@ -38,6 +40,7 @@ namespace eft_dma_radar
         /// Account UUID for Human Controlled Players.
         /// </summary>
         public string AccountID { get; set; }
+        public string ProfileID { get; set; }
         /// <summary>
         /// Player name.
         /// </summary>
@@ -137,13 +140,17 @@ namespace eft_dma_radar
         /// </summary>
         public int ErrorCount { get; set; } = 0;
         public bool isOfflinePlayer { get; set; } = false;
+        public int PlayerSide { get; set; }
         #endregion
 
         #region Getters
         /// <summary>
         /// Contains 'Acct UUIDs' of tracked players for the Key, and the 'Reason' for the Value.
         /// </summary>
-        private static ReadOnlyDictionary<string, string> Watchlist { get; set; } // init in Static Constructor
+        private static Watchlist _watchlistManager
+        {
+            get => Program.Config.Watchlist;
+        }
         /// <summary>
         /// Player is human-controlled.
         /// </summary>
@@ -286,13 +293,14 @@ namespace eft_dma_radar
         }
 
         public int MarkedDeadCount { get; set; } = 0;
+        public string Tag { get; set; } = string.Empty;
         #endregion
 
         #region Constructor
         /// <summary>
         /// Player Constructor.
         /// </summary>
-        public Player(ulong playerBase, ulong playerProfile, Vector3? pos = null, string baseClassName = null)
+        public Player(ulong playerBase, ulong playerProfile, string profileID, Vector3? pos = null, string baseClassName = null)
         {
             if (string.IsNullOrEmpty(baseClassName))
                 throw new Exception("BaseClass is not set!");
@@ -307,6 +315,7 @@ namespace eft_dma_radar
 
             this.Base = playerBase;
             this.Profile = playerProfile;
+            this.ProfileID = profileID;
 
             if (pos is not null)
                 this.Position = (Vector3)pos;
@@ -532,6 +541,7 @@ namespace eft_dma_radar
             var groupID = round1.AddEntry<ulong>(0, 8, this.Info, null, Offsets.ObservedPlayerView.GroupID);
             var playerBody = round1.AddEntry<ulong>(0, 9, this.Info, null, Offsets.ObservedPlayerView.PlayerBody);
             var memberCategory = round1.AddEntry<int>(0, 10, this.Info, null, Offsets.PlayerInfo.MemberCategory);
+            //var profileID = round1.AddEntry<int>(0, 23, this.Info, null, Offsets.ObservedPlayerView.ID);
 
             var movementContextPtr2 = round2.AddEntry<ulong>(0, 11, movementContextPtr1, null, Offsets.ObservedPlayerView.To_MovementContext[1]);
             var transIntPtr2 = round2.AddEntry<ulong>(0, 12, transIntPtr1, null, Offsets.ObservedPlayerView.To_TransformInternal[1]);
@@ -623,6 +633,8 @@ namespace eft_dma_radar
                 return;
             if (!scatterReadMap.Results[0][5].TryGetResult<ulong>(out var accountID))
                 return;
+            //if (!scatterReadMap.Results[0][23].TryGetResult<ulong>(out var profileID))
+            //    return;
             if (!scatterReadMap.Results[0][4].TryGetResult<ulong>(out var name))
                 return;
             if (!scatterReadMap.Results[0][10].TryGetResult<int>(out var memberCategory))
@@ -630,11 +642,12 @@ namespace eft_dma_radar
             if (!scatterReadMap.Results[0][8].TryGetResult<ulong>(out var groupID))
                 return;
 
-            this.InitializePlayerProperties(movementContext, inventoryController, inventorySlots, transformInternal, playerBody, name, groupID);
+            this.InitializePlayerProperties(movementContext, inventoryController, inventorySlots, transformInternal, playerBody, name, groupID, playerSide);
 
             this.IsLocalPlayer = false;
             this.HealthController = healthController;
             this.AccountID = Memory.ReadUnityString(accountID);
+            //this.ProfileID = Memory.ReadUnityString(profileID);
 
             if (!isAI)
             {
@@ -655,7 +668,7 @@ namespace eft_dma_radar
             this.FinishAlloc();
         }
 
-        private void InitializePlayerProperties(ulong movementContext, ulong inventoryController, ulong inventorySlots, ulong transformInternal, ulong playerBody, ulong name, ulong groupID)
+        private void InitializePlayerProperties(ulong movementContext, ulong inventoryController, ulong inventorySlots, ulong transformInternal, ulong playerBody, ulong name, ulong groupID, int playerSide = 0)
         {
             this.MovementContext = movementContext;
             this.InventoryController = inventoryController;
@@ -665,6 +678,7 @@ namespace eft_dma_radar
             this._transform = new Transform(this.TransformInternal, true);
             this.PlayerBody = playerBody;
             this.Name = Memory.ReadUnityString(name);
+            this.PlayerSide = playerSide;
 
             if (groupID != 0)
             {
@@ -685,34 +699,42 @@ namespace eft_dma_radar
         {
             if (this.IsHumanHostile)
             {
-                if (WatchlistManager.IsStreamer(this.AccountID, this.Name, out string streamerName))
+                this.RefreshWatchlistStatus();
+            }
+        }
+
+        public async void RefreshWatchlistStatus()
+        {
+            var isOnWatchlist = _watchlistManager.IsOnWatchlist(this.AccountID, out Watchlist.Entry entry);
+            var isSpecialPlayer = this.Type == PlayerType.SpecialPlayer;
+
+            if ((!isSpecialPlayer || isSpecialPlayer) && isOnWatchlist)
+            {
+                var isLive = false;
+
+                if (entry.IsStreamer)
                 {
-                    var isLive = await WatchlistManager.IsLive(streamerName);
-
+                    isLive = await Watchlist.IsLive(entry);
+                    
                     if (isLive)
-                        streamerName += " (LIVE)";
+                        this.Name += " (LIVE)";
+                }
 
-                    this.Name = streamerName;
+                if (!isLive && this.Name.Contains("(LIVE)"))
+                {
+                    this.Name = this.Name.Substring(0, this.Name.IndexOf("(LIVE)") - 1);
+                }
+
+                if (!string.IsNullOrEmpty(entry.Tag))
+                {
+                    this.Tag = entry.Tag;
                     this.Type = PlayerType.SpecialPlayer;
                 }
-
-                StringBuilder baseMsgBuilder = new StringBuilder();
-                baseMsgBuilder.Append($"{this.Name} ({this.Type}),  L:{this.Lvl}, ");
-
-                if (this.GroupID != -1)
-                    baseMsgBuilder.Append($"G:{this.GroupID}, ");
-
-                if (this.Category is not null)
-                {
-                    if (this.Category != "EOD" && this.Category != "Standard")
-                    {
-                        this.Type = PlayerType.SpecialPlayer;
-                        baseMsgBuilder.Append($"Special Acct: {this.Category}, ");
-                    }
-                }
-
-                baseMsgBuilder.Append($"@{DateTime.Now.ToLongTimeString()}");
-                string baseMsg = baseMsgBuilder.ToString();
+            }
+            else if (isSpecialPlayer && !isOnWatchlist)
+            {
+                this.Tag = "";
+                this.Type = this.isOfflinePlayer ? this.GetOfflinePlayerType(false, this.Name) : this.GetOnlinePlayerType(false, this.PlayerSide, this.Name);
             }
         }
 
