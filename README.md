@@ -1,38 +1,8 @@
+
 # EFT-DMA-Radar-v2
 
 ## Description
 EFT DMA Radar is a radar tool designed for Escape from Tarkov that provides real-time tracking of players and items on a 2D map.
-![image](https://github.com/HuiTeab/EFT-DMA-Radar-v2/assets/63579245/fefdd5de-0d7a-453e-9f0c-1ab650557723)
-![image](https://github.com/HuiTeab/EFT-DMA-Radar-v2/assets/63579245/eb89292d-1634-4d01-bc99-b0fcb44f8b8c)
-![image](https://github.com/HuiTeab/EFT-DMA-Radar-v2/assets/63579245/4d7f5e97-8ee0-4666-aed3-742df6fafb11)
-
-
-
-## Project Structure
-
-- **Maps**: Directory containing maps data.
-- **MonoSharp**: Directory containing MonoSharp library.
-- **Source**: Source code directory.
-  - **Tarkov**: Directory for Tarkov-related files.
-    - **ExfilManager.cs**: Manages extraction points.
-    - **Game.cs**: Handles game-related functionalities.
-    - **GearManager.cs**: Manages player gear.
-    - **GrenadeManager.cs**: Handles grenade-related functionalities.
-    - **LootManager.cs**: Manages loot items. (Work in Progress - loot tracking works but need to create cache so it would automatically refresh current game loot)
-    - **Player.cs**: Manages player-related functionalities. (Work in Progress)
-    - **RegisteredPlayers.cs**: Manages registered players.
-    - **TarkovDevAPIManager.cs**: Manages Tarkov market-related operations.
-    - **QuestManager.cs**: Manages quest related functionality
-    - **PlayerManager.cs**: Manages localplayer operations.
-    - **CameraManager.cs**: Manages FPS / Optics camera functionality.
-  - **Misc**: Directory for miscellaneous files.
-    - **Extensions.cs**: Contains extension methods.
-    - **Misc.cs**: Contains miscellaneous functionalities.
-    - **Offsets.cs**: Contains memory offsets.
-    - **SKPaints.cs**: Contains SKPaint configurations.
-    - **Chams.cs**: Contains chams functionality.
-    - **Toolbox.cs**: Manages execution of memory writing operations.
-    
 
 ## Usage
 
@@ -54,4 +24,15 @@ For any inquiries or assistance, feel free to join the Discord server: https://d
 Ensure all necessary files are properly included and referenced for the application to function correctly.
 
 ## Acknowledgments
-This project builds upon the original work created by [Git link](https://github.com/6b45/eft-dma-radar-1) [UC Forum Thread](https://www.unknowncheats.me/forum/escape-from-tarkov/482418-2d-map-dma-radar-wip.html). I am not the original creator of this project; all credit for the initial concept and development goes to Lone. This version seeks to extend and enhance the original tool with updated functionalities and improvements.
+This project builds upon the original work created by [Git link](https://github.com/6b45/eft-dma-radar-1) [UC Forum Thread](https://www.unknowncheats.me/forum/escape-from-tarkov/482418-2d-map-dma-radar-wip.html). I am not the original creator of this project; all credit for the initial concept and development goes to Lone. This version seeks to extend and enhance the original tool with updated functionalities and improvements. Big thanks to [Keegi](https://github.com/HuiTeab/) for continuing the project as long as he did & implementing many awesome features/functionality & MasterKeef for providing some maps to go with this
+
+## Preview
+![image](https://media.discordapp.net/attachments/1239497216276828181/1239498105431265280/image.png?ex=66432411&is=6641d291&hm=f4659e5d7684bddabfe9c2916444bbdb2f55d9e8d706093be399b7e0402edcce&=&format=webp&quality=lossless)
+![image](https://media.discordapp.net/attachments/1239497216276828181/1239498107805241395/image.png?ex=66432411&is=6641d291&hm=51f94e01cf0e4241ff1f9b1231617cf00f863a64f723a9b8565455be0a968c4d&=&format=webp&quality=lossless)
+
+![image](https://media.discordapp.net/attachments/1239497216276828181/1239498106458996767/image.png?ex=66432411&is=6641d291&hm=e97cc9d7c4f566f4831c30d52657f10928748f2948cfc65a28ea43c1b5310976&=&format=webp&quality=lossless)
+![image](https://media.discordapp.net/attachments/1239497216276828181/1239498108249964594/image.png?ex=66432411&is=6641d291&hm=5f95412f4825dccd18ee19c22750ac8944be4fdd3f8fd51a66fca40c03bbfc4a&=&format=webp&quality=lossless)
+![image](https://media.discordapp.net/attachments/1239497216276828181/1239498106899267644/image.png?ex=66432411&is=6641d291&hm=18d19739dd414ef5b36444d0fcdbda94305fe31ececfc267593dbc49cd7c17b6&=&format=webp&quality=lossless)
+![image](https://media.discordapp.net/attachments/1239497216276828181/1239498107306246195/image.png?ex=66432411&is=6641d291&hm=6e336499c286924b75838efc3294a2fa5e4c34c13125abaece30f3a78446945f&=&format=webp&quality=lossless)
+![image](https://media.discordapp.net/attachments/1239497216276828181/1239498104940527656/image.png?ex=66432410&is=6641d290&hm=4fac63cfa80331a83cc4ceff13ea412bda96c508db8ab354c2ff49c22624cf2c&=&format=webp&quality=lossless)
+![image](https://media.discordapp.net/attachments/1239497216276828181/1239498105921994762/image.png?ex=66432411&is=6641d291&hm=7008b3e1492e3415fb17a42f3b03b21adfb3bc6f38cb4a13617f757f5ef06874&=&format=webp&quality=lossless)

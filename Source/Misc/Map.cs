@@ -97,7 +97,7 @@ namespace eft_dma_radar
                 canvas.DrawCircle(this.GetPoint(), 4 * UIScale, paint);
             }
 
-            if (!_config.HideExfilNames)
+            if (_config.ShowExfilNames)
             {
                 var coords = this.GetPoint();
                 var textWidth = text.MeasureText(exfil.Name);
@@ -105,7 +105,7 @@ namespace eft_dma_radar
                 coords.X = (coords.X - textWidth / 2);
                 coords.Y = (coords.Y - text.TextSize / 2) - 3;
 
-                if (!_config.HideTextOutline)
+                if (_config.ShowTextOutline)
                     canvas.DrawText(exfil.Name, coords, Extensions.GetTextOutlinePaint());
 
                 canvas.DrawText(exfil.Name, coords, text);
@@ -143,7 +143,7 @@ namespace eft_dma_radar
         {
             var paint = Extensions.GetEntityPaint(item);
             var text = Extensions.GetTextPaint(item);
-            var label = _config.HideLootValue ? item.Item.shortName : item.GetFormattedValueShortName();
+            var label = _config.ShowLootValue ? item.GetFormattedValueShortName() : item.Item.shortName;
 
             if (heightDiff > 1.45)
             {
@@ -161,7 +161,7 @@ namespace eft_dma_radar
             }
 
             var coords = this.GetPoint(7 * UIScale, 3 * UIScale);
-            if (!_config.HideTextOutline)
+            if (_config.ShowTextOutline)
                 canvas.DrawText(label, coords, Extensions.GetTextOutlinePaint());
             canvas.DrawText(label, coords, text);
         }
@@ -190,7 +190,7 @@ namespace eft_dma_radar
             }
 
             var coords = this.GetPoint(7 * UIScale, 3 * UIScale);
-            if (!_config.HideTextOutline)
+            if (_config.ShowTextOutline)
                 canvas.DrawText(label, coords, Extensions.GetTextOutlinePaint());
             canvas.DrawText(label, coords, text);
         }
@@ -258,7 +258,7 @@ namespace eft_dma_radar
             }
 
             var coords = this.GetPoint(7 * UIScale, 3 * UIScale);
-            if (!_config.HideTextOutline)
+            if (_config.ShowTextOutline)
                 canvas.DrawText(label, coords, Extensions.GetTextOutlinePaint());
             canvas.DrawText(label, coords, text);
         }
@@ -287,7 +287,7 @@ namespace eft_dma_radar
             }
 
             var coords = this.GetPoint(7 * UIScale, 3 * UIScale);
-            if (!_config.HideTextOutline)
+            if (_config.ShowTextOutline)
                 canvas.DrawText(label, coords, Extensions.GetTextOutlinePaint());
             canvas.DrawText(label, coords, text);
         }
@@ -333,7 +333,7 @@ namespace eft_dma_radar
             {
                 var coords = this.GetPoint(9 * UIScale, spacing);
 
-                if (!_config.HideTextOutline)
+                if (_config.ShowTextOutline)
                     canvas.DrawText(line, coords, Extensions.GetTextOutlinePaint());
                 canvas.DrawText(line, coords, text);
                 spacing += 12 * UIScale;
@@ -527,11 +527,11 @@ namespace eft_dma_radar
                 var width = SKPaints.TextBase.MeasureText(gearItem.GetFormattedTotalValueName());
                 maxWidth = Math.Max(maxWidth, width);
 
-                if (_config.ShowSubItemsEnabled && gearItem.Loot.Count > 0)
+                if (_config.ShowSubItems && gearItem.Loot.Count > 0)
                 {
                     foreach (var lootItem in gearItem.Loot)
                     {
-                        if (lootItem.AlwaysShow || lootItem.Important || (!_config.ImportantLootOnly && _config.ShowSubItemsEnabled && lootItem.Value > _config.MinSubItemValue))
+                        if (lootItem.AlwaysShow || lootItem.Important || (!_config.ImportantLootOnly && _config.ShowSubItems && lootItem.Value > _config.MinSubItemValue))
                         {
                             width = SKPaints.TextBase.MeasureText($"     {lootItem.GetFormattedValueName()}");
                             maxWidth = Math.Max(maxWidth, width);
@@ -558,11 +558,11 @@ namespace eft_dma_radar
             var y = bottom - (padding * 2.2f);
             foreach (var gearItem in items)
             {
-                if (_config.ShowSubItemsEnabled && gearItem.Loot.Count > 0)
+                if (_config.ShowSubItems && gearItem.Loot.Count > 0)
                 {
                     foreach (var lootItem in gearItem.Loot)
                     {
-                        if (lootItem.AlwaysShow || lootItem.Important || (!_config.ImportantLootOnly && _config.ShowSubItemsEnabled && lootItem.Value > _config.MinSubItemValue))
+                        if (lootItem.AlwaysShow || lootItem.Important || (!_config.ImportantLootOnly && _config.ShowSubItems && lootItem.Value > _config.MinSubItemValue))
                         {
                             canvas.DrawText("   " + lootItem.GetFormattedValueName(), left + padding, y, Extensions.GetTextPaint(lootItem));
                             y -= textSpacing;

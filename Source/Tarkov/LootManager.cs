@@ -39,6 +39,10 @@ namespace eft_dma_radar
         /// All tracked loot/corpses in Local Game World.
         /// </summary>
         public ConcurrentBag<LootableObject> Loot { get; set; }
+
+        public int TotalLooseLoot { get => savedLootItemsInfo.Count; }
+        public int TotalContainers { get => savedLootContainersInfo.Count; }
+        public int TotalCorpses { get => savedLootCorpsesInfo.Count; }
         /// <summary>
         /// all quest items
         /// </summary>
@@ -66,11 +70,11 @@ namespace eft_dma_radar
 
             this.CurrentMapName = Memory.MapNameFormatted;
 
-            if (this._config.AutoLootRefreshEnabled)
+            if (this._config.AutoLootRefresh)
             {
                 this.StartAutoRefresh();
             }
-            else
+            else if (this._config.ProcessLoot)
             {
                 this.RefreshLoot();
             }
@@ -117,7 +121,7 @@ namespace eft_dma_radar
 
         private void LootManagerWorkerThread(CancellationToken cancellationToken)
         {
-            while (!cancellationToken.IsCancellationRequested && Memory.GameStatus == Game.GameStatus.InGame && this._config.AutoLootRefreshEnabled && this._config.LootEnabled)
+            while (!cancellationToken.IsCancellationRequested && Memory.GameStatus == Game.GameStatus.InGame && this._config.ProcessLoot && this._config.AutoLootRefresh)
             {
                 Task.Run(async () => { await this.RefreshLoot(); });
                 var sleepFor = this._config.AutoRefreshSettings[this.CurrentMapName] * 1000;
@@ -134,7 +138,7 @@ namespace eft_dma_radar
 
                 await Task.Run(() =>
                 {
-                    if (this._config.AutoLootRefreshEnabled)
+                    if (this._config.ProcessLoot && this._config.AutoLootRefresh)
                     {
                         this.StartAutoRefresh();
                     }
@@ -613,7 +617,7 @@ namespace eft_dma_radar
                 Item = lootItem.Item,
                 Important = lootItem.Important,
                 AlwaysShow = lootItem.AlwaysShow,
-                Value = TarkovDevManager.GetItemValue(lootItem.Item)
+                Value = lootItem.Value
             };
         }
 
@@ -900,7 +904,7 @@ namespace eft_dma_radar
                             Important = childLootItem.Important,
                             Position = position,
                             Item = childLootItem.Item,
-                            Value = TarkovDevManager.GetItemValue(childLootItem.Item)
+                            Value = childLootItem.Value
                         };
 
                         cachedLootItems.Add(newItem);
@@ -982,7 +986,7 @@ namespace eft_dma_radar
                     {
                         var longName = isPocket ? "Pocket" : lootItem?.Item.name ?? "Unknown";
                         var shortName = isPocket ? "Pocket" : lootItem?.Item.shortName ?? "Unknown";
-                        var value = isPocket || lootItem is null ? 0 : TarkovDevManager.GetItemValue(lootItem.Item);
+                        var value = isPocket || lootItem is null ? 0 : lootItem.Value;
 
                         var newGearItem = new GearItem
                         {
@@ -1070,7 +1074,7 @@ namespace eft_dma_radar
                                 Important = lootItem.Important,
                                 Position = position,
                                 Item = lootItem.Item,
-                                Value = TarkovDevManager.GetItemValue(lootItem.Item)
+                                Value = lootItem.Value
                             };
 
                             loot.Add(newLootItem);
@@ -1091,7 +1095,13 @@ namespace eft_dma_radar
         private int CalculateChildrenCount(ulong gridsArrayPtr)
         {
             int totalChildrenCount = 0;
-            var gridsArrayCount = Memory.ReadValue<int>(gridsArrayPtr + Offsets.UnityList.Count);
+            var gridsArrayCount = 0;
+
+            try
+            {
+                gridsArrayCount = Memory.ReadValue<int>(gridsArrayPtr + Offsets.UnityList.Count);
+            }
+            catch { }
 
             if (gridsArrayCount < 0 || gridsArrayCount > 4096)
                 return 0;

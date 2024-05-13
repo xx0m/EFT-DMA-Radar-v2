@@ -68,13 +68,13 @@ namespace eft_dma_radar
                             string longName = lootItem.Item.name;
                             string shortName = lootItem.Item.shortName;
                             var tmpGearItemMods = new ConcurrentBag<LootItem>();
-                            var totalGearValue = TarkovDevManager.GetItemValue(lootItem.Item);
+                            var totalGearValue = lootItem.Value;
 
                             var result = new PlayerWeaponInfo();
                             this.GetItemsInSlots(parentSlot, tmpGearItemMods, ref result);
 
-                            totalGearValue += tmpGearItemMods.Sum(x => TarkovDevManager.GetItemValue(x.Item));
-                            totalValue += tmpGearItemMods.Sum(x => TarkovDevManager.GetItemValue(x.Item));
+                            totalGearValue += tmpGearItemMods.Sum(x => x.Value);
+                            totalValue += tmpGearItemMods.Sum(x => x.Value);
                             gearItemMods.AddRange(tmpGearItemMods);
 
                             var extraSlotInfo = result.ToString();
@@ -194,7 +194,7 @@ namespace eft_dma_radar
                     AlwaysShow = lootItem.AlwaysShow,
                     Important = lootItem.Important,
                     Item = lootItem.Item,
-                    Value = TarkovDevManager.GetItemValue(lootItem.Item)
+                    Value = lootItem.Value
                 };
 
                 loot.Add(newLootItem);

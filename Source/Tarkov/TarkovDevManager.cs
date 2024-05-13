@@ -289,6 +289,7 @@ namespace eft_dma_radar
                         ID = tarkovItem.id,
                         Name = tarkovItem.name,
                         Item = tarkovItem,
+                        Value = TarkovDevManager.GetItemValue(tarkovItem)
                     }
                 );
             }
@@ -439,7 +440,7 @@ namespace eft_dma_radar
 
         public static int GetItemValue(TarkovItem item)
         {
-            int bestPrice = (int)item.avg24hPrice;
+            int bestPrice = item.avg24hPrice ?? 0;
             foreach (var vendor in item.sellFor)
                 {
                     if (vendor.price > bestPrice)

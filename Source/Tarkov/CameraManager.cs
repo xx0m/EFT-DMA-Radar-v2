@@ -1,4 +1,6 @@
 ﻿
+using System.Drawing;
+
 namespace eft_dma_radar
 {
     public class CameraManager
@@ -185,7 +187,7 @@ namespace eft_dma_radar
         /// <summary>
         /// public function to turn nightvision on and off
         /// </summary>
-        public void NightVision(bool state)
+        public void NightVision(bool state, ref List<IScatterWriteEntry> entries)
         {
             if (!this.IsReady)
                 return;
@@ -195,7 +197,7 @@ namespace eft_dma_radar
                 bool nightVisionOn = Memory.ReadValue<bool>(this.NVGComponent + Offsets.NightVision.On);
 
                 if (state != nightVisionOn)
-                    Memory.WriteValue(this.NVGComponent + Offsets.NightVision.On, state);
+                    entries.Add(new ScatterWriteDataEntry<bool>(this.NVGComponent + Offsets.NightVision.On, state));
             }
             catch (Exception ex)
             {
@@ -206,7 +208,7 @@ namespace eft_dma_radar
         /// <summary>
         /// public function to turn visor on and off
         /// </summary>
-        public void VisorEffect(bool state)
+        public void VisorEffect(bool state, ref List<IScatterWriteEntry> entries)
         {
             if (!this.IsReady)
                 return;
@@ -217,7 +219,7 @@ namespace eft_dma_radar
                 bool visorDown = intensity == 1.0f;
 
                 if (state == visorDown)
-                    Memory.WriteValue(this.visorComponent + Offsets.VisorEffect.Intensity, state ? 0.0f : 1.0f);
+                    entries.Add(new ScatterWriteDataEntry<float>(this.visorComponent + Offsets.VisorEffect.Intensity, state ? 0.0f : 1.0f));
             }
             catch (Exception ex)
             {
@@ -228,14 +230,14 @@ namespace eft_dma_radar
         /// <summary>
         /// public function to turn thermalvision on and off
         /// </summary>
-        public void ThermalVision(bool state)
+        public void ThermalVision(bool state, ref List<IScatterWriteEntry> entries)
         {
             if (!this.IsReady)
                 return;
 
             try
             {
-                this.ToggleThermalVision(state);
+                this.ToggleThermalVision(state, ref entries);
             }
             catch (Exception ex)
             {
@@ -243,7 +245,7 @@ namespace eft_dma_radar
             }
         }
 
-        private void ToggleThermalVision(bool state)
+        private void ToggleThermalVision(bool state, ref List<IScatterWriteEntry> entries)
         {
             bool thermalOn = Memory.ReadValue<bool>(this.thermalComponent + Offsets.ThermalVision.On);
 
@@ -252,8 +254,8 @@ namespace eft_dma_radar
 
             try
             {
-                Memory.WriteValue(this.thermalComponent + Offsets.ThermalVision.On, state);
-                this.SetThermalVisionProperties(state);
+                entries.Add(new ScatterWriteDataEntry<bool>(this.thermalComponent + Offsets.ThermalVision.On, state));
+                this.SetThermalVisionProperties(state, ref entries);
             }
             catch (Exception ex)
             {
@@ -261,25 +263,25 @@ namespace eft_dma_radar
             }
         }
 
-        private void SetThermalVisionProperties(bool state)
+        private void SetThermalVisionProperties(bool state, ref List<IScatterWriteEntry> entries)
         {
             try
             {
                 bool isOn = !state;
-                Memory.WriteValue(this.thermalComponent + Offsets.ThermalVision.IsNoisy, isOn);
-                Memory.WriteValue(this.thermalComponent + Offsets.ThermalVision.IsFpsStuck, isOn);
-                Memory.WriteValue(this.thermalComponent + Offsets.ThermalVision.IsMotionBlurred, isOn);
-                Memory.WriteValue(this.thermalComponent + Offsets.ThermalVision.IsGlitched, isOn);
-                Memory.WriteValue(this.thermalComponent + Offsets.ThermalVision.IsPixelated, isOn);
-                Memory.WriteValue(this.thermalComponent + Offsets.ThermalVision.ChromaticAberrationThermalShift, 0.0f);
-                Memory.WriteValue(this.thermalComponent + Offsets.ThermalVision.UnsharpRadiusBlur, 2.0f);
+                entries.Add(new ScatterWriteDataEntry<bool>(this.thermalComponent + Offsets.ThermalVision.IsNoisy, isOn));
+                entries.Add(new ScatterWriteDataEntry<bool>(this.thermalComponent + Offsets.ThermalVision.IsFpsStuck, isOn));
+                entries.Add(new ScatterWriteDataEntry<bool>(this.thermalComponent + Offsets.ThermalVision.IsMotionBlurred, isOn));
+                entries.Add(new ScatterWriteDataEntry<bool>(this.thermalComponent + Offsets.ThermalVision.IsGlitched, isOn));
+                entries.Add(new ScatterWriteDataEntry<bool>(this.thermalComponent + Offsets.ThermalVision.IsPixelated, isOn));
+                entries.Add(new ScatterWriteDataEntry<float>(this.thermalComponent + Offsets.ThermalVision.ChromaticAberrationThermalShift, 0f));
+                entries.Add(new ScatterWriteDataEntry<float>(this.thermalComponent + Offsets.ThermalVision.UnsharpRadiusBlur, 2f));
 
                 ulong thermalVisionUtilities = Memory.ReadPtr(this.thermalComponent + Offsets.ThermalVision.ThermalVisionUtilities);
                 ulong valuesCoefs = Memory.ReadPtr(thermalVisionUtilities + Offsets.ThermalVisionUtilities.ValuesCoefs);
-                Memory.WriteValue(valuesCoefs + Offsets.ValuesCoefs.MainTexColorCoef, this._config.MainThermalSetting.ColorCoefficient);
-                Memory.WriteValue(valuesCoefs + Offsets.ValuesCoefs.MinimumTemperatureValue, this._config.MainThermalSetting.MinTemperature);
-                Memory.WriteValue(valuesCoefs + Offsets.ValuesCoefs.RampShift, this._config.MainThermalSetting.RampShift);
-                Memory.WriteValue(thermalVisionUtilities + Offsets.ThermalVisionUtilities.CurrentRampPalette, this._config.MainThermalSetting.ColorScheme);
+                entries.Add(new ScatterWriteDataEntry<float>(valuesCoefs + Offsets.ValuesCoefs.MainTexColorCoef, this._config.MainThermalSetting.ColorCoefficient));
+                entries.Add(new ScatterWriteDataEntry<float>(valuesCoefs + Offsets.ValuesCoefs.MinimumTemperatureValue, this._config.MainThermalSetting.MinTemperature));
+                entries.Add(new ScatterWriteDataEntry<float>(valuesCoefs + Offsets.ValuesCoefs.RampShift, this._config.MainThermalSetting.RampShift));
+                entries.Add(new ScatterWriteDataEntry<int>(thermalVisionUtilities + Offsets.ThermalVisionUtilities.CurrentRampPalette, this._config.MainThermalSetting.ColorScheme));
             }
             catch (Exception ex)
             {
@@ -290,7 +292,7 @@ namespace eft_dma_radar
         /// <summary>
         /// public function to turn optic thermalvision on and off
         /// </summary>
-        public void OpticThermalVision(bool on)
+        public void OpticThermalVision(bool state, ref List<IScatterWriteEntry> entries)
         {
             if (!this.IsReady)
                 return;
@@ -315,21 +317,21 @@ namespace eft_dma_radar
                     }
                 }
 
-                Memory.WriteValue(opticComponent + 0x38, on);
-                Memory.WriteValue(this.opticThermalComponent + Offsets.ThermalVision.IsNoisy, !on);
-                Memory.WriteValue(this.opticThermalComponent + Offsets.ThermalVision.IsFpsStuck, !on);
-                Memory.WriteValue(this.opticThermalComponent + Offsets.ThermalVision.IsMotionBlurred, !on);
-                Memory.WriteValue(this.opticThermalComponent + Offsets.ThermalVision.IsGlitched, !on);
-                Memory.WriteValue(this.opticThermalComponent + Offsets.ThermalVision.IsPixelated, !on);
-                Memory.WriteValue(this.opticThermalComponent + Offsets.ThermalVision.ChromaticAberrationThermalShift, 0.0f);
-                Memory.WriteValue(this.opticThermalComponent + Offsets.ThermalVision.UnsharpRadiusBlur, 2.0f);
+                entries.Add(new ScatterWriteDataEntry<bool>(opticComponent + 0x38, state));
+                entries.Add(new ScatterWriteDataEntry<bool>(this.opticThermalComponent + Offsets.ThermalVision.IsNoisy, !state));
+                entries.Add(new ScatterWriteDataEntry<bool>(this.opticThermalComponent + Offsets.ThermalVision.IsFpsStuck, !state));
+                entries.Add(new ScatterWriteDataEntry<bool>(this.opticThermalComponent + Offsets.ThermalVision.IsMotionBlurred, !state));
+                entries.Add(new ScatterWriteDataEntry<bool>(this.opticThermalComponent + Offsets.ThermalVision.IsGlitched, !state));
+                entries.Add(new ScatterWriteDataEntry<bool>(this.opticThermalComponent + Offsets.ThermalVision.IsPixelated, !state));
+                entries.Add(new ScatterWriteDataEntry<float>(this.opticThermalComponent + Offsets.ThermalVision.ChromaticAberrationThermalShift, 0f));
+                entries.Add(new ScatterWriteDataEntry<float>(this.opticThermalComponent + Offsets.ThermalVision.UnsharpRadiusBlur, 2f));
 
                 var thermalVisionUtilities = Memory.ReadPtr(this.opticThermalComponent + Offsets.ThermalVision.ThermalVisionUtilities);
                 var valuesCoefs = Memory.ReadPtr(thermalVisionUtilities + Offsets.ThermalVisionUtilities.ValuesCoefs);
-                Memory.WriteValue(valuesCoefs + Offsets.ValuesCoefs.MainTexColorCoef, this._config.OpticThermalSetting.ColorCoefficient);
-                Memory.WriteValue(valuesCoefs + Offsets.ValuesCoefs.MinimumTemperatureValue, this._config.OpticThermalSetting.MinTemperature);
-                Memory.WriteValue(valuesCoefs + Offsets.ValuesCoefs.RampShift, this._config.OpticThermalSetting.RampShift);
-                Memory.WriteValue(thermalVisionUtilities + Offsets.ThermalVisionUtilities.CurrentRampPalette, this._config.OpticThermalSetting.ColorScheme);
+                entries.Add(new ScatterWriteDataEntry<float>(valuesCoefs + Offsets.ValuesCoefs.MainTexColorCoef, this._config.OpticThermalSetting.ColorCoefficient));
+                entries.Add(new ScatterWriteDataEntry<float>(valuesCoefs + Offsets.ValuesCoefs.MinimumTemperatureValue, this._config.OpticThermalSetting.MinTemperature));
+                entries.Add(new ScatterWriteDataEntry<float>(valuesCoefs + Offsets.ValuesCoefs.RampShift, this._config.OpticThermalSetting.RampShift));
+                entries.Add(new ScatterWriteDataEntry<int>(thermalVisionUtilities + Offsets.ThermalVisionUtilities.CurrentRampPalette, this._config.OpticThermalSetting.ColorScheme));
             }
             catch (Exception ex)
             {

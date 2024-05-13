@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using vmmsharp;
 
 namespace eft_dma_radar
@@ -12,12 +13,12 @@ namespace eft_dma_radar
         /// Adjust this to achieve desired mem/sec performance. Higher = slower, Lower = faster.
         /// </summary>
         private static Vmm vmmInstance;
-        private const int LOOP_DELAY = 100;
 
         private static volatile bool _running = false;
         private static volatile bool _restart = false;
         private static volatile bool _ready = false;
-        private static readonly Thread _worker;
+        private static Thread _workerThread;
+        private static CancellationTokenSource _workerCancellationTokenSource;
         private static uint _pid;
         private static ulong _unityBase;
         private static Game _game;
@@ -166,16 +167,7 @@ namespace eft_dma_radar
                     vmmInstance = new Vmm("-printf", "-v", "-device", "fpga", "-memmap", "mmap.txt");
                 }
                 Program.Log("Starting Memory worker thread...");
-                Memory._worker = new Thread((ThreadStart)delegate
-                {
-                    Memory.Worker();
-                })
-                {
-                    IsBackground = true,
-                    Priority = ThreadPriority.AboveNormal
-                };
-                Memory._running = true;
-                Memory._worker.Start(); // Start new background thread to do memory operations on
+                Memory.StartMemoryWorker();
                 Program.HideConsole();
                 Memory._tickSw.Start(); // Start stopwatch for Mem Ticks/sec
             }
@@ -185,6 +177,7 @@ namespace eft_dma_radar
                 Environment.Exit(-1);
             }
         }
+
         /// <summary>
         /// Generates a Physical Memory Map (mmap.txt) to enhance performance/safety.
         /// </summary>
@@ -284,12 +277,62 @@ namespace eft_dma_radar
         #endregion
 
         #region MemoryThread
+        private static void StartMemoryWorker()
+        {
+            if (Memory._workerThread is not null && Memory._workerThread.IsAlive)
+            {
+                return;
+            }
+
+            Memory._workerCancellationTokenSource = new CancellationTokenSource();
+            var cancellationToken = Memory._workerCancellationTokenSource.Token;
+
+            Memory._workerThread = new Thread(() => Memory.MemoryWorkerThread(cancellationToken))
+            {
+                Priority = ThreadPriority.BelowNormal,
+                IsBackground = true
+            };
+            Memory._running = true;
+            Memory._workerThread.Start();
+        }
+
+        public static async void StopMemoryWorker()
+        {
+            await Task.Run(() =>
+            {
+                if (Memory._workerCancellationTokenSource is not null)
+                {
+                    Memory._workerCancellationTokenSource.Cancel();
+                    Memory._workerCancellationTokenSource.Dispose();
+                    Memory._workerCancellationTokenSource = null;
+                }
+
+                if (Memory._workerThread is not null)
+                {
+                    Memory._workerThread.Join();
+                    Memory._workerThread = null;
+                }
+            });
+        }
+
+        private static void MemoryWorkerThread(CancellationToken cancellationToken)
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                try
+                {
+                    Memory.MemoryWorker();
+                }
+                catch { }
+
+            }
+            Program.Log("[Memory] Refresh thread stopped.");
+        }
+
         /// <summary>
-        /// Main worker thread to perform DMA Reads on.
+        /// Main worker to perform DMA Reads on.
         /// </summary>
-        /// 
-        private static CancellationTokenSource _cts = new CancellationTokenSource();
-        private static void Worker()
+        private static void MemoryWorker()
         {
             try
             {
@@ -605,6 +648,7 @@ namespace eft_dma_radar
                         IScatterWriteDataEntry<float> floatEntry => scatter.PrepareWriteStruct(floatEntry.Address, floatEntry.Data),
                         IScatterWriteDataEntry<ulong> ulongEntry => scatter.PrepareWriteStruct(ulongEntry.Address, ulongEntry.Data),
                         IScatterWriteDataEntry<bool> boolEntry => scatter.PrepareWriteStruct(boolEntry.Address, boolEntry.Data),
+                        IScatterWriteDataEntry<byte> byteEntry => scatter.PrepareWriteStruct(byteEntry.Address, byteEntry.Data),
                         _ => throw new NotSupportedException($"Unsupported data type: {entry.GetType()}")
                     };
 
@@ -651,8 +695,7 @@ namespace eft_dma_radar
             {
                 Program.Log("Closing down Memory Thread...");
                 _running = false;
-                _cts.Cancel(); // Signal cancellation to the worker task
-                while (_worker.IsAlive) Thread.SpinWait(100);
+                Memory.StopMemoryWorker();
             }
         }
 

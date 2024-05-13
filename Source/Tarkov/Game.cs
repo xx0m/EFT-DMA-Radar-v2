@@ -395,7 +395,7 @@ namespace eft_dma_radar
             }
             else
             {
-                if (this._config.LootEnabled && (this._lootManager is null || this._refreshLoot))
+                if (this._config.ProcessLoot && (this._lootManager is null || this._refreshLoot))
                 {
                     this._loadingLoot = true;
                     try
@@ -410,7 +410,7 @@ namespace eft_dma_radar
                     this._loadingLoot = false;
                 }
 
-                if (this._config.MasterSwitchEnabled && Memory.GameStatus == Game.GameStatus.InGame)
+                if (this._config.MasterSwitch && Memory.GameStatus == Game.GameStatus.InGame)
                 {
                     if (this._cameraManager is null)
                     {

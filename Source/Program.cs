@@ -12,6 +12,7 @@ namespace eft_dma_radar
         private static readonly Config _config;
         private static readonly LootFilterManager _lootFilterManager;
         private static readonly Watchlist _watchlist;
+        private static readonly AIFactionManager _aiFactionManager;
         private static readonly object _logLock = new();
         private static readonly StreamWriter _log;
 
@@ -28,12 +29,15 @@ namespace eft_dma_radar
             get => _watchlist;
         }
 
+        public static AIFactionManager AIFactionManager
+        {
+            get => _aiFactionManager;
+        }
 
         public static LootFilterManager LootFilterManager
         {
             get => _lootFilterManager;
         }
-
 
         #region Static Constructor
         static Program()
@@ -43,11 +47,14 @@ namespace eft_dma_radar
             if (Config.TryLoadConfig(out _config) is not true)
                 _config = new Config();
 
-            if (eft_dma_radar.LootFilterManager.TryLoadLootFilterManager(out _lootFilterManager) is not true)
+            if (LootFilterManager.TryLoadLootFilterManager(out _lootFilterManager) is not true)
                 _lootFilterManager = new LootFilterManager();
 
             if (Watchlist.TryLoadWatchlist(out _watchlist) is not true)
                 _watchlist = new Watchlist();
+
+            if (AIFactionManager.TryLoadAIFactions(out _aiFactionManager) is not true)
+                _aiFactionManager = new AIFactionManager();
 
             if (_config.LoggingEnabled)
             {
@@ -62,7 +69,7 @@ namespace eft_dma_radar
         /// The main entry point for the application.
         /// </summary>
         [STAThread]
-        static async Task Main()
+        private static void Main()
         {
             Console.OutputEncoding = System.Text.Encoding.Unicode; // allow russian chars
             try
@@ -72,6 +79,8 @@ namespace eft_dma_radar
                     RuntimeHelpers.RunClassConstructor(typeof(TarkovDevManager).TypeHandle); // invoke static constructor
                     RuntimeHelpers.RunClassConstructor(typeof(Memory).TypeHandle); // invoke static constructor
                     ApplicationConfiguration.Initialize();
+                    Application.EnableVisualStyles();
+                    Application.SetCompatibleTextRenderingDefault(true);
                     Application.Run(new frmMain());
                 }
                 else

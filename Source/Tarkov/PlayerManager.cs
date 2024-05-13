@@ -1,274 +1,266 @@
-﻿namespace eft_dma_radar
+﻿using OpenTK.Graphics.OpenGL;
+using OpenTK.Input;
+using System.Net;
+using System.Numerics;
+using static eft_dma_radar.PlayerManager;
+
+namespace eft_dma_radar
 {
     /// <summary>
     /// Class to manage local player write operations
     /// </summary>
     public class PlayerManager
     {
+        private ulong baseMovementState { get; set; }
+        private ulong handsStamina { get; set; }
+        public bool isADS { get; set; }
+        private ulong movementContext { get; set; }
+        private ulong physical { get; set; }
         private ulong playerBase { get; set; }
         private ulong playerProfile { get; set; }
-
-        private ulong movementContext { get; set; }
-        private ulong baseMovementState { get; set; }
-        private ulong physical { get; set; }
-        private ulong stamina { get; set; }
-        private ulong handsStamina { get; set; }
-
-        private ulong skillsManager { get; set; }
-        private ulong magDrillsLoad { get; set; }
-        private ulong magDrillsUnload { get; set; }
-        private ulong searchDouble { get; set; }
-
-        private ulong magDrillsInventoryCheckAccuracy { get; set; } // 0x198
-        private ulong magDrillsInventoryCheckSpeed { get; set; } // 0x190
-        private ulong magDrillsInstantCheck { get; set; } // 0x1A0
-        private ulong magDrillsLoadProgression { get; set; } // 0x1A8
-        private ulong enduranceBreathElite { get; set; } // 0x48
-        private ulong enduranceBuffBreathTimeInc { get; set; } // 0x38
-        private ulong enduranceBuffEnduranceInc { get; set; } // 0x20
-        private ulong enduranceBuffJumpCostRed { get; set; } // 0x30
-        private ulong enduranceBuffRestoration { get; set; } // 0x40 //limit unknown
-        private ulong enduranceHands { get; set; } // 0x28
-        private ulong strengthBuffAimFatigue { get; set; } // 0x68
-        private ulong strengthBuffElite { get; set; } // 0x80
-        private ulong strengthBuffJumpHeightInc { get; set; } // 0x60
-        private ulong strengthBuffLiftWeightInc { get; set; } // 0x50
-        private ulong strengthBuffMeleeCrits { get; set; } // 0x88
-        private ulong strengthBuffMeleePowerInc { get; set; } // 0x78
-        private ulong strengthBuffSprintSpeedInc { get; set; } // 0x58
-        private ulong strengthBuffThrowDistanceInc { get; set; } // 0x70
-        private ulong throwingStrengthBuff { get; set; } // 0x320
-        private ulong throwingEliteBuff { get; set; } // 0x330
-        private ulong vitalityBuffBleedStop { get; set; } // 0xA8
-        private ulong vitalityBuffRegeneration { get; set; } // 0xA0
-        private ulong vitalityBuffSurviobilityInc { get; set; } // 0x98
-        private ulong searchBuffSpeed { get; set; } // 0x4B8
-        private ulong metabolismMiscDebuffTime { get; set; } // 0x108
-        private ulong metabolismEliteBuffNoDyhydration { get; set; } // 0x110
-        private ulong attentionEliteLuckySearch { get; set; } // 0x170
-        private ulong healthBreakChanceRed { get; set; } // 0xB0
-        private ulong healthEliteAbsorbDamage { get; set; } // 0xD0
-        private ulong healthEnergy { get; set; } // 0xC0
-        private ulong surgerySpeed { get; set; } // 0x4D0
-        private ulong stressBerserk { get; set; } // 0xF0
-        private ulong stressPain { get; set; } // 0xE0
-        private ulong drawElite { get; set; } // 0x348
-        private ulong drawSpeed { get; set; } // 0x338
-        private ulong drawSound { get; set; } // 0x340
-        private ulong covertMovementSpeed { get; set; } // 0x488
-        private ulong covertMovementSoundVolume { get; set; } // 0x478
-        private ulong covertMovementLoud { get; set; } // 0x498
-        private ulong covertMovementEquipment { get; set; } // 0x480
-        private ulong covertMovementElite { get; set; } // 0x490
-        private ulong perceptionHearing { get; set; } // 0x118
-        private ulong perceptionLootDot { get; set; } // 0x120
-
         public ulong proceduralWeaponAnimation { get; set; }
-        private ulong breathEffector { get; set; }
-        private ulong walkEffector { get; set; }
-        private ulong motionEffector { get; set; }
-        private ulong forceEffector { get; set; }
-
-        public bool isADS { get; set; }
+        private ulong skillsManager { get; set; }
+        private ulong stamina { get; set; }
 
         private Config _config { get => Program.Config; }
         public Dictionary<string, float> OriginalValues { get; }
-        /// <summary>
-        /// Stores the different skills that can be modified
-        /// </summary>
-        public enum Skills
-        {
-            MagDrillsLoad,
-            MagDrillsUnload,
-            JumpStrength,
-            ThrowStrength,
-            WeightStrength,
-            SearchDouble,
-            ADS,
-            MagDrillsInventoryCheckAccuracy,
-            MagDrillsInventoryCheckSpeed,
-            MagDrillsInstantCheck,
-            MagDrillsLoadProgression,
-            EnduranceBreathElite,
-            EnduranceBuffBreathTimeInc,
-            EnduranceBuffEnduranceInc,
-            EnduranceBuffJumpCostRed,
-            EnduranceBuffRestoration,
-            EnduranceHands,
-            StrengthBuffAimFatigue,
-            StrengthBuffElite,
-            StrengthBuffJumpHeightInc,
-            StrengthBuffLiftWeightInc,
-            StrengthBuffMeleeCrits,
-            StrengthBuffMeleePowerInc,
-            StrengthBuffSprintSpeedInc,
-            StrengthBuffThrowDistanceInc,
-            ThrowingStrengthBuff,
-            ThrowingEliteBuff,
-            VitalityBuffBleedStop,
-            VitalityBuffRegeneration,
-            VitalityBuffSurviobilityInc,
-            SearchBuffSpeed,
-            MetabolismMiscDebuffTime,
-            MetabolismEliteBuffNoDyhydration,
-            AttentionEliteLuckySearch,
-            HealthBreakChanceRed,
-            HealthEliteAbsorbDamage,
-            HealthEnergy,
-            SurgerySpeed,
-            StressBerserk,
-            StressPain,
-            DrawElite,
-            DrawSpeed,
-            DrawSound,
-            CovertMovementSpeed,
-            CovertMovementSoundVolume,
-            CovertMovementLoud,
-            CovertMovementEquipment,
-            CovertMovementElite,
-            PerceptionHearing,
-            PerceptionLootDot
-        }
+        public Dictionary<string, Dictionary<string, Skill>> Skills;
 
         /// <summary>
         /// Creates new PlayerManager object
         /// </summary>
         public PlayerManager(ulong localGameWorld)
         {
-            this.playerBase = Memory.ReadPtr(localGameWorld + Offsets.LocalGameWorld.MainPlayer);
-            this.playerProfile = Memory.ReadPtr(this.playerBase + Offsets.Player.Profile);
-
-            this.movementContext = Memory.ReadPtr(this.playerBase + Offsets.Player.MovementContext);
-            this.baseMovementState = Memory.ReadPtr(this.movementContext + Offsets.MovementContext.BaseMovementState);
-
-            this.physical = Memory.ReadPtr(this.playerBase + Offsets.Player.Physical);
-            this.stamina = Memory.ReadPtr(this.physical + Offsets.Physical.Stamina);
-            this.handsStamina = Memory.ReadPtr(this.physical + Offsets.Physical.HandsStamina);
-
-            this.skillsManager = Memory.ReadPtr(this.playerProfile + Offsets.Profile.SkillManager);
-            this.magDrillsLoad = Memory.ReadPtr(this.skillsManager + Offsets.SkillManager.MagDrillsLoadSpeed);
-            this.magDrillsUnload = Memory.ReadPtr(this.skillsManager + Offsets.SkillManager.MagDrillsUnloadSpeed);
-            this.searchDouble = Memory.ReadPtr(this.skillsManager + 0x4C0);
-            this.magDrillsInventoryCheckAccuracy = Memory.ReadPtr(this.skillsManager + 0x198);
-            this.magDrillsInventoryCheckSpeed = Memory.ReadPtr(this.skillsManager + 0x190);
-            this.magDrillsInstantCheck = Memory.ReadPtr(this.skillsManager + 0x1A0);
-            this.magDrillsLoadProgression = Memory.ReadPtr(this.skillsManager + 0x1A8);
-            this.enduranceBreathElite = Memory.ReadPtr(this.skillsManager + 0x48);
-            this.enduranceBuffBreathTimeInc = Memory.ReadPtr(this.skillsManager + 0x38);
-            this.enduranceBuffEnduranceInc = Memory.ReadPtr(this.skillsManager + 0x20);
-            this.enduranceBuffJumpCostRed = Memory.ReadPtr(this.skillsManager + 0x30);
-            this.enduranceBuffRestoration = Memory.ReadPtr(this.skillsManager + 0x40);
-            this.enduranceHands = Memory.ReadPtr(this.skillsManager + 0x28);
-            this.strengthBuffAimFatigue = Memory.ReadPtr(this.skillsManager + 0x68);
-            this.strengthBuffElite = Memory.ReadPtr(this.skillsManager + 0x80);
-            this.strengthBuffJumpHeightInc = Memory.ReadPtr(this.skillsManager + 0x60);
-            this.strengthBuffLiftWeightInc = Memory.ReadPtr(this.skillsManager + 0x50);
-            this.strengthBuffMeleeCrits = Memory.ReadPtr(this.skillsManager + 0x88);
-            this.strengthBuffMeleePowerInc = Memory.ReadPtr(this.skillsManager + 0x78);
-            this.strengthBuffSprintSpeedInc = Memory.ReadPtr(this.skillsManager + 0x58);
-            this.strengthBuffThrowDistanceInc = Memory.ReadPtr(this.skillsManager + 0x70);
-            this.throwingStrengthBuff = Memory.ReadPtr(this.skillsManager + 0x320);
-            this.throwingEliteBuff = Memory.ReadPtr(this.skillsManager + 0x330);
-            this.vitalityBuffBleedStop = Memory.ReadPtr(this.skillsManager + 0xA8);
-            this.vitalityBuffRegeneration = Memory.ReadPtr(this.skillsManager + 0xA0);
-            this.vitalityBuffSurviobilityInc = Memory.ReadPtr(this.skillsManager + 0x98);
-            this.searchBuffSpeed = Memory.ReadPtr(this.skillsManager + 0x4B8);
-            this.metabolismMiscDebuffTime = Memory.ReadPtr(this.skillsManager + 0x108);
-            this.metabolismEliteBuffNoDyhydration = Memory.ReadPtr(this.skillsManager + 0x110);
-            this.attentionEliteLuckySearch = Memory.ReadPtr(this.skillsManager + 0x170);
-            this.healthBreakChanceRed = Memory.ReadPtr(this.skillsManager + 0xB0);
-            this.healthEliteAbsorbDamage = Memory.ReadPtr(this.skillsManager + 0xD0);
-            this.healthEnergy = Memory.ReadPtr(this.skillsManager + 0xC0);
-            this.surgerySpeed = Memory.ReadPtr(this.skillsManager + 0x4D0);
-            this.stressBerserk = Memory.ReadPtr(this.skillsManager + 0xF0);
-            this.stressPain = Memory.ReadPtr(this.skillsManager + 0xE0);
-            this.drawElite = Memory.ReadPtr(this.skillsManager + 0x348);
-            this.drawSpeed = Memory.ReadPtr(this.skillsManager + 0x338);
-            this.drawSound = Memory.ReadPtr(this.skillsManager + 0x340);
-            this.covertMovementSpeed = Memory.ReadPtr(this.skillsManager + 0x488);
-            this.covertMovementSoundVolume = Memory.ReadPtr(this.skillsManager + 0x478);
-            this.covertMovementLoud = Memory.ReadPtr(this.skillsManager + 0x498);
-            this.covertMovementEquipment = Memory.ReadPtr(this.skillsManager + 0x480);
-            this.covertMovementElite = Memory.ReadPtr(this.skillsManager + 0x490);
-            this.perceptionHearing = Memory.ReadPtr(this.skillsManager + 0x118);
-            this.perceptionLootDot = Memory.ReadPtr(this.skillsManager + 0x120);
-
-            this.proceduralWeaponAnimation = Memory.ReadPtr(this.playerBase + 0x1C0);
-            this.isADS = Memory.ReadValue<bool>(this.proceduralWeaponAnimation + 0x1BD);
-            this.breathEffector = Memory.ReadPtr(this.proceduralWeaponAnimation + 0x28);
-            this.walkEffector = Memory.ReadPtr(this.proceduralWeaponAnimation + 0x30);
-            this.motionEffector = Memory.ReadPtr(this.proceduralWeaponAnimation + 0x38);
-            this.forceEffector = Memory.ReadPtr(this.proceduralWeaponAnimation + 0x40);
-
             this.OriginalValues = new Dictionary<string, float>()
             {
-                ["MagDrillsLoad"] = -1,
-                ["MagDrillsUnload"] = -1,
-                ["JumpStrength"] = -1,
-                ["WeightStrength"] = -1,
-                ["ThrowStrength"] = -1,
-                ["SearchDouble"] = -1,
                 ["Mask"] = 125,
                 ["AimingSpeed"] = 1,
                 ["AimingSpeedSway"] = 0.2f,
                 ["StaminaCapacity"] = -1,
                 ["HandStaminaCapacity"] = -1,
-
-                ["BreathEffectorIntensity"] = -1,
-                ["WalkEffectorIntensity"] = -1,
-                ["MotionEffectorIntensity"] = -1,
-                ["ForceEffectorIntensity"] = -1,
-
-                ["MagDrillsInventoryCheckAccuracy"] = -1,
-                ["MagDrillsInventoryCheckSpeed"] = -1,
-                ["MagDrillsInstantCheck"] = -1,
-                ["MagDrillsLoadProgression"] = -1,
-                ["EnduranceBreathElite"] = -1,
-                ["EnduranceBuffBreathTimeInc"] = -1,
-                ["EnduranceBuffEnduranceInc"] = -1,
-                ["EnduranceBuffJumpCostRed"] = -1,
-                ["EnduranceBuffRestoration"] = -1,
-                ["EnduranceHands"] = -1,
-                ["StrengthBuffAimFatigue"] = -1,
-                ["StrengthBuffElite"] = -1,
-                ["StrengthBuffJumpHeightInc"] = -1,
-                ["StrengthBuffLiftWeightInc"] = -1,
-                ["StrengthBuffMeleeCrits"] = -1,
-                ["StrengthBuffMeleePowerInc"] = -1,
-                ["StrengthBuffSprintSpeedInc"] = -1,
-                ["StrengthBuffThrowDistanceInc"] = -1,
-                ["ThrowingStrengthBuff"] = -1,
-                ["ThrowingEliteBuff"] = -1,
-                ["VitalityBuffBleedStop"] = -1,
-                ["VitalityBuffRegeneration"] = -1,
-                ["VitalityBuffSurviobilityInc"] = -1,
-                ["SearchBuffSpeed"] = -1,
-                ["MetabolismMiscDebuffTime"] = -1,
-                ["MetabolismEliteBuffNoDyhydration"] = -1,
-                ["AttentionEliteLuckySearch"] = -1,
-                ["HealthBreakChanceRed"] = -1,
-                ["HealthEliteAbsorbDamage"] = -1,
-                ["HealthEnergy"] = -1,
-                ["SurgerySpeed"] = -1,
-                ["StressBerserk"] = -1,
-                ["StressPain"] = -1,
-                ["DrawElite"] = -1,
-                ["DrawSpeed"] = -1,
-                ["DrawSound"] = -1,
-                ["CovertMovementSpeed"] = -1,
-                ["CovertMovementSoundVolume"] = -1,
-                ["CovertMovementLoud"] = -1,
-                ["CovertMovementEquipment"] = -1,
-                ["CovertMovementElite"] = -1,
-                ["PerceptionHearing"] = -1,
-                ["PerceptionLootDot"] = -1
             };
+
+            this.Skills = new Dictionary<string, Dictionary<string, Skill>>
+            {
+                {
+                    "Endurance", new Dictionary<string, Skill>
+                    {
+                        { "BuffEnduranceInc", new Skill(Offsets.SkillManager.EnduranceBuffEnduranceInc, 0.7f) },
+                        { "Hands", new Skill(Offsets.SkillManager.EnduranceHands, 0.5f) },
+                        { "BuffJumpCostRed", new Skill(Offsets.SkillManager.EnduranceBuffJumpCostRed, 0.3f) },
+                        { "BuffBreathTimeInc", new Skill(Offsets.SkillManager.EnduranceBuffBreathTimeInc, 1f) },
+                        { "BuffRestoration", new Skill(Offsets.SkillManager.EnduranceBuffRestoration, 0.5f) },
+                        { "BreathElite", new Skill(Offsets.SkillManager.EnduranceBreathElite, 0f, true) }
+                    }
+                },
+                {
+                    "Strength", new Dictionary<string, Skill>
+                    {
+                        { "BuffLiftWeightInc", new Skill(Offsets.SkillManager.StrengthBuffLiftWeightInc, 0.3f) },
+                        { "BuffSprintSpeedInc", new Skill(Offsets.SkillManager.StrengthBuffSprintSpeedInc, 0.2f) },
+                        { "BuffJumpHeightInc", new Skill(Offsets.SkillManager.StrengthBuffJumpHeightInc, 0.2f + (_config.JumpPowerStrength / 100)) },
+                        { "BuffAimFatigue", new Skill(Offsets.SkillManager.StrengthBuffAimFatigue, 0.2f) },
+                        { "BuffThrowDistanceInc", new Skill(Offsets.SkillManager.StrengthBuffThrowDistanceInc, _config.ThrowPowerStrength / 100) },
+                        { "BuffMeleePowerInc", new Skill(Offsets.SkillManager.StrengthBuffMeleePowerInc, 0.3f) },
+                        { "BuffElite", new Skill(Offsets.SkillManager.StrengthBuffElite, 0f, true) },
+                        { "BuffMeleeCrits", new Skill(Offsets.SkillManager.StrengthBuffMeleeCrits, 0f, true) }
+                    }
+                },
+                {
+                    "Vitality", new Dictionary<string, Skill>
+                    {
+                        { "BuffBleedChanceRed", new Skill(Offsets.SkillManager.VitalityBuffBleedChanceRed, 0.6f) },
+                        { "BuffSurviobilityInc", new Skill(Offsets.SkillManager.VitalityBuffSurviobilityInc, 0.2f) },
+                        { "BuffRegeneration", new Skill(Offsets.SkillManager.VitalityBuffRegeneration, 0f, true) },
+                        { "BuffBleedStop", new Skill(Offsets.SkillManager.VitalityBuffBleedStop, 0f, true) }
+                    }
+                },
+                {
+                    "Health", new Dictionary<string, Skill>
+                    {
+                        { "BreakChanceRed", new Skill(Offsets.SkillManager.HealthBreakChanceRed, 0.6f) },
+                        { "Energy", new Skill(Offsets.SkillManager.HealthEnergy, 0.3f) },
+                        { "Hydration", new Skill(Offsets.SkillManager.HealthHydration, 0.3f) },
+                        { "EliteAbsorbDamage", new Skill(Offsets.SkillManager.HealthEliteAbsorbDamage, 0f, true) }
+                    }
+                },
+                {
+                    "Stress Resistance", new Dictionary<string, Skill>
+                    {
+                        { "Pain", new Skill(Offsets.SkillManager.StressResistancePain, 0.5f) },
+                        { "Tremor", new Skill(Offsets.SkillManager.StressResistanceTremor, 0.6f) },
+                        { "Berserk", new Skill(Offsets.SkillManager.StressResistanceBerserk, 0f, true) }
+                    }
+                },
+                {
+                    "Metabolism", new Dictionary<string, Skill>
+                    {
+                        { "RatioPlus", new Skill(Offsets.SkillManager.MetabolismRatioPlus, 0.5f) },
+                        { "MiscDebuffTime", new Skill(Offsets.SkillManager.MetabolismMiscDebuffTime, 0.5f) },
+                        { "EliteBuffNoDyhydration", new Skill(Offsets.SkillManager.MetabolismEliteBuffNoDyhydration, 0f, true) }
+                    }
+                },
+                {
+                    "Perception", new Dictionary<string, Skill>
+                    {
+                        { "Hearing", new Skill(Offsets.SkillManager.PerceptionHearing, 0.15f) },
+                        { "LootDot", new Skill(Offsets.SkillManager.PerceptionLootDot, 1f) },
+                        { "EliteNoIdea", new Skill(Offsets.SkillManager.PerceptionEliteNoIdea, 0f, true) }
+                    }
+                },
+                {
+                    "Intellect", new Dictionary<string, Skill>
+                    {
+                        { "LearningSpeed", new Skill(Offsets.SkillManager.IntellectLearningSpeed, 1f) },
+                        { "EliteNaturalLearner", new Skill(Offsets.SkillManager.IntellectEliteNaturalLearner, 0f, true) },
+                        { "EliteAmmoCounter", new Skill(Offsets.SkillManager.IntellectEliteAmmoCounter, 0f, true) },
+                        { "EliteContainerScope", new Skill(Offsets.SkillManager.IntellectEliteContainerScope, 0f, true) }
+                    }
+                },
+                {
+                    "Attention", new Dictionary<string, Skill>
+                    {
+                        { "LootSpeed", new Skill(Offsets.SkillManager.AttentionLootSpeed, 1f) },
+                        { "Examine", new Skill(Offsets.SkillManager.AttentionExamine, 1f) },
+                        { "EliteLuckySearch", new Skill(Offsets.SkillManager.AttentionEliteLuckySearch, 0f, true) }
+                    }
+                },
+                {
+                    "MagDrills", new Dictionary<string, Skill>
+                    {
+                        { "LoadSpeed", new Skill(Offsets.SkillManager.MagDrillsLoadSpeed, (float)_config.MagDrillSpeed) },
+                        { "UnloadSpeed", new Skill(Offsets.SkillManager.MagDrillsUnloadSpeed, (float)_config.MagDrillSpeed) },
+                        { "InventoryCheckSpeed", new Skill(Offsets.SkillManager.MagDrillsInventoryCheckSpeed, 40f) },
+                        { "InventoryCheckAccuracy", new Skill(Offsets.SkillManager.MagDrillsInventoryCheckAccuracy, 100f) },
+                        { "InstantCheck", new Skill(Offsets.SkillManager.MagDrillsInstantCheck, 0f, true) },
+                        { "LoadProgression", new Skill(Offsets.SkillManager.MagDrillsLoadProgression, 0f, true) }
+                    }
+                },
+                {
+                    "Immunity", new Dictionary<string, Skill>
+                    {
+                        { "MiscEffects", new Skill(Offsets.SkillManager.ImmunityMiscEffects, 0.5f) },
+                        { "PoisonBuff", new Skill(Offsets.SkillManager.ImmunityPoisonBuff, 0.5f) },
+                        { "PainKiller", new Skill(Offsets.SkillManager.ImmunityPainKiller, 0.3f) },
+                        { "AvoidPoisonChance", new Skill(Offsets.SkillManager.ImmunityAvoidPoisonChance, 1f) },
+                        { "AvoidMiscEffectsChance", new Skill(Offsets.SkillManager.ImmunityAvoidMiscEffectsChance, 1f) }
+                    }
+                },
+                {
+                    "Throwables", new Dictionary<string, Skill>
+                    {
+                        { "StrengthBuff", new Skill(Offsets.SkillManager.ThrowingStrengthBuff, 0.25f) },
+                        { "EnergyExpenses", new Skill(Offsets.SkillManager.ThrowingEnergyExpenses, 0.5f) },
+                        { "EliteBuff", new Skill(Offsets.SkillManager.ThrowingEliteBuff, 0f, true) }
+                    }
+                },
+                {
+                    "Covert Movement", new Dictionary<string, Skill>
+                    {
+                        { "SoundVolume", new Skill(Offsets.SkillManager.CovertMovementSoundVolume, 0.6f) },
+                        { "Equipment", new Skill(Offsets.SkillManager.CovertMovementEquipment, 0.6f) },
+                        { "Speed", new Skill(Offsets.SkillManager.CovertMovementSpeed, 0.5f) },
+                        { "Elite", new Skill(Offsets.SkillManager.CovertMovementElite, 0f, true) },
+                        { "Loud", new Skill(Offsets.SkillManager.CovertMovementLoud, 0.6f) }
+                    }
+                },
+                {
+                    "Search", new Dictionary<string, Skill>
+                    {
+                        { "BuffSpeed", new Skill(Offsets.SkillManager.SearchBuffSpeed, 1.0f) },
+                        { "Double", new Skill(Offsets.SkillManager.SearchDouble, 0f, true) },
+                    }
+                },
+                {
+                    "Surgery", new Dictionary<string, Skill>
+                    {
+                        { "ReducePenalty", new Skill(Offsets.SkillManager.SurgeryReducePenalty, 1f) },
+                        { "Speed", new Skill(Offsets.SkillManager.SurgerySpeed, 0.4f) }
+                    }
+                },
+                {
+                    "Light Vests", new Dictionary<string, Skill>
+                    {
+                        { "MoveSpeedPenaltyReduction", new Skill(Offsets.SkillManager.LightVestMoveSpeedPenaltyReduction, 0.3f) },
+                        { "MeleeWeaponDamageReduction", new Skill(Offsets.SkillManager.LightVestMeleeWeaponDamageReduction, 0.3f) },
+                        { "BleedingProtection", new Skill(Offsets.SkillManager.LightVestBleedingProtection, 0f, true) },
+                    }
+                },
+                {
+                    "Heavy Vests", new Dictionary<string, Skill>
+                    {
+                        { "MoveSpeedPenaltyReduction", new Skill(Offsets.SkillManager.HeavyVestMoveSpeedPenaltyReduction, 0.25f) },
+                        { "BluntThroughputDamageReduction", new Skill(Offsets.SkillManager.HeavyVestBluntThroughputDamageReduction, 0.2f) },
+                        { "NoBodyDamageDeflectChance", new Skill(Offsets.SkillManager.HeavyVestNoBodyDamageDeflectChance, 0f, true) },
+                    }
+                },
+            };
+
+            var scatterMap = new ScatterReadMap(1);
+            var round1 = scatterMap.AddRound();
+            var round2 = scatterMap.AddRound();
+            var round3 = scatterMap.AddRound();
+            var round4 = scatterMap.AddRound();
+            var round5 = scatterMap.AddRound();
+
+            var playerBasePtr = round1.AddEntry<ulong>(0, 0, localGameWorld, null, Offsets.LocalGameWorld.MainPlayer);
+
+            var playerProfilePtr = round2.AddEntry<ulong>(0, 1, playerBasePtr, null, Offsets.Player.Profile);
+            var movementContextPtr = round2.AddEntry<ulong>(0, 2, playerBasePtr, null, Offsets.Player.MovementContext);
+            var physicalPtr = round2.AddEntry<ulong>(0, 3, playerBasePtr, null, Offsets.Player.Physical);
+            var proceduralWeaponAnimationPtr = round2.AddEntry<ulong>(0, 4, playerBasePtr, null, Offsets.Player.ProceduralWeaponAnimation);
+
+            var skillsManagerPtr = round3.AddEntry<ulong>(0, 5, playerProfilePtr, null, Offsets.Profile.SkillManager);
+            var baseMovementStatePtr = round3.AddEntry<ulong>(0, 6, movementContextPtr, null, Offsets.MovementContext.BaseMovementState);
+            var isADSPtr = round3.AddEntry<ulong>(0, 7, proceduralWeaponAnimationPtr, null, Offsets.ProceduralWeaponAnimation.IsAiming);
+            var staminaPtr = round3.AddEntry<ulong>(0, 8, physicalPtr, null, Offsets.Physical.Stamina);
+            var handsStaminaPtr = round3.AddEntry<ulong>(0, 9, physicalPtr, null, Offsets.Physical.HandsStamina);
+
+            var startingIndex = 10; // last scattermap index + 1
+
+            SetupOriginalSkillValues(startingIndex, skillsManagerPtr, ref round4, ref round5);
+
+            scatterMap.Execute();
+
+            if (!scatterMap.Results[0][0].TryGetResult<ulong>(out var playerBase))
+                return;
+            if (!scatterMap.Results[0][1].TryGetResult<ulong>(out var playerProfile))
+                return;
+            if (!scatterMap.Results[0][2].TryGetResult<ulong>(out var movementContext))
+                return;
+            if (!scatterMap.Results[0][3].TryGetResult<ulong>(out var physical))
+                return;
+            if (!scatterMap.Results[0][4].TryGetResult<ulong>(out var proceduralWeaponAnimation))
+                return;
+            if (!scatterMap.Results[0][5].TryGetResult<ulong>(out var skillsManager))
+                return;
+            if (!scatterMap.Results[0][6].TryGetResult<ulong>(out var baseMovementState))
+                return;
+            if (!scatterMap.Results[0][8].TryGetResult<ulong>(out var stamina))
+                return;
+            if (!scatterMap.Results[0][9].TryGetResult<ulong>(out var handsStamina))
+                return;
+
+            scatterMap.Results[0][7].TryGetResult<bool>(out var isADS);
+
+            this.playerBase = playerBase;
+            this.playerProfile = playerProfile;
+            this.movementContext = movementContext;
+            this.baseMovementState = baseMovementState;
+            this.physical = physical;
+            this.stamina = stamina;
+            this.handsStamina = handsStamina;
+            this.skillsManager = skillsManager;
+            this.proceduralWeaponAnimation = proceduralWeaponAnimation;
+            this.isADS = isADS;
+
+            ProcessOriginalSkillValues(startingIndex, ref scatterMap);
         }
 
         /// <summary>
         /// Enables / disables weapon recoil
         /// </summary>
-        public void SetNoRecoilSway(bool on)
+        public void SetNoRecoilSway(bool on, ref List<IScatterWriteEntry> entries)
         {
             try
             {
@@ -276,11 +268,11 @@
 
                 if (on && mask != 0)
                 {
-                    Memory.WriteValue(this.proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.Mask, 0);
+                    entries.Add(new ScatterWriteDataEntry<int>(this.proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.Mask, 0));
                 }
                 else if (!on && mask == 0)
                 {
-                    Memory.WriteValue(this.proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.Mask, (int)this.OriginalValues["Mask"]);
+                    entries.Add(new ScatterWriteDataEntry<int>(this.proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.Mask, (int)this.OriginalValues["Mask"]));
                 }
             }
             catch (Exception ex)
@@ -290,46 +282,9 @@
         }
 
         /// <summary>
-        /// Enables / disables weapon recoil
-        /// </summary>
-        // public void SetNoRecoil(bool on)
-        // {
-        //     var mask = Memory.ReadValue<int>(this.proceduralWeaponAnimation + 0x138);
-
-        //     if (on && mask != 1)
-        //     {
-        //         Memory.WriteValue(this.proceduralWeaponAnimation + 0x138, 1);
-        //     }
-        //     else if (!on && mask == 1)
-        //     {
-        //         Memory.WriteValue(this.proceduralWeaponAnimation + 0x138, (int)this.OriginalValues["Mask"]);
-        //     }
-        // }
-
-        /// <summary>
-        /// Enables / disables weapon sway
-        /// </summary>
-        // public void SetNoSway(bool on)
-        // {
-
-        //     if (this.OriginalValues["BreathEffectorIntensity"] == -1)
-        //     {
-        //         this.OriginalValues["BreathEffectorIntensity"] = Memory.ReadValue<float>(this.breathEffector + 0xA4);
-        //         this.OriginalValues["WalkEffectorIntensity"] = Memory.ReadValue<float>(this.walkEffector + 0x44);
-        //         this.OriginalValues["MotionEffectorIntensity"] = Memory.ReadValue<float>(this.motionEffector + 0xD0);
-        //         this.OriginalValues["ForceEffectorIntensity"] = Memory.ReadValue<float>(this.forceEffector + 0x30);
-        //     }
-
-        //     Memory.WriteValue<float>(this.breathEffector + 0xA4, on ? 0f : this.OriginalValues["BreathEffectorIntensity"]);
-        //     Memory.WriteValue<float>(this.walkEffector + 0x44, on ? 0f : this.OriginalValues["WalkEffectorIntensity"]);
-        //     Memory.WriteValue<float>(this.motionEffector + 0xD0, on ? 0f : this.OriginalValues["MotionEffectorIntensity"]);
-        //     Memory.WriteValue<float>(this.forceEffector + 0x30, on ? 0f : this.OriginalValues["ForceEffectorIntensity"]);
-        // }
-
-        /// <summary>
         /// Enables / disables instant ads, changes per weapon
         /// </summary>
-        public void SetInstantADS(bool on)
+        public void SetInstantADS(bool on, ref List<IScatterWriteEntry> entries)
         {
             try
             {
@@ -337,13 +292,13 @@
 
                 if (on && aimingSpeed != 7)
                 {
-                    Memory.WriteValue(this.proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.AimingSpeed, 7f);
-                    Memory.WriteValue(this.proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.AimSwayStrength, 0f);
+                    entries.Add(new ScatterWriteDataEntry<float>(this.proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.AimingSpeed, 7f));
+                    entries.Add(new ScatterWriteDataEntry<float>(this.proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.AimSwayStrength, 0f));
                 }
                 else if (!on && aimingSpeed != 1)
                 {
-                    Memory.WriteValue(this.proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.AimingSpeed, (float)this.OriginalValues["AimingSpeed"]);
-                    Memory.WriteValue(this.proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.AimSwayStrength, (float)this.OriginalValues["AimingSpeedSway"]);
+                    entries.Add(new ScatterWriteDataEntry<float>(this.proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.AimingSpeed, this.OriginalValues["AimingSpeed"]));
+                    entries.Add(new ScatterWriteDataEntry<float>(this.proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.AimSwayStrength, this.OriginalValues["AimingSpeedSway"]));
                 }
             }
             catch (Exception ex)
@@ -352,400 +307,112 @@
             }
         }
 
-        /// <summary>
-        /// Modifies the players skill buffs
-        /// </summary>
-        public void SetMaxSkill(Skills skill, bool revert = false)
+        private void ProcessOriginalSkillValues(int index, ref ScatterReadMap scatterMap)
         {
             try
             {
-                switch (skill)
+                foreach (var category in Skills)
                 {
-                    case Skills.MagDrillsLoad:
+                    foreach (var skill in category.Value.Values)
+                    {
+                        scatterMap.Results[0][index].TryGetResult<ulong>(out var pointer);
+                        skill.Pointer = pointer;
+                        
+                        index++;
+
+                        if (skill.IsEliteSkill)
                         {
-                            if (this.OriginalValues["MagDrillsLoad"] == -1)
-                            {
-                                this.OriginalValues["MagDrillsLoad"] = Memory.ReadValue<float>(this.magDrillsLoad + 0x30);
-                            }
-                            Memory.WriteValue<float>(this.magDrillsLoad + 0x30, revert ? this.OriginalValues["MagDrillsLoad"] : 30f);
-                            break;
+                            scatterMap.Results[0][index].TryGetResult<bool>(out var value);
+                            skill.EliteToggled = value;
                         }
-                    case Skills.MagDrillsUnload:
+                        else
                         {
-                            if (this.OriginalValues["MagDrillsUnload"] == -1)
-                            {
-                                this.OriginalValues["MagDrillsUnload"] = Memory.ReadValue<float>(this.magDrillsUnload + 0x30);
-                            }
-                            Memory.WriteValue<float>(this.magDrillsUnload + 0x30, revert ? this.OriginalValues["MagDrillsUnload"] : 30f);
-                            break;
+                            scatterMap.Results[0][index].TryGetResult<float>(out var value);
+                            skill.DefaultValue = value;
                         }
 
-                    case Skills.SearchDouble:
-                        {
-                            Memory.WriteValue<bool>(this.searchDouble + 0x30, _config.DoubleSearchEnabled);
-                            break;
-                        }
-                    case Skills.MagDrillsInventoryCheckAccuracy:
-                        {
-                            if (this.OriginalValues["MagDrillsInventoryCheckAccuracy"] == -1)
-                            {
-                                this.OriginalValues["MagDrillsInventoryCheckAccuracy"] = Memory.ReadValue<float>(this.magDrillsInventoryCheckAccuracy + 0x30);
-                            }
-                            Memory.WriteValue<float>(this.magDrillsInventoryCheckAccuracy + 0x30, revert ? this.OriginalValues["MagDrillsInventoryCheckAccuracy"] : 2f);
-                            break;
-                        }
-                    case Skills.MagDrillsInventoryCheckSpeed:
-                        {
-                            if (this.OriginalValues["MagDrillsInventoryCheckSpeed"] == -1)
-                            {
-                                this.OriginalValues["MagDrillsInventoryCheckSpeed"] = Memory.ReadValue<float>(this.magDrillsInventoryCheckSpeed + 0x30);
-                            }
-                            Memory.WriteValue<float>(this.magDrillsInventoryCheckSpeed + 0x30, revert ? this.OriginalValues["MagDrillsInventoryCheckSpeed"] : 40f);
-                            break;
-                        }
-                    case Skills.MagDrillsInstantCheck:
-                        {
-
-                            Memory.WriteValue<bool>(this.magDrillsInstantCheck + 0x30, true);
-                            break;
-                        }
-                    case Skills.MagDrillsLoadProgression:
-                        {
-                            if (this.OriginalValues["MagDrillsLoadProgression"] == -1)
-                            {
-                                this.OriginalValues["MagDrillsLoadProgression"] = Memory.ReadValue<float>(this.magDrillsLoadProgression + 0x30);
-                            }
-                            //Memory.WriteValue<float>(this.magDrillsLoadProgression + 0x30, revert ? this.OriginalValues["MagDrillsLoadProgression"] : 30f);
-                            break;
-                        }
-                    case Skills.EnduranceBreathElite:
-                        {
-                            if (this.OriginalValues["EnduranceBreathElite"] == -1)
-                            {
-                                this.OriginalValues["EnduranceBreathElite"] = Memory.ReadValue<float>(this.enduranceBreathElite + 0x30);
-                            }
-                            Memory.WriteValue<float>(this.enduranceBreathElite + 0x30, revert ? this.OriginalValues["EnduranceBreathElite"] : 1f);
-                            break;
-                        }
-                    case Skills.EnduranceBuffBreathTimeInc:
-                        {
-                            if (this.OriginalValues["EnduranceBuffBreathTimeInc"] == -1)
-                            {
-                                this.OriginalValues["EnduranceBuffBreathTimeInc"] = Memory.ReadValue<float>(this.enduranceBuffBreathTimeInc + 0x30);
-                            }
-                            Memory.WriteValue<float>(this.enduranceBuffBreathTimeInc + 0x30, revert ? this.OriginalValues["EnduranceBuffBreathTimeInc"] : 1f);
-                            break;
-                        }
-                    case Skills.EnduranceBuffEnduranceInc:
-                        {
-                            if (this.OriginalValues["EnduranceBuffEnduranceInc"] == -1)
-                            {
-                                this.OriginalValues["EnduranceBuffEnduranceInc"] = Memory.ReadValue<float>(this.enduranceBuffEnduranceInc + 0x30);
-                            }
-                            Memory.WriteValue<float>(this.enduranceBuffEnduranceInc + 0x30, revert ? this.OriginalValues["EnduranceBuffEnduranceInc"] : 0.7f);
-                            break;
-                        }
-                    case Skills.EnduranceBuffJumpCostRed:
-                        {
-                            if (this.OriginalValues["EnduranceBuffJumpCostRed"] == -1)
-                            {
-                                this.OriginalValues["EnduranceBuffJumpCostRed"] = Memory.ReadValue<float>(this.enduranceBuffJumpCostRed + 0x30);
-                            }
-                            Memory.WriteValue<float>(this.enduranceBuffJumpCostRed + 0x30, revert ? this.OriginalValues["EnduranceBuffJumpCostRed"] : 0.3f);
-                            break;
-                        }
-                    case Skills.EnduranceBuffRestoration:
-                        {
-                            if (this.OriginalValues["EnduranceBuffRestoration"] == -1)
-                            {
-                                this.OriginalValues["EnduranceBuffRestoration"] = Memory.ReadValue<float>(this.enduranceBuffRestoration + 0x30);
-                            }
-                            Memory.WriteValue<float>(this.enduranceBuffRestoration + 0x30, revert ? this.OriginalValues["EnduranceBuffRestoration"] : 0.75f);
-                            break;
-                        }
-                    case Skills.EnduranceHands:
-                        {
-                            if (this.OriginalValues["EnduranceHands"] == -1)
-                            {
-                                this.OriginalValues["EnduranceHands"] = Memory.ReadValue<float>(this.enduranceHands + 0x30);
-                            }
-                            Memory.WriteValue<float>(this.enduranceHands + 0x30, revert ? this.OriginalValues["EnduranceHands"] : 0.5f);
-                            break;
-                        }
-                    case Skills.StrengthBuffAimFatigue:
-                        {
-                            if (this.OriginalValues["StrengthBuffAimFatigue"] == -1)
-                            {
-                                this.OriginalValues["StrengthBuffAimFatigue"] = Memory.ReadValue<float>(this.strengthBuffAimFatigue + 0x30);
-                            }
-                            //Memory.WriteValue<float>(this.strengthBuffAimFatigue + 0x30, revert ? this.OriginalValues["StrengthBuffAimFatigue"] : 0.5f);
-                            break;
-                        }
-                    case Skills.StrengthBuffElite:
-                        {
-
-                            Memory.WriteValue<bool>(this.strengthBuffElite + 0x30, true);
-                            break;
-                        }
-                    case Skills.StrengthBuffJumpHeightInc:
-                        {
-                            if (this.OriginalValues["StrengthBuffJumpHeightInc"] == -1)
-                            {
-                                this.OriginalValues["StrengthBuffJumpHeightInc"] = Memory.ReadValue<float>(this.strengthBuffJumpHeightInc + 0x30);
-                            }
-                            Memory.WriteValue<float>(this.strengthBuffJumpHeightInc + 0x30, revert ? this.OriginalValues["StrengthBuffJumpHeightInc"] : 0.2f);
-                            break;
-                        }
-                    case Skills.StrengthBuffLiftWeightInc:
-                        {
-                            if (this.OriginalValues["StrengthBuffLiftWeightInc"] == -1)
-                            {
-                                this.OriginalValues["StrengthBuffLiftWeightInc"] = Memory.ReadValue<float>(this.strengthBuffLiftWeightInc + 0x30);
-                            }
-                            Memory.WriteValue<float>(this.strengthBuffLiftWeightInc + 0x30, revert ? this.OriginalValues["StrengthBuffLiftWeightInc"] : 0.3f);
-                            break;
-                        }
-                    case Skills.StrengthBuffMeleeCrits:
-                        {
-                            if (this.OriginalValues["StrengthBuffMeleeCrits"] == -1)
-                            {
-                                this.OriginalValues["StrengthBuffMeleeCrits"] = Memory.ReadValue<float>(this.strengthBuffMeleeCrits + 0x30);
-                            }
-                            Memory.WriteValue<float>(this.strengthBuffMeleeCrits + 0x30, revert ? this.OriginalValues["StrengthBuffMeleeCrits"] : 0.5f);
-                            break;
-                        }
-                    case Skills.StrengthBuffMeleePowerInc:
-                        {
-                            if (this.OriginalValues["StrengthBuffMeleePowerInc"] == -1)
-                            {
-                                this.OriginalValues["StrengthBuffMeleePowerInc"] = Memory.ReadValue<float>(this.strengthBuffMeleePowerInc + 0x30);
-                            }
-                            Memory.WriteValue<float>(this.strengthBuffMeleePowerInc + 0x30, revert ? this.OriginalValues["StrengthBuffMeleePowerInc"] : 0.3f);
-                            break;
-                        }
-                    case Skills.StrengthBuffSprintSpeedInc:
-                        {
-                            if (this.OriginalValues["StrengthBuffSprintSpeedInc"] == -1)
-                            {
-                                this.OriginalValues["StrengthBuffSprintSpeedInc"] = Memory.ReadValue<float>(this.strengthBuffSprintSpeedInc + 0x30);
-                            }
-                            Memory.WriteValue<float>(this.strengthBuffSprintSpeedInc + 0x30, revert ? this.OriginalValues["StrengthBuffSprintSpeedInc"] : 0.2f);
-                            break;
-                        }
-                    case Skills.StrengthBuffThrowDistanceInc:
-                        {
-                            if (this.OriginalValues["StrengthBuffThrowDistanceInc"] == -1)
-                            {
-                                this.OriginalValues["StrengthBuffThrowDistanceInc"] = Memory.ReadValue<float>(this.strengthBuffThrowDistanceInc + 0x30);
-                            }
-                            Memory.WriteValue<float>(this.strengthBuffThrowDistanceInc + 0x30, revert ? this.OriginalValues["StrengthBuffThrowDistanceInc"] : 0.2f);
-                            break;
-                        }
-                    case Skills.ThrowingStrengthBuff:
-                        {
-
-                            //Memory.WriteValue<bool>(this.throwingStrengthBuff + 0x30, true);
-                            break;
-                        }
-                    case Skills.ThrowingEliteBuff:
-                        {
-
-                            //Memory.WriteValue<bool>(this.throwingEliteBuff + 0x30, true);
-                            break;
-                        }
-                    case Skills.VitalityBuffBleedStop:
-                        {
-
-                            Memory.WriteValue<bool>(this.vitalityBuffBleedStop + 0x30, true);
-                            break;
-                        }
-                    case Skills.VitalityBuffRegeneration:
-                        {
-
-                            Memory.WriteValue<bool>(this.vitalityBuffRegeneration + 0x30, true);
-                            break;
-                        }
-                    case Skills.VitalityBuffSurviobilityInc:
-                        {
-                            if (this.OriginalValues["VitalityBuffSurviobilityInc"] == -1)
-                            {
-                                this.OriginalValues["VitalityBuffSurviobilityInc"] = Memory.ReadValue<float>(this.vitalityBuffSurviobilityInc + 0x30);
-                            }
-                            Memory.WriteValue<float>(this.vitalityBuffSurviobilityInc + 0x30, revert ? this.OriginalValues["VitalityBuffSurviobilityInc"] : 0.2f);
-                            break;
-                        }
-                    case Skills.SearchBuffSpeed:
-                        {
-                            if (this.OriginalValues["SearchBuffSpeed"] == -1)
-                            {
-                                this.OriginalValues["SearchBuffSpeed"] = Memory.ReadValue<float>(this.searchBuffSpeed + 0x30);
-                            }
-                            Memory.WriteValue<float>(this.searchBuffSpeed + 0x30, revert ? this.OriginalValues["SearchBuffSpeed"] : 0.5f);
-                            break;
-                        }
-                    case Skills.MetabolismMiscDebuffTime:
-                        {
-                            if (this.OriginalValues["MetabolismMiscDebuffTime"] == -1)
-                            {
-                                this.OriginalValues["MetabolismMiscDebuffTime"] = Memory.ReadValue<float>(this.metabolismMiscDebuffTime + 0x30);
-                            }
-                            Memory.WriteValue<float>(this.metabolismMiscDebuffTime + 0x30, revert ? this.OriginalValues["MetabolismMiscDebuffTime"] : 0.5f);
-                            break;
-                        }
-                    case Skills.MetabolismEliteBuffNoDyhydration:
-                        {
-
-                            Memory.WriteValue<bool>(this.metabolismEliteBuffNoDyhydration + 0x30, true);
-                            break;
-                        }
-                    case Skills.AttentionEliteLuckySearch:
-                        {
-
-                            //Memory.WriteValue<bool>(this.attentionEliteLuckySearch + 0x30, true);
-                            break;
-                        }
-                    case Skills.HealthBreakChanceRed:
-                        {
-                            if (this.OriginalValues["HealthBreakChanceRed"] == -1)
-                            {
-                                this.OriginalValues["HealthBreakChanceRed"] = Memory.ReadValue<float>(this.healthBreakChanceRed + 0x30);
-                            }
-                            Memory.WriteValue<float>(this.healthBreakChanceRed + 0x30, revert ? this.OriginalValues["HealthBreakChanceRed"] : 0.6f);
-                            break;
-                        }
-                    case Skills.HealthEliteAbsorbDamage:
-                        {
-
-                            Memory.WriteValue<bool>(this.healthEliteAbsorbDamage + 0x30, true);
-                            break;
-                        }
-                    case Skills.HealthEnergy:
-                        {
-                            if (this.OriginalValues["HealthEnergy"] == -1)
-                            {
-                                this.OriginalValues["HealthEnergy"] = Memory.ReadValue<float>(this.healthEnergy + 0x30);
-                            }
-                            Memory.WriteValue<float>(this.healthEnergy + 0x30, revert ? this.OriginalValues["HealthEnergy"] : 0.3f);
-                            break;
-                        }
-                    case Skills.SurgerySpeed:
-                        {
-                            if (this.OriginalValues["SurgerySpeed"] == -1)
-                            {
-                                this.OriginalValues["SurgerySpeed"] = Memory.ReadValue<float>(this.surgerySpeed + 0x30);
-                            }
-                            Memory.WriteValue<float>(this.surgerySpeed + 0x30, revert ? this.OriginalValues["SurgerySpeed"] : 0.4f);
-                            break;
-                        }
-                    case Skills.StressBerserk:
-                        {
-                            Memory.WriteValue<bool>(this.stressBerserk + 0x30, true);
-                            break;
-                        }
-                    case Skills.StressPain:
-                        {
-                            if (this.OriginalValues["StressPain"] == -1)
-                            {
-                                this.OriginalValues["StressPain"] = Memory.ReadValue<float>(this.stressPain + 0x30);
-                            }
-                            Memory.WriteValue<float>(this.stressPain + 0x30, revert ? this.OriginalValues["StressPain"] : 0.5f);
-                            break;
-                        }
-                    case Skills.DrawElite:
-                        {
-                            Memory.WriteValue<bool>(this.drawElite + 0x30, true);
-                            break;
-                        }
-                    case Skills.DrawSpeed:
-                        {
-                            if (this.OriginalValues["DrawSpeed"] == -1)
-                            {
-                                this.OriginalValues["DrawSpeed"] = Memory.ReadValue<float>(this.drawSpeed + 0x30);
-                            }
-                            Memory.WriteValue<float>(this.drawSpeed + 0x30, revert ? this.OriginalValues["DrawSpeed"] : 0.5f);
-                            break;
-                        }
-                    case Skills.DrawSound:
-                        {
-                            if (this.OriginalValues["DrawSound"] == -1)
-                            {
-                                this.OriginalValues["DrawSound"] = Memory.ReadValue<float>(this.drawSound + 0x30);
-                            }
-                            Memory.WriteValue<float>(this.drawSound + 0x30, revert ? this.OriginalValues["DrawSound"] : 0.5f);
-                            break;
-                        }
-                    case Skills.CovertMovementSpeed:
-                        {
-                            if (this.OriginalValues["CovertMovementSpeed"] == -1)
-                            {
-                                this.OriginalValues["CovertMovementSpeed"] = Memory.ReadValue<float>(this.covertMovementSpeed + 0x30);
-                            }
-                            Memory.WriteValue<float>(this.covertMovementSpeed + 0x30, revert ? this.OriginalValues["CovertMovementSpeed"] : 1.5f);
-                            break;
-                        }
-                    case Skills.CovertMovementSoundVolume:
-                        {
-                            if (this.OriginalValues["CovertMovementSoundVolume"] == -1)
-                            {
-                                this.OriginalValues["CovertMovementSoundVolume"] = Memory.ReadValue<float>(this.covertMovementSoundVolume + 0x30);
-                            }
-                            Memory.WriteValue<float>(this.covertMovementSoundVolume + 0x30, revert ? this.OriginalValues["CovertMovementSoundVolume"] : 0.6f);
-                            break;
-                        }
-                    case Skills.CovertMovementLoud:
-                        {
-                            if (this.OriginalValues["CovertMovementLoud"] == -1)
-                            {
-                                this.OriginalValues["CovertMovementLoud"] = Memory.ReadValue<float>(this.covertMovementLoud + 0x30);
-                            }
-                            Memory.WriteValue<float>(this.covertMovementLoud + 0x30, revert ? this.OriginalValues["CovertMovementLoud"] : 0.6f);
-                            break;
-                        }
-                    case Skills.CovertMovementEquipment:
-                        {
-                            if (this.OriginalValues["CovertMovementEquipment"] == -1)
-                            {
-                                this.OriginalValues["CovertMovementEquipment"] = Memory.ReadValue<float>(this.covertMovementEquipment + 0x30);
-                            }
-                            Memory.WriteValue<float>(this.covertMovementEquipment + 0x30, revert ? this.OriginalValues["CovertMovementEquipment"] : 0.6f);
-                            break;
-                        }
-                    case Skills.CovertMovementElite:
-                        {
-                            Memory.WriteValue<bool>(this.covertMovementElite + 0x30, true);
-                            break;
-                        }
-                    case Skills.PerceptionHearing:
-                        {
-                            if (this.OriginalValues["PerceptionHearing"] == -1)
-                            {
-                                this.OriginalValues["PerceptionHearing"] = Memory.ReadValue<float>(this.perceptionHearing + 0x30);
-                            }
-                            Memory.WriteValue<float>(this.perceptionHearing + 0x30, revert ? this.OriginalValues["PerceptionHearing"] : 0.15f);
-                            break;
-                        }
-                    case Skills.PerceptionLootDot:
-                        {
-                            if (this.OriginalValues["PerceptionLootDot"] == -1)
-                            {
-                                this.OriginalValues["PerceptionLootDot"] = Memory.ReadValue<float>(this.perceptionLootDot + 0x30);
-                            }
-                            Memory.WriteValue<float>(this.perceptionLootDot + 0x30, revert ? this.OriginalValues["PerceptionLootDot"] : 1f);
-                            break;
-                        }
-
+                        index++;
+                    }
                 }
             }
             catch (Exception ex)
             {
-                Program.Log($"[PlayerManager] - SetSkillValue ({ex.Message})\n{ex.StackTrace}");
+                Program.Log($"[PlayerManager] - UpdateOriginalSkillValues ({ex.Message})\n{ex.StackTrace}");
+            }
+        }
+
+        private void SetupOriginalSkillValues(int index, ScatterReadEntry<ulong> skillsManagerPtr, ref ScatterReadRound round4, ref ScatterReadRound round5)
+        {
+            try
+            {
+                foreach (var category in Skills)
+                {
+                    foreach (var skill in category.Value.Values)
+                    {
+                        var skillPtr = round4.AddEntry<ulong>(0, index, skillsManagerPtr, null, skill.Offset);
+
+                        index++;
+
+                        if (skill.EliteToggled)
+                        {
+                            round5.AddEntry<bool>(0, index, skillPtr, null, Offsets.SkillBool.Value);
+                        }
+                        else
+                        {
+                            round5.AddEntry<float>(0, index, skillPtr, null, Offsets.SkillFloat.Value);
+                        }
+
+                        index++;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Program.Log($"[PlayerManager] - UpdateOriginalSkillValues ({ex.Message})\n{ex.StackTrace}");
+            }
+        }
+
+        public void SetMaxSkillByCategory(string category, bool revert, ref List<IScatterWriteEntry> entries)
+        {
+            try
+            {
+                foreach (var skill in this.Skills[category])
+                {
+                    var skillValue = skill.Value;
+
+                    if (skillValue.IsEliteSkill)
+                    {
+                        skillValue.EliteToggled = !revert;
+                        entries.Add(new ScatterWriteDataEntry<bool>(skillValue.Pointer + Offsets.SkillFloat.Value, skillValue.EliteToggled));
+                    }
+                    else
+                    {
+                        entries.Add(new ScatterWriteDataEntry<float>(skillValue.Pointer + Offsets.SkillFloat.Value, revert ? skillValue.DefaultValue : skillValue.MaxValue));
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Program.Log($"[PlayerManager] - SetMaxSkillByCategory ({ex.Message})\n{ex.StackTrace}");
+            }
+        }
+
+        public void SetMaxSkill(Skill skill, bool revert = false)
+        {
+            try
+            {
+                Memory.WriteValue<float>(skill.Pointer + Offsets.SkillFloat.Value, revert ? skill.DefaultValue : skill.MaxValue);
+            }
+            catch (Exception ex)
+            {
+                Program.Log($"[PlayerManager] - SetMaxSkill ({ex.Message})\n{ex.StackTrace}");
             }
         }
 
         /// <summary>
         /// Changes movement state
         /// </summary>
-        public void SetMovementState(bool on)
+        public void SetMovementState(bool on, ref List<IScatterWriteEntry> entries)
         {
             try
             {
@@ -754,11 +421,11 @@
 
                 if (on && animationState == 5)
                 {
-                    Memory.WriteValue<byte>(this.baseMovementState + Offsets.BaseMovementState.Name, 6);
+                    entries.Add(new ScatterWriteDataEntry<byte>(this.baseMovementState + Offsets.BaseMovementState.Name, 6));
                 }
                 else if (!on && animationState == 6)
                 {
-                    Memory.WriteValue<byte>(this.baseMovementState + Offsets.BaseMovementState.Name, 5);
+                    entries.Add(new ScatterWriteDataEntry<byte>(this.baseMovementState + Offsets.BaseMovementState.Name, 5));
                 }
             }
             catch (Exception ex)
@@ -770,7 +437,7 @@
         /// <summary>
         /// Sets maximum stamina / hand stamina
         /// </summary>
-        public void SetMaxStamina()
+        public void SetMaxStamina(ref List<IScatterWriteEntry> entries)
         {
             try
             {
@@ -780,12 +447,31 @@
                     this.OriginalValues["HandStaminaCapacity"] = Memory.ReadValue<float>(this.physical + 0xC8);
                 }
 
-                Memory.WriteValue<float>(this.stamina + 0x48, (float)this.OriginalValues["StaminaCapacity"]);
-                Memory.WriteValue<float>(this.handsStamina + 0x48, (float)this.OriginalValues["HandStaminaCapacity"]);
+                entries.Add(new ScatterWriteDataEntry<float>(this.stamina + 0x48, this.OriginalValues["StaminaCapacity"]));
+                entries.Add(new ScatterWriteDataEntry<float>(this.handsStamina + 0x48, this.OriginalValues["HandStaminaCapacity"]));
             }
             catch (Exception ex)
             {
                 Program.Log($"[PlayerManager] - SetMaxStamina ({ex.Message})\n{ex.StackTrace}");
+            }
+        }
+
+        public class Skill
+        {
+            public uint Offset { get; set; }
+            public ulong Pointer { get; set; }
+            public float DefaultValue { get; set; }
+            public float MaxValue { get; set; }
+            public bool IsEliteSkill { get; set; }
+            public bool EliteToggled { get; set; }
+
+            public Skill(uint offset, float maxValue, bool isEliteSkill = false, bool eliteToggled = false)
+            {
+                Offset = offset;
+                MaxValue = maxValue;
+                IsEliteSkill = isEliteSkill;
+                EliteToggled = eliteToggled;
+                DefaultValue = -1f;
             }
         }
     }

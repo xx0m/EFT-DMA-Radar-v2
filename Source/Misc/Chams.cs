@@ -88,7 +88,7 @@ namespace eft_dma_radar
             }
 
             var players = this.AllPlayers
-                ?.Where(x => x.Value.IsAlive && x.Value.Type is not PlayerType.LocalPlayer && !Chams.PlayersWithChams.ContainsKey(x.Value.Base.ToString()))
+                ?.Where(x => x.Value.IsAlive && x.Value.IsHumanActive && x.Value.Type is not PlayerType.LocalPlayer && !Chams.PlayersWithChams.ContainsKey(x.Value.Base.ToString()))
                 .Select(x => x.Value)
                 .ToList();
 
@@ -213,9 +213,6 @@ namespace eft_dma_radar
                             {
                                 if (pMaterial == 0 || material == 0)
                                     continue;
-
-                                //if (player.Type == PlayerType.AIBoss)
-                                    //continue;
                                 
                                 SavePointer(materialDictionaryBase + (0x50 * (uint)k), pMaterial, player);
                                 Memory.WriteValue(materialDictionaryBase + (0x50 * (uint)k), material);

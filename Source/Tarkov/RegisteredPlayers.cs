@@ -347,7 +347,6 @@ namespace eft_dma_radar
 
                                 Task.Run(async () =>
                                 {
-                                    //await Memory.Chams.RestorePointersForPlayer(player);
                                     await Memory.Chams.RestorePointersForPlayerAsync(player);
 
                                     Memory.Chams.SetPlayerBodyChams(player, Memory.Chams.ThermalMaterial);

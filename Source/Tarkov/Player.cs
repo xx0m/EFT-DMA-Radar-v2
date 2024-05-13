@@ -161,7 +161,7 @@ namespace eft_dma_radar
                 this.Type is PlayerType.Teammate ||
                 this.Type is PlayerType.PMC ||
                 this.Type is PlayerType.SpecialPlayer ||
-                this.Type is PlayerType.PScav ||
+                this.Type is PlayerType.PlayerScav ||
                 this.Type is PlayerType.BEAR ||
                 this.Type is PlayerType.USEC);
         }
@@ -175,7 +175,7 @@ namespace eft_dma_radar
                 this.Type is PlayerType.Teammate ||
                 this.Type is PlayerType.PMC ||
                 this.Type is PlayerType.SpecialPlayer ||
-                this.Type is PlayerType.PScav ||
+                this.Type is PlayerType.PlayerScav ||
                 this.Type is PlayerType.BEAR ||
                 this.Type is PlayerType.USEC) && IsActive && IsAlive;
         }
@@ -187,7 +187,7 @@ namespace eft_dma_radar
             get => (
                 this.Type is PlayerType.PMC ||
                 this.Type is PlayerType.SpecialPlayer ||
-                this.Type is PlayerType.PScav ||
+                this.Type is PlayerType.PlayerScav ||
                 this.Type is PlayerType.BEAR ||
                 this.Type is PlayerType.USEC);
         }
@@ -200,7 +200,7 @@ namespace eft_dma_radar
                 this.Type is PlayerType.BEAR ||
                 this.Type is PlayerType.USEC ||
                 this.Type is PlayerType.SpecialPlayer ||
-                this.Type is PlayerType.PScav) && this.IsActive && this.IsAlive;
+                this.Type is PlayerType.PlayerScav) && this.IsActive && this.IsAlive;
         }
         /// <summary>
         /// Player is AI & boss, rogue, raider etc.
@@ -208,11 +208,12 @@ namespace eft_dma_radar
         public bool IsBossRaider
         {
             get => (
-                this.Type is PlayerType.AIRaider ||
-                this.Type is PlayerType.AIBossFollower ||
-                this.Type is PlayerType.AIBossGuard ||
-                this.Type is PlayerType.AIRogue ||
-                this.Type is PlayerType.AIBoss);
+                this.Type is PlayerType.Raider ||
+                this.Type is PlayerType.BossFollower ||
+                this.Type is PlayerType.BossGuard ||
+                this.Type is PlayerType.Rogue ||
+                this.Type is PlayerType.Cultist || 
+                this.Type is PlayerType.Boss);
         }
         /// <summary>
         /// Player is AI/human-controlled and Active/Alive.
@@ -224,14 +225,15 @@ namespace eft_dma_radar
                 this.Type is PlayerType.BEAR ||
                 this.Type is PlayerType.USEC ||
                 this.Type is PlayerType.SpecialPlayer ||
-                this.Type is PlayerType.PScav ||
-                this.Type is PlayerType.AIScav ||
-                this.Type is PlayerType.AIRaider ||
-                this.Type is PlayerType.AIBossFollower ||
-                this.Type is PlayerType.AIBossGuard ||
-                this.Type is PlayerType.AIRogue ||
-                this.Type is PlayerType.AIOfflineScav ||
-                this.Type is PlayerType.AIBoss) && this.IsActive && this.IsAlive;
+                this.Type is PlayerType.PlayerScav ||
+                this.Type is PlayerType.Scav ||
+                this.Type is PlayerType.Raider ||
+                this.Type is PlayerType.BossFollower ||
+                this.Type is PlayerType.BossGuard ||
+                this.Type is PlayerType.Rogue ||
+                this.Type is PlayerType.OfflineScav ||
+                this.Type is PlayerType.Cultist ||
+                this.Type is PlayerType.Boss) && this.IsActive && this.IsAlive;
         }
         /// <summary>
         /// Player is friendly to LocalPlayer (including LocalPlayer) and Active/Alive.
@@ -444,22 +446,20 @@ namespace eft_dma_radar
                 {
                     1 => PlayerType.USEC,
                     2 => PlayerType.BEAR,
-                    _ => PlayerType.PScav,
+                    _ => PlayerType.PlayerScav,
                 };
             }
             else
             {
-                if (Helpers.BossNames.Contains(name) || name.Contains("(BTR)"))
+                if (this.Name.Contains("(BTR)"))
                 {
-                    return PlayerType.AIBoss;
-                }
-                else if (Helpers.RaiderGuardRogueNames.Contains(name))
-                {
-                    return PlayerType.AIRaider;
+                    return PlayerType.Boss;
                 }
                 else
                 {
-                    return PlayerType.AIScav;
+                    Program.AIFactionManager.IsInFaction(this.Name, out var playerType);
+
+                    return playerType;
                 }
             }
         }
@@ -472,17 +472,15 @@ namespace eft_dma_radar
             }
             else
             {
-                if (Helpers.BossNames.Contains(name) || name.Contains("(BTR)"))
+                if (this.Name.Contains("(BTR)"))
                 {
-                    return PlayerType.AIBoss;
-                }
-                else if (Helpers.RaiderGuardRogueNames.Contains(name))
-                {
-                    return PlayerType.AIRaider;
+                    return PlayerType.Boss;
                 }
                 else
                 {
-                    return PlayerType.AIScav;
+                    Program.AIFactionManager.IsInFaction(this.Name, out var playerType);
+
+                    return playerType;
                 }
             }
         }
@@ -541,12 +539,11 @@ namespace eft_dma_radar
             var groupID = round1.AddEntry<ulong>(0, 8, this.Info, null, Offsets.ObservedPlayerView.GroupID);
             var playerBody = round1.AddEntry<ulong>(0, 9, this.Info, null, Offsets.ObservedPlayerView.PlayerBody);
             var memberCategory = round1.AddEntry<int>(0, 10, this.Info, null, Offsets.PlayerInfo.MemberCategory);
-            //var profileID = round1.AddEntry<int>(0, 23, this.Info, null, Offsets.ObservedPlayerView.ID);
 
             var movementContextPtr2 = round2.AddEntry<ulong>(0, 11, movementContextPtr1, null, Offsets.ObservedPlayerView.To_MovementContext[1]);
             var transIntPtr2 = round2.AddEntry<ulong>(0, 12, transIntPtr1, null, Offsets.ObservedPlayerView.To_TransformInternal[1]);
             var inventoryController = round2.AddEntry<ulong>(0, 13, inventoryControllerPtr1, null, Offsets.ObservedPlayerView.To_InventoryController[1]);
-            var healthController = round3.AddEntry<ulong>(0, 14, healthControllerPtr1, null, Offsets.ObservedPlayerView.To_HealthController[1]);
+            var healthController = round2.AddEntry<ulong>(0, 14, healthControllerPtr1, null, Offsets.ObservedPlayerView.To_HealthController[1]);
 
             var movementContext = round3.AddEntry<ulong>(0, 15, movementContextPtr2, null, Offsets.ObservedPlayerView.To_MovementContext[2]);
             var transIntPtr3 = round3.AddEntry<ulong>(0, 16, transIntPtr2, null, Offsets.ObservedPlayerView.To_TransformInternal[2]);
@@ -633,8 +630,6 @@ namespace eft_dma_radar
                 return;
             if (!scatterReadMap.Results[0][5].TryGetResult<ulong>(out var accountID))
                 return;
-            //if (!scatterReadMap.Results[0][23].TryGetResult<ulong>(out var profileID))
-            //    return;
             if (!scatterReadMap.Results[0][4].TryGetResult<ulong>(out var name))
                 return;
             if (!scatterReadMap.Results[0][10].TryGetResult<int>(out var memberCategory))
@@ -647,7 +642,6 @@ namespace eft_dma_radar
             this.IsLocalPlayer = false;
             this.HealthController = healthController;
             this.AccountID = Memory.ReadUnityString(accountID);
-            //this.ProfileID = Memory.ReadUnityString(profileID);
 
             if (!isAI)
             {

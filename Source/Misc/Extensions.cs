@@ -92,19 +92,26 @@ namespace eft_dma_radar
             SKPaint basePaint = SKPaints.PaintBase.Clone();
 
             basePaint.Color = player.Type switch {
+                // AI
+                PlayerType.Boss => SKColorFromPaintColor("Boss"),
+                PlayerType.BossGuard => SKColorFromPaintColor("BossGuard"),
+                PlayerType.BossFollower => SKColorFromPaintColor("BossFollower"),
+                PlayerType.Raider => SKColorFromPaintColor("Raider"),
+                PlayerType.Rogue => SKColorFromPaintColor("Rogue"),
+                PlayerType.Cultist => SKColorFromPaintColor("Cultist"),
+                PlayerType.FollowerOfMorana => SKColorFromPaintColor("FollowerOfMorana"),
+                PlayerType.Scav => SKColorFromPaintColor("Scav"),
+
+                // Player
+                PlayerType.PlayerScav => SKColorFromPaintColor("PlayerScav"),
                 PlayerType.LocalPlayer => SKColorFromPaintColor("LocalPlayer"),
                 PlayerType.Teammate => SKColorFromPaintColor("Teammate"),
                 PlayerType.BEAR => SKColorFromPaintColor("BEAR"),
                 PlayerType.USEC => SKColorFromPaintColor("USEC"),
                 PlayerType.SpecialPlayer => SKColorFromPaintColor("Special"),
-                PlayerType.AIScav => SKColorFromPaintColor("AIScav"),
-                PlayerType.AIBoss => SKColorFromPaintColor("Boss"),
-                PlayerType.AIOfflineScav => SKColorFromPaintColor("AIScav"),
-                PlayerType.AIRaider or PlayerType.AIBossGuard or PlayerType.AIRogue or PlayerType.AIBossFollower => SKColorFromPaintColor("AIRaider"),
-                PlayerType.PScav => SKColorFromPaintColor("PScav"),
 
-                // default to white
-                _ => new SKColor(255, 255, 255, 255),
+                // default to yellow
+                _ => new SKColor(255, 0, 255, 255),
             };
 
             return basePaint;
@@ -227,19 +234,26 @@ namespace eft_dma_radar
             SKPaint baseText = SKPaints.TextBase.Clone();
             baseText.Color = player.Type switch
             {
+                // AI
+                PlayerType.Boss => SKColorFromPaintColor("Boss"),
+                PlayerType.BossGuard => SKColorFromPaintColor("BossGuard"),
+                PlayerType.BossFollower => SKColorFromPaintColor("BossFollower"),
+                PlayerType.Raider => SKColorFromPaintColor("Raider"),
+                PlayerType.Rogue => SKColorFromPaintColor("Rogue"),
+                PlayerType.Cultist => SKColorFromPaintColor("Cultist"),
+                PlayerType.FollowerOfMorana => SKColorFromPaintColor("FollowerOfMorana"),
+                PlayerType.Scav => SKColorFromPaintColor("Scav"),
+
+                // Player
+                PlayerType.PlayerScav => SKColorFromPaintColor("PlayerScav"),
                 PlayerType.LocalPlayer => SKColorFromPaintColor("LocalPlayer"),
                 PlayerType.Teammate => SKColorFromPaintColor("Teammate"),
                 PlayerType.BEAR => SKColorFromPaintColor("BEAR"),
                 PlayerType.USEC => SKColorFromPaintColor("USEC"),
                 PlayerType.SpecialPlayer => SKColorFromPaintColor("Special"),
-                PlayerType.AIScav => SKColorFromPaintColor("AIScav"),
-                PlayerType.AIBoss => SKColorFromPaintColor("Boss"),
-                PlayerType.AIOfflineScav => SKColorFromPaintColor("AIScav"),
-                PlayerType.AIRaider or PlayerType.AIBossGuard or PlayerType.AIRogue or PlayerType.AIBossFollower => SKColorFromPaintColor("AIRaider"),
-                PlayerType.PScav => SKColorFromPaintColor("PScav"),
 
-                // default to white
-                _ => new SKColor(255, 255, 255, 255),
+                // default to yellow
+                _ => new SKColor(255, 0, 255, 255),
             };
 
             return baseText;
@@ -349,19 +363,26 @@ namespace eft_dma_radar
             basePaint.Style = SKPaintStyle.Fill;
 
             basePaint.Color = player.Type switch {
+                // AI
+                PlayerType.Boss => SKColorFromPaintColor("Boss"),
+                PlayerType.BossGuard => SKColorFromPaintColor("BossGuard"),
+                PlayerType.BossFollower => SKColorFromPaintColor("BossFollower"),
+                PlayerType.Raider => SKColorFromPaintColor("Raider"),
+                PlayerType.Rogue => SKColorFromPaintColor("Rogue"),
+                PlayerType.Cultist => SKColorFromPaintColor("Cultist"),
+                PlayerType.FollowerOfMorana => SKColorFromPaintColor("FollowerOfMorana"),
+                PlayerType.Scav => SKColorFromPaintColor("Scav"),
+
+                // Player
+                PlayerType.PlayerScav => SKColorFromPaintColor("PlayerScav"),
                 PlayerType.LocalPlayer => SKColorFromPaintColor("LocalPlayer"),
                 PlayerType.Teammate => SKColorFromPaintColor("Teammate"),
                 PlayerType.BEAR => SKColorFromPaintColor("BEAR"),
                 PlayerType.USEC => SKColorFromPaintColor("USEC"),
                 PlayerType.SpecialPlayer => SKColorFromPaintColor("Special"),
-                PlayerType.AIScav => SKColorFromPaintColor("AIScav"),
-                PlayerType.AIBoss => SKColorFromPaintColor("Boss"),
-                PlayerType.AIOfflineScav => SKColorFromPaintColor("AIScav"),
-                PlayerType.AIRaider or PlayerType.AIBossGuard or PlayerType.AIRogue or PlayerType.AIBossFollower => SKColorFromPaintColor("AIRaider"),
-                PlayerType.PScav => SKColorFromPaintColor("PScav"),
 
-                // default to white
-                _ => new SKColor(255, 255, 255, 255),
+                // default to yellow
+                _ => new SKColor(255, 0, 255, 255),
             };
 
             return basePaint;
