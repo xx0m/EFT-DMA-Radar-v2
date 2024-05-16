@@ -215,6 +215,19 @@ namespace eft_dma_radar
                 this.Type is PlayerType.Cultist || 
                 this.Type is PlayerType.Boss);
         }
+
+        /// <summary>
+        /// Player is rogue, raider etc.
+        /// </summary>
+        public bool IsRogueRaider
+        {
+            get => (
+                this.Type is PlayerType.Raider ||
+                this.Type is PlayerType.BossFollower ||
+                this.Type is PlayerType.BossGuard ||
+                this.Type is PlayerType.Rogue ||
+                this.Type is PlayerType.Cultist);
+        }
         /// <summary>
         /// Player is AI/human-controlled and Active/Alive.
         /// </summary>
@@ -689,7 +702,7 @@ namespace eft_dma_radar
         /// <summary>
         /// Allocation wrap-up.
         /// </summary>
-        private async void FinishAlloc()
+        private void FinishAlloc()
         {
             if (this.IsHumanHostile)
             {

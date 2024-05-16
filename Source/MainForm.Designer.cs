@@ -43,7 +43,6 @@
             swAimview = new MaterialSkin.Controls.MaterialSwitch();
             swShowLoot = new MaterialSkin.Controls.MaterialSwitch();
             btnRestartRadar = new MaterialSkin.Controls.MaterialButton();
-            sldrThreadSpinDelay = new MaterialSkin.Controls.MaterialSlider();
             btnToggleMap = new MaterialSkin.Controls.MaterialButton();
             swMapHelper = new MaterialSkin.Controls.MaterialSwitch();
             swMasterSwitch = new MaterialSkin.Controls.MaterialSwitch();
@@ -128,21 +127,34 @@
             swMaxAttention = new MaterialSkin.Controls.MaterialSwitch();
             swProcessLoot = new MaterialSkin.Controls.MaterialSwitch();
             swRadarStats = new MaterialSkin.Controls.MaterialSwitch();
+            swRadarVsync = new MaterialSkin.Controls.MaterialSwitch();
+            swRadarEnemyStats = new MaterialSkin.Controls.MaterialSwitch();
             sldrThermalColorCoefficient = new MaterialSkin.Controls.MaterialSlider();
             sldrMinTemperature = new MaterialSkin.Controls.MaterialSlider();
             sldrThermalRampShift = new MaterialSkin.Controls.MaterialSlider();
             tabControlMain = new MaterialSkin.Controls.MaterialTabControl();
             tabRadar = new TabPage();
+            mcRadarEnemyStats = new MaterialSkin.Controls.MaterialCard();
+            lblRadarBossesValue = new MaterialSkin.Controls.MaterialLabel();
+            lblRadarBosses = new MaterialSkin.Controls.MaterialLabel();
+            lblRadarPlayerScavsValue = new MaterialSkin.Controls.MaterialLabel();
+            lblRadarPlayerScavs = new MaterialSkin.Controls.MaterialLabel();
+            lblRadarRoguesValue = new MaterialSkin.Controls.MaterialLabel();
+            lblRadarAIScavsValue = new MaterialSkin.Controls.MaterialLabel();
+            lblRadarPMCsValue = new MaterialSkin.Controls.MaterialLabel();
+            lblRadarRogues = new MaterialSkin.Controls.MaterialLabel();
+            lblRadarAIScavs = new MaterialSkin.Controls.MaterialLabel();
+            lblRadarPMCs = new MaterialSkin.Controls.MaterialLabel();
             mcRadarStats = new MaterialSkin.Controls.MaterialCard();
+            lblRadarCorpsesValue = new MaterialSkin.Controls.MaterialLabel();
+            lblRadarCorpses = new MaterialSkin.Controls.MaterialLabel();
             lblRadarMemSValue = new MaterialSkin.Controls.MaterialLabel();
             lblRadarMemS = new MaterialSkin.Controls.MaterialLabel();
-            lblRadarCorpsesValue = new MaterialSkin.Controls.MaterialLabel();
             lblRadarContainersValue = new MaterialSkin.Controls.MaterialLabel();
             lblRadarLooseLootValue = new MaterialSkin.Controls.MaterialLabel();
             lblRadarFPSValue = new MaterialSkin.Controls.MaterialLabel();
             lblRadarContainers = new MaterialSkin.Controls.MaterialLabel();
             lblRadarLooseLoot = new MaterialSkin.Controls.MaterialLabel();
-            lblRadarCorpses = new MaterialSkin.Controls.MaterialLabel();
             lblRadarFPS = new MaterialSkin.Controls.MaterialLabel();
             mcRadarSettings = new MaterialSkin.Controls.MaterialCard();
             mcRadarMapSetup = new MaterialSkin.Controls.MaterialCard();
@@ -290,6 +302,7 @@
             iconList = new ImageList(components);
             tabControlMain.SuspendLayout();
             tabRadar.SuspendLayout();
+            mcRadarEnemyStats.SuspendLayout();
             mcRadarStats.SuspendLayout();
             mcRadarSettings.SuspendLayout();
             mcRadarMapSetup.SuspendLayout();
@@ -561,24 +574,6 @@
             btnRestartRadar.UseVisualStyleBackColor = true;
             btnRestartRadar.Click += btnRestartRadar_Click;
             // 
-            // sldrThreadSpinDelay
-            // 
-            sldrThreadSpinDelay.Depth = 0;
-            sldrThreadSpinDelay.ForeColor = Color.Black;
-            sldrThreadSpinDelay.Location = new Point(15, 95);
-            sldrThreadSpinDelay.MouseState = MaterialSkin.MouseState.HOVER;
-            sldrThreadSpinDelay.Name = "sldrThreadSpinDelay";
-            sldrThreadSpinDelay.RangeMax = 120;
-            sldrThreadSpinDelay.RangeMin = 1;
-            sldrThreadSpinDelay.Size = new Size(346, 40);
-            sldrThreadSpinDelay.TabIndex = 29;
-            sldrThreadSpinDelay.Text = "ThreadSpin Delay";
-            toolTip.SetToolTip(sldrThreadSpinDelay, "Adjust this to achieve desired mem/sec performance. Higher = slower, Lower = faster.");
-            sldrThreadSpinDelay.UseAccentColor = true;
-            sldrThreadSpinDelay.ValueMax = 120;
-            sldrThreadSpinDelay.ValueSuffix = "ms";
-            sldrThreadSpinDelay.onValueChanged += sldrThreadSpinDelay_onValueChanged;
-            // 
             // btnToggleMap
             // 
             btnToggleMap.AutoSize = false;
@@ -605,7 +600,7 @@
             // 
             swMapHelper.Depth = 0;
             swMapHelper.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
-            swMapHelper.Location = new Point(15, 50);
+            swMapHelper.Location = new Point(15, 45);
             swMapHelper.Margin = new Padding(0);
             swMapHelper.MouseLocation = new Point(-1, -1);
             swMapHelper.MouseState = MaterialSkin.MouseState.HOVER;
@@ -2320,18 +2315,52 @@
             // 
             swRadarStats.Depth = 0;
             swRadarStats.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
-            swRadarStats.Location = new Point(172, 50);
+            swRadarStats.Location = new Point(15, 85);
             swRadarStats.Margin = new Padding(0);
             swRadarStats.MouseLocation = new Point(-1, -1);
             swRadarStats.MouseState = MaterialSkin.MouseState.HOVER;
             swRadarStats.Name = "swRadarStats";
             swRadarStats.Ripple = true;
-            swRadarStats.Size = new Size(146, 28);
+            swRadarStats.Size = new Size(144, 28);
             swRadarStats.TabIndex = 31;
-            swRadarStats.Text = "Show Stats";
+            swRadarStats.Text = "Radar Stats";
             toolTip.SetToolTip(swRadarStats, "Shows radar stats on radar tab");
             swRadarStats.UseVisualStyleBackColor = true;
             swRadarStats.CheckedChanged += swRadarStats_CheckedChanged;
+            // 
+            // swRadarVsync
+            // 
+            swRadarVsync.Depth = 0;
+            swRadarVsync.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swRadarVsync.Location = new Point(172, 45);
+            swRadarVsync.Margin = new Padding(0);
+            swRadarVsync.MouseLocation = new Point(-1, -1);
+            swRadarVsync.MouseState = MaterialSkin.MouseState.HOVER;
+            swRadarVsync.Name = "swRadarVsync";
+            swRadarVsync.Ripple = true;
+            swRadarVsync.Size = new Size(118, 28);
+            swRadarVsync.TabIndex = 32;
+            swRadarVsync.Text = "VSync";
+            toolTip.SetToolTip(swRadarVsync, "Shows radar stats on radar tab");
+            swRadarVsync.UseVisualStyleBackColor = true;
+            swRadarVsync.CheckedChanged += swRadarVsync_CheckedChanged;
+            // 
+            // swRadarEnemyStats
+            // 
+            swRadarEnemyStats.Depth = 0;
+            swRadarEnemyStats.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swRadarEnemyStats.Location = new Point(172, 85);
+            swRadarEnemyStats.Margin = new Padding(0);
+            swRadarEnemyStats.MouseLocation = new Point(-1, -1);
+            swRadarEnemyStats.MouseState = MaterialSkin.MouseState.HOVER;
+            swRadarEnemyStats.Name = "swRadarEnemyStats";
+            swRadarEnemyStats.Ripple = true;
+            swRadarEnemyStats.Size = new Size(152, 28);
+            swRadarEnemyStats.TabIndex = 33;
+            swRadarEnemyStats.Text = "Enemy Stats";
+            toolTip.SetToolTip(swRadarEnemyStats, "Shows radar stats on radar tab");
+            swRadarEnemyStats.UseVisualStyleBackColor = true;
+            swRadarEnemyStats.CheckedChanged += swRadarEnemyStats_CheckedChanged;
             // 
             // sldrThermalColorCoefficient
             // 
@@ -2404,6 +2433,7 @@
             // tabRadar
             // 
             tabRadar.BackColor = Color.White;
+            tabRadar.Controls.Add(mcRadarEnemyStats);
             tabRadar.Controls.Add(mcRadarStats);
             tabRadar.Controls.Add(mcRadarSettings);
             tabRadar.Controls.Add(mcRadarMapSetup);
@@ -2416,19 +2446,174 @@
             tabRadar.TabIndex = 0;
             tabRadar.Text = "Radar";
             // 
+            // mcRadarEnemyStats
+            // 
+            mcRadarEnemyStats.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            mcRadarEnemyStats.BackColor = Color.FromArgb(255, 255, 255);
+            mcRadarEnemyStats.Controls.Add(lblRadarBossesValue);
+            mcRadarEnemyStats.Controls.Add(lblRadarBosses);
+            mcRadarEnemyStats.Controls.Add(lblRadarPlayerScavsValue);
+            mcRadarEnemyStats.Controls.Add(lblRadarPlayerScavs);
+            mcRadarEnemyStats.Controls.Add(lblRadarRoguesValue);
+            mcRadarEnemyStats.Controls.Add(lblRadarAIScavsValue);
+            mcRadarEnemyStats.Controls.Add(lblRadarPMCsValue);
+            mcRadarEnemyStats.Controls.Add(lblRadarRogues);
+            mcRadarEnemyStats.Controls.Add(lblRadarAIScavs);
+            mcRadarEnemyStats.Controls.Add(lblRadarPMCs);
+            mcRadarEnemyStats.Depth = 0;
+            mcRadarEnemyStats.ForeColor = Color.FromArgb(222, 0, 0, 0);
+            mcRadarEnemyStats.Location = new Point(1040, 623);
+            mcRadarEnemyStats.Margin = new Padding(14);
+            mcRadarEnemyStats.MouseState = MaterialSkin.MouseState.HOVER;
+            mcRadarEnemyStats.Name = "mcRadarEnemyStats";
+            mcRadarEnemyStats.Padding = new Padding(14);
+            mcRadarEnemyStats.Size = new Size(98, 76);
+            mcRadarEnemyStats.TabIndex = 49;
+            mcRadarEnemyStats.Visible = false;
+            // 
+            // lblRadarBossesValue
+            // 
+            lblRadarBossesValue.AutoSize = true;
+            lblRadarBossesValue.Depth = 0;
+            lblRadarBossesValue.Font = new Font("Roboto", 12F, FontStyle.Regular, GraphicsUnit.Pixel);
+            lblRadarBossesValue.FontType = MaterialSkin.MaterialSkinManager.fontType.Caption;
+            lblRadarBossesValue.Location = new Point(80, 59);
+            lblRadarBossesValue.MouseState = MaterialSkin.MouseState.HOVER;
+            lblRadarBossesValue.Name = "lblRadarBossesValue";
+            lblRadarBossesValue.Size = new Size(8, 14);
+            lblRadarBossesValue.TabIndex = 8;
+            lblRadarBossesValue.Text = "0";
+            // 
+            // lblRadarBosses
+            // 
+            lblRadarBosses.AutoSize = true;
+            lblRadarBosses.Depth = 0;
+            lblRadarBosses.Font = new Font("Roboto", 12F, FontStyle.Regular, GraphicsUnit.Pixel);
+            lblRadarBosses.FontType = MaterialSkin.MaterialSkinManager.fontType.Caption;
+            lblRadarBosses.Location = new Point(35, 59);
+            lblRadarBosses.MouseState = MaterialSkin.MouseState.HOVER;
+            lblRadarBosses.Name = "lblRadarBosses";
+            lblRadarBosses.Size = new Size(42, 14);
+            lblRadarBosses.TabIndex = 1;
+            lblRadarBosses.Text = "Bosses:";
+            // 
+            // lblRadarPlayerScavsValue
+            // 
+            lblRadarPlayerScavsValue.AutoSize = true;
+            lblRadarPlayerScavsValue.Depth = 0;
+            lblRadarPlayerScavsValue.Font = new Font("Roboto", 12F, FontStyle.Regular, GraphicsUnit.Pixel);
+            lblRadarPlayerScavsValue.FontType = MaterialSkin.MaterialSkinManager.fontType.Caption;
+            lblRadarPlayerScavsValue.Location = new Point(80, 17);
+            lblRadarPlayerScavsValue.MouseState = MaterialSkin.MouseState.HOVER;
+            lblRadarPlayerScavsValue.Name = "lblRadarPlayerScavsValue";
+            lblRadarPlayerScavsValue.Size = new Size(8, 14);
+            lblRadarPlayerScavsValue.TabIndex = 10;
+            lblRadarPlayerScavsValue.Text = "0";
+            // 
+            // lblRadarPlayerScavs
+            // 
+            lblRadarPlayerScavs.AutoSize = true;
+            lblRadarPlayerScavs.Depth = 0;
+            lblRadarPlayerScavs.Font = new Font("Roboto", 12F, FontStyle.Regular, GraphicsUnit.Pixel);
+            lblRadarPlayerScavs.FontType = MaterialSkin.MaterialSkinManager.fontType.Caption;
+            lblRadarPlayerScavs.Location = new Point(4, 17);
+            lblRadarPlayerScavs.MouseState = MaterialSkin.MouseState.HOVER;
+            lblRadarPlayerScavs.Name = "lblRadarPlayerScavs";
+            lblRadarPlayerScavs.Size = new Size(73, 14);
+            lblRadarPlayerScavs.TabIndex = 9;
+            lblRadarPlayerScavs.Text = "Player Scavs:";
+            // 
+            // lblRadarRoguesValue
+            // 
+            lblRadarRoguesValue.AutoSize = true;
+            lblRadarRoguesValue.Depth = 0;
+            lblRadarRoguesValue.Font = new Font("Roboto", 12F, FontStyle.Regular, GraphicsUnit.Pixel);
+            lblRadarRoguesValue.FontType = MaterialSkin.MaterialSkinManager.fontType.Caption;
+            lblRadarRoguesValue.Location = new Point(80, 45);
+            lblRadarRoguesValue.MouseState = MaterialSkin.MouseState.HOVER;
+            lblRadarRoguesValue.Name = "lblRadarRoguesValue";
+            lblRadarRoguesValue.Size = new Size(8, 14);
+            lblRadarRoguesValue.TabIndex = 7;
+            lblRadarRoguesValue.Text = "0";
+            // 
+            // lblRadarAIScavsValue
+            // 
+            lblRadarAIScavsValue.AutoSize = true;
+            lblRadarAIScavsValue.Depth = 0;
+            lblRadarAIScavsValue.Font = new Font("Roboto", 12F, FontStyle.Regular, GraphicsUnit.Pixel);
+            lblRadarAIScavsValue.FontType = MaterialSkin.MaterialSkinManager.fontType.Caption;
+            lblRadarAIScavsValue.Location = new Point(80, 31);
+            lblRadarAIScavsValue.MouseState = MaterialSkin.MouseState.HOVER;
+            lblRadarAIScavsValue.Name = "lblRadarAIScavsValue";
+            lblRadarAIScavsValue.Size = new Size(8, 14);
+            lblRadarAIScavsValue.TabIndex = 6;
+            lblRadarAIScavsValue.Text = "0";
+            // 
+            // lblRadarPMCsValue
+            // 
+            lblRadarPMCsValue.AutoSize = true;
+            lblRadarPMCsValue.Depth = 0;
+            lblRadarPMCsValue.Font = new Font("Roboto", 12F, FontStyle.Regular, GraphicsUnit.Pixel);
+            lblRadarPMCsValue.FontType = MaterialSkin.MaterialSkinManager.fontType.Caption;
+            lblRadarPMCsValue.Location = new Point(80, 3);
+            lblRadarPMCsValue.MouseState = MaterialSkin.MouseState.HOVER;
+            lblRadarPMCsValue.Name = "lblRadarPMCsValue";
+            lblRadarPMCsValue.Size = new Size(8, 14);
+            lblRadarPMCsValue.TabIndex = 5;
+            lblRadarPMCsValue.Text = "0";
+            // 
+            // lblRadarRogues
+            // 
+            lblRadarRogues.AutoSize = true;
+            lblRadarRogues.Depth = 0;
+            lblRadarRogues.Font = new Font("Roboto", 12F, FontStyle.Regular, GraphicsUnit.Pixel);
+            lblRadarRogues.FontType = MaterialSkin.MaterialSkinManager.fontType.Caption;
+            lblRadarRogues.Location = new Point(33, 45);
+            lblRadarRogues.MouseState = MaterialSkin.MouseState.HOVER;
+            lblRadarRogues.Name = "lblRadarRogues";
+            lblRadarRogues.Size = new Size(44, 14);
+            lblRadarRogues.TabIndex = 3;
+            lblRadarRogues.Text = "Rogues:";
+            // 
+            // lblRadarAIScavs
+            // 
+            lblRadarAIScavs.AutoSize = true;
+            lblRadarAIScavs.Depth = 0;
+            lblRadarAIScavs.Font = new Font("Roboto", 12F, FontStyle.Regular, GraphicsUnit.Pixel);
+            lblRadarAIScavs.FontType = MaterialSkin.MaterialSkinManager.fontType.Caption;
+            lblRadarAIScavs.Location = new Point(27, 31);
+            lblRadarAIScavs.MouseState = MaterialSkin.MouseState.HOVER;
+            lblRadarAIScavs.Name = "lblRadarAIScavs";
+            lblRadarAIScavs.Size = new Size(50, 14);
+            lblRadarAIScavs.TabIndex = 2;
+            lblRadarAIScavs.Text = "AI Scavs:";
+            // 
+            // lblRadarPMCs
+            // 
+            lblRadarPMCs.AutoSize = true;
+            lblRadarPMCs.Depth = 0;
+            lblRadarPMCs.Font = new Font("Roboto", 12F, FontStyle.Regular, GraphicsUnit.Pixel);
+            lblRadarPMCs.FontType = MaterialSkin.MaterialSkinManager.fontType.Caption;
+            lblRadarPMCs.Location = new Point(41, 3);
+            lblRadarPMCs.MouseState = MaterialSkin.MouseState.HOVER;
+            lblRadarPMCs.Name = "lblRadarPMCs";
+            lblRadarPMCs.Size = new Size(36, 14);
+            lblRadarPMCs.TabIndex = 0;
+            lblRadarPMCs.Text = "PMCs:";
+            // 
             // mcRadarStats
             // 
             mcRadarStats.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
             mcRadarStats.BackColor = Color.FromArgb(255, 255, 255);
+            mcRadarStats.Controls.Add(lblRadarCorpsesValue);
+            mcRadarStats.Controls.Add(lblRadarCorpses);
             mcRadarStats.Controls.Add(lblRadarMemSValue);
             mcRadarStats.Controls.Add(lblRadarMemS);
-            mcRadarStats.Controls.Add(lblRadarCorpsesValue);
             mcRadarStats.Controls.Add(lblRadarContainersValue);
             mcRadarStats.Controls.Add(lblRadarLooseLootValue);
             mcRadarStats.Controls.Add(lblRadarFPSValue);
             mcRadarStats.Controls.Add(lblRadarContainers);
             mcRadarStats.Controls.Add(lblRadarLooseLoot);
-            mcRadarStats.Controls.Add(lblRadarCorpses);
             mcRadarStats.Controls.Add(lblRadarFPS);
             mcRadarStats.Depth = 0;
             mcRadarStats.ForeColor = Color.FromArgb(222, 0, 0, 0);
@@ -2441,6 +2626,32 @@
             mcRadarStats.TabIndex = 36;
             mcRadarStats.Visible = false;
             // 
+            // lblRadarCorpsesValue
+            // 
+            lblRadarCorpsesValue.AutoSize = true;
+            lblRadarCorpsesValue.Depth = 0;
+            lblRadarCorpsesValue.Font = new Font("Roboto", 12F, FontStyle.Regular, GraphicsUnit.Pixel);
+            lblRadarCorpsesValue.FontType = MaterialSkin.MaterialSkinManager.fontType.Caption;
+            lblRadarCorpsesValue.Location = new Point(72, 59);
+            lblRadarCorpsesValue.MouseState = MaterialSkin.MouseState.HOVER;
+            lblRadarCorpsesValue.Name = "lblRadarCorpsesValue";
+            lblRadarCorpsesValue.Size = new Size(8, 14);
+            lblRadarCorpsesValue.TabIndex = 8;
+            lblRadarCorpsesValue.Text = "0";
+            // 
+            // lblRadarCorpses
+            // 
+            lblRadarCorpses.AutoSize = true;
+            lblRadarCorpses.Depth = 0;
+            lblRadarCorpses.Font = new Font("Roboto", 12F, FontStyle.Regular, GraphicsUnit.Pixel);
+            lblRadarCorpses.FontType = MaterialSkin.MaterialSkinManager.fontType.Caption;
+            lblRadarCorpses.Location = new Point(18, 59);
+            lblRadarCorpses.MouseState = MaterialSkin.MouseState.HOVER;
+            lblRadarCorpses.Name = "lblRadarCorpses";
+            lblRadarCorpses.Size = new Size(48, 14);
+            lblRadarCorpses.TabIndex = 1;
+            lblRadarCorpses.Text = "Corpses:";
+            // 
             // lblRadarMemSValue
             // 
             lblRadarMemSValue.AutoSize = true;
@@ -2450,9 +2661,9 @@
             lblRadarMemSValue.Location = new Point(72, 17);
             lblRadarMemSValue.MouseState = MaterialSkin.MouseState.HOVER;
             lblRadarMemSValue.Name = "lblRadarMemSValue";
-            lblRadarMemSValue.Size = new Size(20, 14);
+            lblRadarMemSValue.Size = new Size(8, 14);
             lblRadarMemSValue.TabIndex = 10;
-            lblRadarMemSValue.Text = "n/a";
+            lblRadarMemSValue.Text = "0";
             // 
             // lblRadarMemS
             // 
@@ -2467,19 +2678,6 @@
             lblRadarMemS.TabIndex = 9;
             lblRadarMemS.Text = "Mem/s:";
             // 
-            // lblRadarCorpsesValue
-            // 
-            lblRadarCorpsesValue.AutoSize = true;
-            lblRadarCorpsesValue.Depth = 0;
-            lblRadarCorpsesValue.Font = new Font("Roboto", 12F, FontStyle.Regular, GraphicsUnit.Pixel);
-            lblRadarCorpsesValue.FontType = MaterialSkin.MaterialSkinManager.fontType.Caption;
-            lblRadarCorpsesValue.Location = new Point(72, 59);
-            lblRadarCorpsesValue.MouseState = MaterialSkin.MouseState.HOVER;
-            lblRadarCorpsesValue.Name = "lblRadarCorpsesValue";
-            lblRadarCorpsesValue.Size = new Size(20, 14);
-            lblRadarCorpsesValue.TabIndex = 8;
-            lblRadarCorpsesValue.Text = "n/a";
-            // 
             // lblRadarContainersValue
             // 
             lblRadarContainersValue.AutoSize = true;
@@ -2489,9 +2687,9 @@
             lblRadarContainersValue.Location = new Point(72, 45);
             lblRadarContainersValue.MouseState = MaterialSkin.MouseState.HOVER;
             lblRadarContainersValue.Name = "lblRadarContainersValue";
-            lblRadarContainersValue.Size = new Size(20, 14);
+            lblRadarContainersValue.Size = new Size(8, 14);
             lblRadarContainersValue.TabIndex = 7;
-            lblRadarContainersValue.Text = "n/a";
+            lblRadarContainersValue.Text = "0";
             // 
             // lblRadarLooseLootValue
             // 
@@ -2502,9 +2700,9 @@
             lblRadarLooseLootValue.Location = new Point(72, 31);
             lblRadarLooseLootValue.MouseState = MaterialSkin.MouseState.HOVER;
             lblRadarLooseLootValue.Name = "lblRadarLooseLootValue";
-            lblRadarLooseLootValue.Size = new Size(20, 14);
+            lblRadarLooseLootValue.Size = new Size(8, 14);
             lblRadarLooseLootValue.TabIndex = 6;
-            lblRadarLooseLootValue.Text = "n/a";
+            lblRadarLooseLootValue.Text = "0";
             // 
             // lblRadarFPSValue
             // 
@@ -2515,9 +2713,9 @@
             lblRadarFPSValue.Location = new Point(72, 3);
             lblRadarFPSValue.MouseState = MaterialSkin.MouseState.HOVER;
             lblRadarFPSValue.Name = "lblRadarFPSValue";
-            lblRadarFPSValue.Size = new Size(20, 14);
+            lblRadarFPSValue.Size = new Size(8, 14);
             lblRadarFPSValue.TabIndex = 5;
-            lblRadarFPSValue.Text = "n/a";
+            lblRadarFPSValue.Text = "0";
             // 
             // lblRadarContainers
             // 
@@ -2544,19 +2742,6 @@
             lblRadarLooseLoot.Size = new Size(63, 14);
             lblRadarLooseLoot.TabIndex = 2;
             lblRadarLooseLoot.Text = "Loose Loot:";
-            // 
-            // lblRadarCorpses
-            // 
-            lblRadarCorpses.AutoSize = true;
-            lblRadarCorpses.Depth = 0;
-            lblRadarCorpses.Font = new Font("Roboto", 12F, FontStyle.Regular, GraphicsUnit.Pixel);
-            lblRadarCorpses.FontType = MaterialSkin.MaterialSkinManager.fontType.Caption;
-            lblRadarCorpses.Location = new Point(18, 59);
-            lblRadarCorpses.MouseState = MaterialSkin.MouseState.HOVER;
-            lblRadarCorpses.Name = "lblRadarCorpses";
-            lblRadarCorpses.Size = new Size(48, 14);
-            lblRadarCorpses.TabIndex = 1;
-            lblRadarCorpses.Text = "Corpses:";
             // 
             // lblRadarFPS
             // 
@@ -2740,10 +2925,11 @@
             // 
             mcSettingsGeneralRadar.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             mcSettingsGeneralRadar.BackColor = Color.FromArgb(255, 255, 255);
+            mcSettingsGeneralRadar.Controls.Add(swRadarEnemyStats);
+            mcSettingsGeneralRadar.Controls.Add(swRadarVsync);
             mcSettingsGeneralRadar.Controls.Add(swRadarStats);
             mcSettingsGeneralRadar.Controls.Add(lblSettingsGeneralRadar);
             mcSettingsGeneralRadar.Controls.Add(btnRestartRadar);
-            mcSettingsGeneralRadar.Controls.Add(sldrThreadSpinDelay);
             mcSettingsGeneralRadar.Controls.Add(btnToggleMap);
             mcSettingsGeneralRadar.Controls.Add(swMapHelper);
             mcSettingsGeneralRadar.Depth = 0;
@@ -4640,6 +4826,8 @@
             Shown += frmMain_Shown;
             tabControlMain.ResumeLayout(false);
             tabRadar.ResumeLayout(false);
+            mcRadarEnemyStats.ResumeLayout(false);
+            mcRadarEnemyStats.PerformLayout();
             mcRadarStats.ResumeLayout(false);
             mcRadarStats.PerformLayout();
             mcRadarSettings.ResumeLayout(false);
@@ -4750,7 +4938,6 @@
         private TabPage tabSettingsColors;
         private MaterialSkin.Controls.MaterialTabSelector tabSelector;
         private ImageList iconList;
-        private MaterialSkin.Controls.MaterialSlider sldrThreadSpinDelay;
         private MaterialSkin.Controls.MaterialCard mcSettingsGeneralRadar;
         private MaterialSkin.Controls.MaterialSwitch swMapHelper;
         private MaterialSkin.Controls.MaterialButton btnRestartRadar;
@@ -4992,6 +5179,19 @@
         private MaterialSkin.Controls.MaterialLabel lblRadarFPSValue;
         private MaterialSkin.Controls.MaterialLabel lblRadarMemSValue;
         private MaterialSkin.Controls.MaterialLabel lblRadarMemS;
+        private MaterialSkin.Controls.MaterialCard mcRadarEnemyStats;
+        private MaterialSkin.Controls.MaterialLabel lblRadarBossesValue;
+        private MaterialSkin.Controls.MaterialLabel lblRadarBosses;
+        private MaterialSkin.Controls.MaterialLabel lblRadarPlayerScavsValue;
+        private MaterialSkin.Controls.MaterialLabel lblRadarPlayerScavs;
+        private MaterialSkin.Controls.MaterialLabel lblRadarRoguesValue;
+        private MaterialSkin.Controls.MaterialLabel lblRadarAIScavsValue;
+        private MaterialSkin.Controls.MaterialLabel lblRadarPMCsValue;
+        private MaterialSkin.Controls.MaterialLabel lblRadarRogues;
+        private MaterialSkin.Controls.MaterialLabel lblRadarAIScavs;
+        private MaterialSkin.Controls.MaterialLabel lblRadarPMCs;
+        private MaterialSkin.Controls.MaterialSwitch swRadarVsync;
+        private MaterialSkin.Controls.MaterialSwitch swRadarEnemyStats;
     }
 }
 

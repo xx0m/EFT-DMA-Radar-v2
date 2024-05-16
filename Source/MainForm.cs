@@ -166,11 +166,11 @@ namespace eft_dma_radar
             materialSkinManager.Theme = MaterialSkinManager.Themes.DARK;
             materialSkinManager.ColorScheme = new ColorScheme(Primary.Grey800, Primary.Grey800, Primary.Indigo100, Accent.Orange400, TextShade.WHITE);
 
-            _mapCanvas = skMapCanvas;
-            _mapCanvas.VSync = _config.Vsync;
-
             LoadConfig();
             LoadMaps();
+
+            _mapCanvas = skMapCanvas;
+            _mapCanvas.VSync = _config.VSync;
 
             _mapChangeTimer.AutoReset = false;
             _mapChangeTimer.Elapsed += MapChangeTimer_Elapsed;
@@ -399,8 +399,14 @@ namespace eft_dma_radar
         {
             #region Settings
             #region General
+            // Radar
+            swRadarStats.Checked = _config.ShowRadarStats;
+            mcRadarStats.Visible = _config.ShowRadarStats;
+            swRadarVsync.Checked = _config.VSync;
+            swRadarEnemyStats.Checked = _config.EnemyStats;
+            mcRadarEnemyStats.Visible = _config.EnemyStats;
+
             // User Interface
-            swShowLoot.Enabled = _config.ProcessLoot;
             swShowLoot.Checked = _config.ShowLoot;
             swQuestHelper.Checked = _config.QuestHelperEnabled;
             swAimview.Checked = _config.AimviewEnabled;
@@ -414,11 +420,6 @@ namespace eft_dma_radar
             sldrAimlineLength.Value = _config.PlayerAimLineLength;
             sldrUIScale.Value = _config.UIScale;
             sldrZoomDistance.Value = _config.DefaultZoom;
-
-            // Radar
-            swRadarStats.Checked = _config.ShowRadarStats;
-            mcRadarStats.Visible = _config.ShowRadarStats;
-            sldrThreadSpinDelay.Value = _config.ThreadSpinDelay;
 
             #endregion
 
@@ -514,7 +515,9 @@ namespace eft_dma_radar
         {
             while (_mapCanvas.GRContext is null)
                 await Task.Delay(1);
+
             _mapCanvas.GRContext.SetResourceCacheLimit(503316480); // Fixes low FPS on big maps
+
             while (true)
             {
                 await Task.Run(() => Thread.SpinWait(50000)); // High performance async delay
@@ -638,7 +641,6 @@ namespace eft_dma_radar
 
             if (inGame && localPlayer is not null)
             {
-                // Check if map changed
                 UpdateSelectedMap();
 
                 if (_fpsWatch.ElapsedMilliseconds >= 1000)
@@ -646,20 +648,64 @@ namespace eft_dma_radar
                     // RE-ENABLE & EXPLORE WHAT THIS DOES
                     //_mapCanvas.GRContext.PurgeResources(); // Seems to fix mem leak issue on increasing resource cache
 
-                    lblRadarFPSValue.Text = $"{_fps}";
-                    lblRadarMemSValue.Text = $"{Memory.Ticks}";
+                    #region Radar Stats
+                    var fps = _fps;
+                    var memTicks = Memory.Ticks;
+                    var looseLoot = Loot.TotalLooseLoot;
+                    var containers = Loot.TotalContainers;
+                    var corpses = Loot.TotalCorpses;
 
-                    if (lblRadarLooseLootValue.Text != Loot.TotalLooseLoot.ToString())
-                        lblRadarLooseLootValue.Text = Loot.TotalLooseLoot.ToString();
+                    if (lblRadarFPSValue.Text != fps.ToString())
+                        lblRadarFPSValue.Text = $"{fps}";
 
-                    if (lblRadarContainersValue.Text != Loot.TotalContainers.ToString())
-                        lblRadarContainersValue.Text = Loot.TotalContainers.ToString();
+                    if (lblRadarMemSValue.Text != memTicks.ToString())
+                        lblRadarMemSValue.Text = $"{memTicks}";
 
-                    if (lblRadarCorpsesValue.Text != Loot.TotalCorpses.ToString())
-                        lblRadarCorpsesValue.Text = Loot.TotalCorpses.ToString();
+                    if (lblRadarLooseLootValue.Text != looseLoot.ToString())
+                        lblRadarLooseLootValue.Text = $"{looseLoot}";
 
+                    if (lblRadarContainersValue.Text != containers.ToString())
+                        lblRadarContainersValue.Text = $"{containers}";
 
-                    _fpsWatch.Restart();
+                    if (lblRadarCorpsesValue.Text != corpses.ToString())
+                        lblRadarCorpsesValue.Text = $"{corpses}";
+                    #endregion
+
+                    #region Enemy Stats
+                    var playerCounts = AllPlayers
+                        .Where(x => x.Value.IsAlive && x.Value.IsActive)
+                        .GroupBy(x => x.Value.Type)
+                        .ToDictionary(g => g.Key, g => g.Count());
+
+                    var enemyPMCs = playerCounts.GetValueOrDefault(PlayerType.USEC, 0) + playerCounts.GetValueOrDefault(PlayerType.BEAR, 0);
+                    var playerScavs = playerCounts.GetValueOrDefault(PlayerType.PlayerScav, 0);
+                    var aiScavs = playerCounts.GetValueOrDefault(PlayerType.Scav, 0);
+                    var rogues = playerCounts.GetValueOrDefault(PlayerType.Raider) +
+                                 playerCounts.GetValueOrDefault(PlayerType.Rogue) +
+                                 playerCounts.GetValueOrDefault(PlayerType.BossFollower) +
+                                 playerCounts.GetValueOrDefault(PlayerType.BossGuard) +
+                                 playerCounts.GetValueOrDefault(PlayerType.Cultist);
+
+                    var bosses = playerCounts.GetValueOrDefault(PlayerType.Boss, 0);
+
+                    if (lblRadarPMCsValue.Text != enemyPMCs.ToString())
+                        lblRadarPMCsValue.Text = $"{enemyPMCs}";
+
+                    if (lblRadarPlayerScavsValue.Text != playerScavs.ToString())
+                        lblRadarPlayerScavsValue.Text = $"{playerScavs}";
+
+                    if (lblRadarAIScavsValue.Text != aiScavs.ToString())
+                        lblRadarAIScavsValue.Text = $"{aiScavs}";
+
+                    if (lblRadarRoguesValue.Text != rogues.ToString())
+                        lblRadarRoguesValue.Text = $"{rogues}";
+
+                    if (lblRadarBossesValue.Text != bosses.ToString())
+                        lblRadarBossesValue.Text = $"{bosses}";
+
+                    #endregion
+
+                     _fpsWatch.Restart();
                     _fps = 0;
                 }
                 else
@@ -685,7 +731,6 @@ namespace eft_dma_radar
                     // Init map
                     CleanupLoadedBitmaps();
                     LoadMapBitmaps();
-                    tabRadar.Text = $"Radar ({this.MapNameFormatted})";
 
                     int selectedIndex = cboAutoRefreshMap.FindString(this.MapNameFormatted);
                     cboAutoRefreshMap.SelectedIndex = selectedIndex != 0 ? selectedIndex : 0;
@@ -718,6 +763,7 @@ namespace eft_dma_radar
                     using (var stream = File.Open(mapLayer.Filename, FileMode.Open, FileAccess.Read))
                     {
                         _loadedBitmaps[mapLayers.IndexOf(mapLayer)] = SKBitmap.Decode(stream);
+                        _loadedBitmaps[mapLayers.IndexOf(mapLayer)].SetImmutable();
                     }
                 }
             });
@@ -744,9 +790,7 @@ namespace eft_dma_radar
                 return false; // Cannot find local player
 
             if (!selectedMapLoaded)
-            {
                 return false; // Map not loaded
-            }
 
             return true; // Ready to render
         }
@@ -881,15 +925,15 @@ namespace eft_dma_radar
                     var mapParams = GetMapLocation();
 
                     // Draw LocalPlayer
-                    {
-                        var localPlayerZoomedPos = localPlayerMapPos.ToZoomedPos(mapParams);
-                        localPlayerZoomedPos.DrawPlayerMarker(
-                            canvas,
-                            localPlayer,
-                            sldrAimlineLength.Value,
-                            null
-                        );
-                    }
+
+                    var localPlayerZoomedPos = localPlayerMapPos.ToZoomedPos(mapParams);
+                    localPlayerZoomedPos.DrawPlayerMarker(
+                        canvas,
+                        localPlayer,
+                        sldrAimlineLength.Value,
+                        null
+                    );
+
 
                     foreach (var player in allPlayers) // Draw PMCs
                     {
@@ -1303,13 +1347,18 @@ namespace eft_dma_radar
                 if (selectedMap is not null)
                 {
                     this._selectedMap = null;
-                    this.tabRadar.Text = "Radar";
 
-                    lblRadarFPSValue.Text = "n/a";
-                    lblRadarMemSValue.Text = "n/a";
-                    lblRadarLooseLootValue.Text = "n/a";
-                    lblRadarContainersValue.Text = "n/a";
-                    lblRadarCorpsesValue.Text = "n/a";
+                    lblRadarFPSValue.Text = "0";
+                    lblRadarMemSValue.Text = "0";
+                    lblRadarLooseLootValue.Text = "0";
+                    lblRadarContainersValue.Text = "0";
+                    lblRadarCorpsesValue.Text = "0";
+
+                    lblRadarPMCsValue.Text = "0";
+                    lblRadarPlayerScavsValue.Text = "0";
+                    lblRadarAIScavsValue.Text = "0";
+                    lblRadarRoguesValue.Text = "0";
+                    lblRadarBossesValue.Text = "0";
                 }
             }
             else if (localPlayer is null)
@@ -1829,13 +1878,13 @@ namespace eft_dma_radar
 
         private void skMapCanvas_PaintSurface(object sender, SKPaintGLSurfaceEventArgs e)
         {
-            SKCanvas canvas = e.Surface.Canvas;
-            canvas.Clear();
-
-            UpdateWindowTitle();
-
             try
             {
+                SKCanvas canvas = e.Surface.Canvas;
+                canvas.Clear();
+
+                UpdateWindowTitle();
+
                 if (IsReadyToRender())
                 {
                     lock (_renderLock)
@@ -1867,10 +1916,10 @@ namespace eft_dma_radar
                 {
                     DrawStatusText(canvas);
                 }
-            }
-            catch (Exception ex) { }
 
-            canvas.Flush();
+                canvas.Flush();
+            }
+            catch { }
         }
 
         private void btnToggleMap_Click(object sender, EventArgs e)
@@ -1943,11 +1992,6 @@ namespace eft_dma_radar
                 mcRadarMapSetup.Visible = false;
         }
 
-        private void sldrThreadSpinDelay_onValueChanged(object sender, int newValue)
-        {
-            _config.ThreadSpinDelay = newValue;
-        }
-
         private void swShowLoot_CheckedChanged(object sender, EventArgs e)
         {
             _config.ShowLoot = swShowLoot.Checked;
@@ -1990,7 +2034,8 @@ namespace eft_dma_radar
 
         private void sldrUIScale_onValueChanged(object sender, int newValue)
         {
-            _uiScale = (.01f * sldrUIScale.Value);
+            _config.UIScale = newValue;
+            _uiScale = (.01f * newValue);
             #region UpdatePaints
             SKPaints.TextMouseoverGroup.TextSize = 12 * _uiScale;
             SKPaints.TextBase.TextSize = 12 * _uiScale;
@@ -2346,12 +2391,19 @@ namespace eft_dma_radar
         private void cboAutoRefreshMap_SelectedIndexChanged(object sender, EventArgs e)
         {
             var mapName = cboAutoRefreshMap.SelectedItem.ToString();
+
+            if (string.IsNullOrEmpty(mapName) || !_config.AutoRefreshSettings.ContainsKey(mapName))
+                return;
+
             sldrAutoRefreshDelay.Value = _config.AutoRefreshSettings[mapName];
         }
 
         private void sldrAutoRefreshDelay_onValueChanged(object sender, int newValue)
         {
             var mapName = cboAutoRefreshMap.SelectedItem.ToString();
+
+            if (string.IsNullOrEmpty(mapName) || !_config.AutoRefreshSettings.ContainsKey(mapName))
+                return;
 
             if (newValue != _config.AutoRefreshSettings[mapName])
             {
@@ -3218,11 +3270,14 @@ namespace eft_dma_radar
                 }
             }
 
-            foreach (var player in enemyPlayers)
+            if (enemyPlayers is not null)
             {
-                if (!_watchlistMatchPlayers.Any(p => p.Name == player.Name))
+                foreach (var player in enemyPlayers)
                 {
-                    _watchlistMatchPlayers.Add(player);
+                    if (!_watchlistMatchPlayers.Any(p => p.Name == player.Name))
+                    {
+                        _watchlistMatchPlayers.Add(player);
+                    }
                 }
             }
 
@@ -3487,7 +3542,7 @@ namespace eft_dma_radar
         {
             var selectedFilter = GetActiveLootFilter();
 
-            if (selectedFilter is null)
+            if (selectedFilter?.Items is null)
                 return;
 
             var lootList = TarkovDevManager.AllItems.Values.ToList();
@@ -3534,7 +3589,7 @@ namespace eft_dma_radar
             var selectedFilter = GetActiveLootFilter();
             var selectedItem = cboLootFilterItemsToAdd.SelectedItem as LootItem;
 
-            if (selectedFilter is not null && !selectedFilter.Items.Contains(selectedItem.ID))
+            if (selectedFilter?.Items is not null && selectedItem is not null && !selectedFilter.Items.Contains(selectedItem.ID))
             {
                 var listItem = new ListViewItem(new[]
                 {       selectedItem.Item.name,
@@ -3676,5 +3731,22 @@ namespace eft_dma_radar
         #endregion
         #endregion
         #endregion
+
+        private void swRadarVsync_CheckedChanged(object sender, EventArgs e)
+        {
+            var enabled = swRadarVsync.Checked;
+            _config.VSync = enabled;
+
+            if (_mapCanvas is not null)
+                _mapCanvas.VSync = enabled;
+        }
+
+        private void swRadarEnemyStats_CheckedChanged(object sender, EventArgs e)
+        {
+            var enabled = swRadarEnemyStats.Checked;
+
+            _config.EnemyStats = enabled;
+            mcRadarEnemyStats.Visible = enabled;
+        }
     }
 }

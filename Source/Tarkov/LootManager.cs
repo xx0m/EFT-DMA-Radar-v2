@@ -366,99 +366,96 @@ namespace eft_dma_radar
                     return;
 
                 if (containerName.Contains("script", StringComparison.OrdinalIgnoreCase))
-                {
                     return;
-                }
-                else
+
+                try
                 {
-                    try
+                    if (className.Contains("Corpse", StringComparison.OrdinalIgnoreCase))
                     {
-                        if (className.Contains("Corpse", StringComparison.OrdinalIgnoreCase))
+                        if (!this.savedLootCorpsesInfo.Any(x => x.InteractiveClass == interactiveClass))
                         {
-                            if (!this.savedLootCorpsesInfo.Any(x => x.InteractiveClass == interactiveClass))
-                            {
-                                if (!validScatterMap.Results[i][22].TryGetResult<ulong>(out var slots))
-                                    return;
+                            if (!validScatterMap.Results[i][22].TryGetResult<ulong>(out var slots))
+                                return;
 
-                                Vector3 position = new Transform(posToTransform, false).GetPosition(null);
+                            Vector3 position = new Transform(posToTransform, false).GetPosition(null);
 
-                                var playerNameSplit = containerName.Split('(', ')');
-                                var playerName = playerNameSplit.Count() > 1 ? playerNameSplit[1] : playerNameSplit[0];
-                                playerName = Helpers.TransliterateCyrillic(playerName);
+                            var playerNameSplit = containerName.Split('(', ')');
+                            var playerName = playerNameSplit.Count() > 1 ? playerNameSplit[1] : playerNameSplit[0];
+                            playerName = Helpers.TransliterateCyrillic(playerName);
 
-                                this.savedLootCorpsesInfo.Add(new CorpseInfo { InteractiveClass = interactiveClass, Position = position, Slots = slots, PlayerName = playerName });
-                            }
+                            this.savedLootCorpsesInfo.Add(new CorpseInfo { InteractiveClass = interactiveClass, Position = position, Slots = slots, PlayerName = playerName });
                         }
-                        else if (className.Equals("LootableContainer", StringComparison.OrdinalIgnoreCase))
+                    }
+                    else if (className.Equals("LootableContainer", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (!this.savedLootContainersInfo.Any(x => x.InteractiveClass == interactiveClass))
                         {
-                            if (!this.savedLootContainersInfo.Any(x => x.InteractiveClass == interactiveClass))
-                            {
-                                if (!validScatterMap.Results[i][5].TryGetResult<ulong>(out var containerIDPtr))
-                                    return;
+                            if (!validScatterMap.Results[i][5].TryGetResult<ulong>(out var containerIDPtr))
+                                return;
 
-                                if (!validScatterMap.Results[i][18].TryGetResult<ulong>(out var grids))
-                                    return;
+                            if (!validScatterMap.Results[i][18].TryGetResult<ulong>(out var grids))
+                                return;
 
-                                Vector3 position = new Transform(posToTransform, false).GetPosition(null);
+                            Vector3 position = new Transform(posToTransform, false).GetPosition(null);
 
-                                var containerID = Memory.ReadUnityString(containerIDPtr);
-                                var containerExists = TarkovDevManager.AllLootContainers.TryGetValue(containerID, out var container) && container is not null;
+                            var containerID = Memory.ReadUnityString(containerIDPtr);
+                            var containerExists = TarkovDevManager.AllLootContainers.TryGetValue(containerID, out var container) && container is not null;
 
-                                this.savedLootContainersInfo.Add(new ContainerInfo { InteractiveClass = interactiveClass, Position = position, Name = containerExists ? container.Name : containerName, Grids = grids });
-                            }
+                            this.savedLootContainersInfo.Add(new ContainerInfo { InteractiveClass = interactiveClass, Position = position, Name = containerExists ? container.Name : containerName, Grids = grids });
                         }
-                        else if (className.Equals("ObservedLootItem", StringComparison.OrdinalIgnoreCase)) // handle loose weapons / gear
+                    }
+                    else if (className.Equals("ObservedLootItem", StringComparison.OrdinalIgnoreCase)) // handle loose weapons / gear
+                    {
+                        var savedItemExists = this.savedLootItemsInfo.Any(x => x.InteractiveClass == interactiveClass);
+                        var savedSearchableExists = this.savedLootContainersInfo.Any(x => x.InteractiveClass == interactiveClass);
+
+                        if (!savedItemExists || !savedSearchableExists)
                         {
-                            var savedItemExists = this.savedLootItemsInfo.Any(x => x.InteractiveClass == interactiveClass);
-                            var savedSearchableExists = this.savedLootContainersInfo.Any(x => x.InteractiveClass == interactiveClass);
+                            if (!validScatterMap.Results[i][15].TryGetResult<bool>(out var isQuestItem))
+                                return;
+                            if (!validScatterMap.Results[i][16].TryGetResult<ulong>(out var BSGIDPtr))
+                                return;
 
-                            if (!savedItemExists || !savedSearchableExists)
+                            var id = Memory.ReadUnityString(BSGIDPtr);
+
+                            if (id is null)
+                                return;
+
+                            var itemExists = TarkovDevManager.AllItems.TryGetValue(id, out var lootItem) && lootItem is not null;
+                            var isSearchableItem = lootItem?.Item.categories.FirstOrDefault(x => x.name == "Weapon" || x.name == "Searchable item") is not null;
+
+                            if (isSearchableItem)
                             {
-                                if (!validScatterMap.Results[i][15].TryGetResult<bool>(out var isQuestItem))
-                                    return;
-                                if (!validScatterMap.Results[i][16].TryGetResult<ulong>(out var BSGIDPtr))
-                                    return;
-
-                                var id = Memory.ReadUnityString(BSGIDPtr);
-
-                                if (id is null)
-                                    return;
-
-                                var itemExists = TarkovDevManager.AllItems.TryGetValue(id, out var lootItem) && lootItem is not null;
-                                var isSearchableItem = lootItem?.Item.categories.FirstOrDefault(x => x.name == "Weapon" || x.name == "Searchable item") is not null;
-
-                                if (isSearchableItem)
+                                if (!savedSearchableExists)
                                 {
-                                    if (!savedSearchableExists)
+                                    Vector3 position = new Transform(posToTransform, false).GetPosition(null);
+                                    var container = new ContainerInfo { InteractiveClass = interactiveClass, Position = position, Name = lootItem.Item.shortName ?? containerName };
+
+                                    if (validScatterMap.Results[i][22].TryGetResult<ulong>(out var slots))
+                                        container.Slots = slots;
+
+                                    if (validScatterMap.Results[i][17].TryGetResult<ulong>(out var rootItem))
                                     {
-                                        Vector3 position = new Transform(posToTransform, false).GetPosition(null);
-                                        var container = new ContainerInfo { InteractiveClass = interactiveClass, Position = position, Name = lootItem.Item.shortName ?? containerName };
-
-                                        if (validScatterMap.Results[i][22].TryGetResult<ulong>(out var slots))
-                                            container.Slots = slots;
-
-                                        if (validScatterMap.Results[i][17].TryGetResult<ulong>(out var rootItem))
-                                        {
-                                            var itemGrids = Memory.ReadPtr(rootItem + 0x70);
-                                            container.Grids = itemGrids;
-                                        }
-
-                                        this.savedLootContainersInfo.Add(container);
+                                        var itemGrids = Memory.ReadPtr(rootItem + 0x70);
+                                        container.Grids = itemGrids;
                                     }
+
+                                    this.savedLootContainersInfo.Add(container);
                                 }
-                                else
+                            }
+                            else
+                            {
+                                if (!savedItemExists)
                                 {
-                                    if (!savedItemExists)
-                                    {
-                                        Vector3 position = new Transform(posToTransform, false).GetPosition(null);
-                                        this.savedLootItemsInfo.Add(new LootItemInfo { InteractiveClass = interactiveClass, QuestItem = isQuestItem, Position = position, ItemID = id });
-                                    }
+                                    Vector3 position = new Transform(posToTransform, false).GetPosition(null);
+                                    this.savedLootItemsInfo.Add(new LootItemInfo { InteractiveClass = interactiveClass, QuestItem = isQuestItem, Position = position, ItemID = id });
                                 }
                             }
                         }
                     }
-                    catch { }
                 }
+                catch { }
+                
             });
         }
 
@@ -1099,6 +1096,11 @@ namespace eft_dma_radar
 
             try
             {
+                var gridPtrLength = gridsArrayPtr.ToString().Length;
+
+                if (gridPtrLength != 13)
+                    Console.WriteLine($"gridsArryPtr Size: {gridPtrLength}");
+
                 gridsArrayCount = Memory.ReadValue<int>(gridsArrayPtr + Offsets.UnityList.Count);
             }
             catch { }

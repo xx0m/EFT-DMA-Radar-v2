@@ -24,6 +24,9 @@ namespace eft_dma_radar
         [JsonPropertyName("defaultZoom")]
         public int DefaultZoom { get; set; }
 
+        [JsonPropertyName("enemyStats")]
+        public bool EnemyStats { get; set; }
+
         [JsonPropertyName("extendedReach")]
         public bool ExtendedReach { get; set; }
 
@@ -132,9 +135,6 @@ namespace eft_dma_radar
         [JsonPropertyName("thermalVision")]
         public bool ThermalVision { get; set; }
 
-        [JsonPropertyName("threadSpinDelay")]
-        public int ThreadSpinDelay { get; set; }
-
         [JsonPropertyName("throwPowerStrength")]
         public int ThrowPowerStrength { get; set; }
 
@@ -144,8 +144,8 @@ namespace eft_dma_radar
         [JsonPropertyName("uiScale")]
         public int UIScale { get; set; }
 
-        [JsonPropertyName("vsyncEnabled")]
-        public bool Vsync { get; set; }
+        [JsonPropertyName("vsync")]
+        public bool VSync { get; set; }
         #endregion
 
         #region Json Ignore
@@ -241,6 +241,7 @@ namespace eft_dma_radar
             };
             ChamsEnabled = false;
             DefaultZoom = 100;
+            EnemyStats = false;
             ExtendedReach = false;
             FreezeTimeOfDay = false;
             ImportantLootOnly = false;
@@ -282,7 +283,7 @@ namespace eft_dma_radar
             OpticThermalSetting = new ThermalSettings(1f, 0.0011f, -0.1f, 0);
             OpticThermalVision = false;
             PaintColors = DefaultPaintColors;
-            ParallelOptions = new ParallelOptions { MaxDegreeOfParallelism = 1 };
+            ParallelOptions = new ParallelOptions { MaxDegreeOfParallelism = 2 };
             PlayerAimLineLength = 1000;
             PrimaryTeammateId = null;
             ProcessLoot = true;
@@ -297,11 +298,10 @@ namespace eft_dma_radar
             ShowSubItems = false;
             ShowTextOutline = true;
             ThermalVision = false;
-            ThreadSpinDelay = 100;
             ThrowPowerStrength = 1;
             TimeOfDay = 12f;
             UIScale = 100;
-            Vsync = true;
+            VSync = true;
         }
 
         /// <summary>
@@ -328,6 +328,7 @@ namespace eft_dma_radar
                 }
                 catch (Exception ex)
                 {
+                    Program.Log($"TryLoadConfig - {ex.Message}\n{ex.StackTrace}");
                     config = null;
                     return false;
                 }

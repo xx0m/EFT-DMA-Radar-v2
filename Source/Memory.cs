@@ -368,6 +368,7 @@ namespace eft_dma_radar
                                 {
                                     Memory._ticksCounter++;
                                 }
+
                                 if (Memory._restart)
                                 {
                                     Memory.GameStatus = Game.GameStatus.Menu;
@@ -375,8 +376,9 @@ namespace eft_dma_radar
                                     Memory._restart = false;
                                     break;
                                 }
+
                                 Memory._game.GameLoop();
-                                Thread.SpinWait(Program.Config.ThreadSpinDelay * 1000);
+                                Thread.SpinWait(1000);
                             }
                         }
                         catch (GameNotRunningException) { break; }
@@ -425,6 +427,8 @@ namespace eft_dma_radar
             var pagesToRead = new HashSet<ulong>(); // Will contain each unique page only once to prevent reading the same page multiple times
             foreach (var entry in entries) // First loop through all entries - GET INFO
             {
+                if (entry is null)
+                    continue;
                 // Parse Address and Size properties
                 ulong addr = entry.ParseAddr();
                 uint size = (uint)entry.ParseSize();
@@ -452,7 +456,7 @@ namespace eft_dma_radar
 
             foreach (var entry in entries) // Second loop through all entries - PARSE RESULTS
             {
-                if (entry.IsFailed) // Skip this entry, leaves result as null
+                if (entry is null || entry.IsFailed) // Skip this entry, leaves result as null
                     continue;
 
                 ulong readAddress = (ulong)entry.Addr + entry.Offset; // location of object
