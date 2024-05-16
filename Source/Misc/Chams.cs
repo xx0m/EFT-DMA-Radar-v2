@@ -88,9 +88,9 @@ namespace eft_dma_radar
             }
 
             var players = this.AllPlayers
-                ?.Where(x => x.Value.IsAlive && x.Value.IsHumanActive && x.Value.Type is not PlayerType.LocalPlayer && !Chams.PlayersWithChams.ContainsKey(x.Value.Base.ToString()))
-                .Select(x => x.Value)
-                .ToList();
+                          ?.Where(x => x.Value.IsAlive && x.Value.Type is not PlayerType.LocalPlayer && !Chams.PlayersWithChams.ContainsKey(x.Value.Base.ToString()))
+                          .Select(x => x.Value)
+                          .ToList();
 
             if (players is not null && players.Count > 0)
             {
