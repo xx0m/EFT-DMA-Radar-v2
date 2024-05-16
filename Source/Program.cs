@@ -102,7 +102,7 @@ namespace eft_dma_radar
         public static void Log(string msg)
         {
             Debug.WriteLine(msg);
-            if (_config.LoggingEnabled)
+            if (_config?.LoggingEnabled ?? false)
             {
                 lock (_logLock) // Sync access to File IO
                 {
