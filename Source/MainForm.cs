@@ -43,8 +43,8 @@ namespace eft_dma_radar
         private string _lastFactionEntry;
         private List<Player> _watchlistMatchPlayers = new();
 
-        private const double ZoomSensitivity = 0.07; // 'size' of each 'scroll' (lower = less jumpy)
-        private const int ZoomInterval = 10; // frequency of 'zoom updates' (lower = smoother but slower, higher = faster)
+        private const double ZoomSensitivity = 0.3;
+        private const int ZoomInterval = 10;
         private int targetZoomValue = 0;
         private System.Windows.Forms.Timer zoomTimer;
 
@@ -207,7 +207,7 @@ namespace eft_dma_radar
         }
 
         /// <summary>
-        /// Process hotkey presses.
+        /// Process hotkey presses.sc
         /// </summary>
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
@@ -252,12 +252,13 @@ namespace eft_dma_radar
             if (tabControlMain.SelectedIndex == 0) // Main Radar Tab should be open
             {
                 int zoomDelta = -(int)(e.Delta * ZoomSensitivity);
-                this.targetZoomValue = Math.Max(sldrZoomDistance.RangeMin, Math.Min(sldrZoomDistance.RangeMax, this.targetZoomValue + zoomDelta));
 
-                if (!this.zoomTimer.Enabled)
-                    this.zoomTimer.Start();
+                if (zoomDelta < 0)
+                    ZoomIn(-zoomDelta);
+                else if (zoomDelta > 0)
+                    ZoomOut(zoomDelta);
 
-                if (this._isFreeMapToggled)
+                if (this._isFreeMapToggled && zoomDelta < 0) // Only move the zoom position when scrolling in
                 {
                     var mousePos = this._mapCanvas.PointToClient(Cursor.Position);
                     var mapParams = GetMapLocation();
@@ -1950,9 +1951,14 @@ namespace eft_dma_radar
             int zoomDifference = this.targetZoomValue - sldrZoomDistance.Value;
 
             if (zoomDifference != 0)
-                sldrZoomDistance.Value += Math.Sign(zoomDifference);
+            {
+                int zoomStep = Math.Sign(zoomDifference);
+                sldrZoomDistance.Value += zoomStep;
+            }
             else
+            {
                 this.zoomTimer.Stop();
+            }
         }
 
         private void ZoomIn(int amt)

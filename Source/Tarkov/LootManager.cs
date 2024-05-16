@@ -1096,11 +1096,6 @@ namespace eft_dma_radar
 
             try
             {
-                var gridPtrLength = gridsArrayPtr.ToString().Length;
-
-                if (gridPtrLength != 13)
-                    Console.WriteLine($"gridsArryPtr Size: {gridPtrLength}");
-
                 gridsArrayCount = Memory.ReadValue<int>(gridsArrayPtr + Offsets.UnityList.Count);
             }
             catch { }
