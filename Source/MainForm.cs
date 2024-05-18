@@ -436,8 +436,8 @@ namespace eft_dma_radar
             swRadarStats.Checked = _config.ShowRadarStats;
             mcRadarStats.Visible = _config.ShowRadarStats;
             swRadarVsync.Checked = _config.VSync;
-            swRadarEnemyStats.Checked = _config.EnemyStats;
-            mcRadarEnemyStats.Visible = _config.EnemyStats;
+            swRadarEnemyCount.Checked = _config.EnemyCount;
+            mcRadarEnemyStats.Visible = _config.EnemyCount;
 
             // User Interface
             swShowLoot.Checked = _config.ShowLoot;
@@ -723,19 +723,41 @@ namespace eft_dma_radar
                     var bosses = playerCounts.GetValueOrDefault(PlayerType.Boss, 0);
 
                     if (lblRadarPMCsValue.Text != enemyPMCs.ToString())
+                    {
                         lblRadarPMCsValue.Text = $"{enemyPMCs}";
-
+                        lblRadarPMCsValue.UseAccent = enemyPMCs > 0;
+                        lblRadarPMCsValue.HighEmphasis = enemyPMCs > 0;
+                    }
+                        
                     if (lblRadarPlayerScavsValue.Text != playerScavs.ToString())
+                    {
                         lblRadarPlayerScavsValue.Text = $"{playerScavs}";
+                        lblRadarPlayerScavsValue.UseAccent = playerScavs > 0;
+                        lblRadarPlayerScavsValue.HighEmphasis = playerScavs > 0;
+                    }
+                        
 
                     if (lblRadarAIScavsValue.Text != aiScavs.ToString())
+                    {
                         lblRadarAIScavsValue.Text = $"{aiScavs}";
+                        lblRadarAIScavsValue.UseAccent = aiScavs > 0;
+                        lblRadarAIScavsValue.HighEmphasis = aiScavs > 0;
+                    }
+                        
 
                     if (lblRadarRoguesValue.Text != rogues.ToString())
+                    {
                         lblRadarRoguesValue.Text = $"{rogues}";
+                        lblRadarRoguesValue.UseAccent = rogues > 0;
+                        lblRadarRoguesValue.HighEmphasis = rogues > 0;
+                    }
 
                     if (lblRadarBossesValue.Text != bosses.ToString())
+                    {
                         lblRadarBossesValue.Text = $"{bosses}";
+                        lblRadarBossesValue.UseAccent = bosses > 0;
+                        lblRadarBossesValue.HighEmphasis = bosses > 0;
+                    }
 
                     #endregion
 
@@ -1389,10 +1411,20 @@ namespace eft_dma_radar
                     lblRadarCorpsesValue.Text = "0";
 
                     lblRadarPMCsValue.Text = "0";
+                    lblRadarPMCsValue.UseAccent = false;
+                    lblRadarPMCsValue.HighEmphasis = false;
                     lblRadarPlayerScavsValue.Text = "0";
+                    lblRadarPlayerScavsValue.UseAccent = false;
+                    lblRadarPlayerScavsValue.HighEmphasis = false;
                     lblRadarAIScavsValue.Text = "0";
+                    lblRadarAIScavsValue.UseAccent = false;
+                    lblRadarAIScavsValue.HighEmphasis = false;
                     lblRadarRoguesValue.Text = "0";
+                    lblRadarRoguesValue.UseAccent = false;
+                    lblRadarRoguesValue.HighEmphasis = false;
                     lblRadarBossesValue.Text = "0";
+                    lblRadarBossesValue.UseAccent = false;
+                    lblRadarBossesValue.HighEmphasis = false;
                 }
             }
             else if (localPlayer is null)
@@ -2077,6 +2109,35 @@ namespace eft_dma_radar
         private void btnRestartRadar_Click(object sender, EventArgs e)
         {
             Memory.Restart();
+        }
+
+        private void swRadarVsync_CheckedChanged(object sender, EventArgs e)
+        {
+            var enabled = swRadarVsync.Checked;
+            _config.VSync = enabled;
+
+            if (_mapCanvas is not null)
+                _mapCanvas.VSync = enabled;
+        }
+
+        private void swRadarEnemyCount_CheckedChanged(object sender, EventArgs e)
+        {
+            var enabled = swRadarEnemyCount.Checked;
+
+            _config.EnemyCount = enabled;
+            mcRadarEnemyStats.Visible = enabled;
+        }
+
+        private void cboFont_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            _config.Font = cboFont.SelectedIndex;
+            InitiateFont();
+        }
+
+        private void sldrFontSize_onValueChanged(object sender, int newValue)
+        {
+            _config.FontSize = newValue;
+            InitiateFontSize();
         }
         #endregion
         #endregion
@@ -3749,34 +3810,5 @@ namespace eft_dma_radar
         #endregion
         #endregion
         #endregion
-
-        private void swRadarVsync_CheckedChanged(object sender, EventArgs e)
-        {
-            var enabled = swRadarVsync.Checked;
-            _config.VSync = enabled;
-
-            if (_mapCanvas is not null)
-                _mapCanvas.VSync = enabled;
-        }
-
-        private void swRadarEnemyStats_CheckedChanged(object sender, EventArgs e)
-        {
-            var enabled = swRadarEnemyStats.Checked;
-
-            _config.EnemyStats = enabled;
-            mcRadarEnemyStats.Visible = enabled;
-        }
-
-        private void cboFont_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            _config.Font = cboFont.SelectedIndex;
-            InitiateFont();
-        }
-
-        private void sldrFontSize_onValueChanged(object sender, int newValue)
-        {
-            _config.FontSize = newValue;
-            InitiateFontSize();
-        }
     }
 }

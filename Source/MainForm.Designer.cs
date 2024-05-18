@@ -127,9 +127,9 @@
             swProcessLoot = new MaterialSkin.Controls.MaterialSwitch();
             swRadarStats = new MaterialSkin.Controls.MaterialSwitch();
             swRadarVsync = new MaterialSkin.Controls.MaterialSwitch();
-            swRadarEnemyStats = new MaterialSkin.Controls.MaterialSwitch();
-            cboFont = new MaterialSkin.Controls.MaterialComboBox();
+            swRadarEnemyCount = new MaterialSkin.Controls.MaterialSwitch();
             sldrFontSize = new MaterialSkin.Controls.MaterialSlider();
+            cboFont = new MaterialSkin.Controls.MaterialComboBox();
             sldrThermalColorCoefficient = new MaterialSkin.Controls.MaterialSlider();
             sldrMinTemperature = new MaterialSkin.Controls.MaterialSlider();
             sldrThermalRampShift = new MaterialSkin.Controls.MaterialSlider();
@@ -137,8 +137,8 @@
             tabRadar = new TabPage();
             mcRadarEnemyStats = new MaterialSkin.Controls.MaterialCard();
             lblRadarBossesValue = new MaterialSkin.Controls.MaterialLabel();
-            lblRadarBosses = new MaterialSkin.Controls.MaterialLabel();
             lblRadarPlayerScavsValue = new MaterialSkin.Controls.MaterialLabel();
+            lblRadarBosses = new MaterialSkin.Controls.MaterialLabel();
             lblRadarPlayerScavs = new MaterialSkin.Controls.MaterialLabel();
             lblRadarRoguesValue = new MaterialSkin.Controls.MaterialLabel();
             lblRadarAIScavsValue = new MaterialSkin.Controls.MaterialLabel();
@@ -2329,49 +2329,22 @@
             swRadarVsync.UseVisualStyleBackColor = true;
             swRadarVsync.CheckedChanged += swRadarVsync_CheckedChanged;
             // 
-            // swRadarEnemyStats
+            // swRadarEnemyCount
             // 
-            swRadarEnemyStats.Depth = 0;
-            swRadarEnemyStats.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
-            swRadarEnemyStats.Location = new Point(172, 85);
-            swRadarEnemyStats.Margin = new Padding(0);
-            swRadarEnemyStats.MouseLocation = new Point(-1, -1);
-            swRadarEnemyStats.MouseState = MaterialSkin.MouseState.HOVER;
-            swRadarEnemyStats.Name = "swRadarEnemyStats";
-            swRadarEnemyStats.Ripple = true;
-            swRadarEnemyStats.Size = new Size(152, 28);
-            swRadarEnemyStats.TabIndex = 33;
-            swRadarEnemyStats.Text = "Enemy Stats";
-            toolTip.SetToolTip(swRadarEnemyStats, "Shows radar stats on radar tab");
-            swRadarEnemyStats.UseVisualStyleBackColor = true;
-            swRadarEnemyStats.CheckedChanged += swRadarEnemyStats_CheckedChanged;
-            // 
-            // cboFont
-            // 
-            cboFont.AutoResize = false;
-            cboFont.BackColor = Color.FromArgb(255, 255, 255);
-            cboFont.Depth = 0;
-            cboFont.DrawMode = DrawMode.OwnerDrawVariable;
-            cboFont.DropDownHeight = 118;
-            cboFont.DropDownStyle = ComboBoxStyle.DropDownList;
-            cboFont.DropDownWidth = 121;
-            cboFont.Font = new Font("Microsoft Sans Serif", 14F, FontStyle.Bold, GraphicsUnit.Pixel);
-            cboFont.ForeColor = Color.FromArgb(222, 0, 0, 0);
-            cboFont.FormattingEnabled = true;
-            cboFont.Hint = "Font";
-            cboFont.IntegralHeight = false;
-            cboFont.ItemHeight = 29;
-            cboFont.Items.AddRange(new object[] { "Arial", "Segoe UI", "Tahoma", "Verdana", "Calibri", "Candara", "Corbel", "Consolas", "Constantia", "Trebuchet MS" });
-            cboFont.Location = new Point(15, 215);
-            cboFont.MaxDropDownItems = 6;
-            cboFont.MouseState = MaterialSkin.MouseState.OUT;
-            cboFont.Name = "cboFont";
-            cboFont.Size = new Size(171, 35);
-            cboFont.StartIndex = 0;
-            cboFont.TabIndex = 38;
-            toolTip.SetToolTip(cboFont, "The font to use for the text on the radar");
-            cboFont.UseTallSize = false;
-            cboFont.SelectedIndexChanged += cboFont_SelectedIndexChanged;
+            swRadarEnemyCount.Depth = 0;
+            swRadarEnemyCount.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swRadarEnemyCount.Location = new Point(172, 85);
+            swRadarEnemyCount.Margin = new Padding(0);
+            swRadarEnemyCount.MouseLocation = new Point(-1, -1);
+            swRadarEnemyCount.MouseState = MaterialSkin.MouseState.HOVER;
+            swRadarEnemyCount.Name = "swRadarEnemyCount";
+            swRadarEnemyCount.Ripple = true;
+            swRadarEnemyCount.Size = new Size(152, 28);
+            swRadarEnemyCount.TabIndex = 33;
+            swRadarEnemyCount.Text = "Enemy Count";
+            toolTip.SetToolTip(swRadarEnemyCount, "Shows radar stats on radar tab");
+            swRadarEnemyCount.UseVisualStyleBackColor = true;
+            swRadarEnemyCount.CheckedChanged += swRadarEnemyCount_CheckedChanged;
             // 
             // sldrFontSize
             // 
@@ -2391,6 +2364,33 @@
             sldrFontSize.ValueMax = 36;
             sldrFontSize.ValueSuffix = "px";
             sldrFontSize.onValueChanged += sldrFontSize_onValueChanged;
+            // 
+            // cboFont
+            // 
+            cboFont.AutoResize = false;
+            cboFont.BackColor = Color.FromArgb(255, 255, 255);
+            cboFont.Depth = 0;
+            cboFont.DrawMode = DrawMode.OwnerDrawVariable;
+            cboFont.DropDownHeight = 292;
+            cboFont.DropDownStyle = ComboBoxStyle.DropDownList;
+            cboFont.DropDownWidth = 121;
+            cboFont.Font = new Font("Microsoft Sans Serif", 14F, FontStyle.Bold, GraphicsUnit.Pixel);
+            cboFont.ForeColor = Color.FromArgb(222, 0, 0, 0);
+            cboFont.FormattingEnabled = true;
+            cboFont.Hint = "Font";
+            cboFont.IntegralHeight = false;
+            cboFont.ItemHeight = 29;
+            cboFont.Items.AddRange(new object[] { "Arial", "Calibri", "Candara", "Consolas", "Constantia", "Corbel", "Helvetica", "Lato", "Roboto", "Segoe UI", "Tahoma", "Trebuchet MS", "Verdana" });
+            cboFont.Location = new Point(17, 212);
+            cboFont.MaxDropDownItems = 10;
+            cboFont.MouseState = MaterialSkin.MouseState.OUT;
+            cboFont.Name = "cboFont";
+            cboFont.Size = new Size(171, 35);
+            cboFont.StartIndex = 0;
+            cboFont.TabIndex = 39;
+            toolTip.SetToolTip(cboFont, "The item to add to the loot filter");
+            cboFont.UseTallSize = false;
+            cboFont.SelectedIndexChanged += cboFont_SelectedIndexChanged;
             // 
             // sldrThermalColorCoefficient
             // 
@@ -2481,8 +2481,8 @@
             mcRadarEnemyStats.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
             mcRadarEnemyStats.BackColor = Color.FromArgb(255, 255, 255);
             mcRadarEnemyStats.Controls.Add(lblRadarBossesValue);
-            mcRadarEnemyStats.Controls.Add(lblRadarBosses);
             mcRadarEnemyStats.Controls.Add(lblRadarPlayerScavsValue);
+            mcRadarEnemyStats.Controls.Add(lblRadarBosses);
             mcRadarEnemyStats.Controls.Add(lblRadarPlayerScavs);
             mcRadarEnemyStats.Controls.Add(lblRadarRoguesValue);
             mcRadarEnemyStats.Controls.Add(lblRadarAIScavsValue);
@@ -2514,19 +2514,6 @@
             lblRadarBossesValue.TabIndex = 8;
             lblRadarBossesValue.Text = "0";
             // 
-            // lblRadarBosses
-            // 
-            lblRadarBosses.AutoSize = true;
-            lblRadarBosses.Depth = 0;
-            lblRadarBosses.Font = new Font("Roboto", 12F, FontStyle.Regular, GraphicsUnit.Pixel);
-            lblRadarBosses.FontType = MaterialSkin.MaterialSkinManager.fontType.Caption;
-            lblRadarBosses.Location = new Point(35, 59);
-            lblRadarBosses.MouseState = MaterialSkin.MouseState.HOVER;
-            lblRadarBosses.Name = "lblRadarBosses";
-            lblRadarBosses.Size = new Size(42, 14);
-            lblRadarBosses.TabIndex = 1;
-            lblRadarBosses.Text = "Bosses:";
-            // 
             // lblRadarPlayerScavsValue
             // 
             lblRadarPlayerScavsValue.AutoSize = true;
@@ -2539,6 +2526,19 @@
             lblRadarPlayerScavsValue.Size = new Size(8, 14);
             lblRadarPlayerScavsValue.TabIndex = 10;
             lblRadarPlayerScavsValue.Text = "0";
+            // 
+            // lblRadarBosses
+            // 
+            lblRadarBosses.AutoSize = true;
+            lblRadarBosses.Depth = 0;
+            lblRadarBosses.Font = new Font("Roboto", 12F, FontStyle.Regular, GraphicsUnit.Pixel);
+            lblRadarBosses.FontType = MaterialSkin.MaterialSkinManager.fontType.Caption;
+            lblRadarBosses.Location = new Point(35, 59);
+            lblRadarBosses.MouseState = MaterialSkin.MouseState.HOVER;
+            lblRadarBosses.Name = "lblRadarBosses";
+            lblRadarBosses.Size = new Size(42, 14);
+            lblRadarBosses.TabIndex = 1;
+            lblRadarBosses.Text = "Bosses:";
             // 
             // lblRadarPlayerScavs
             // 
@@ -2914,8 +2914,8 @@
             // 
             mcSettingsGeneralUI.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             mcSettingsGeneralUI.BackColor = Color.FromArgb(255, 255, 255);
-            mcSettingsGeneralUI.Controls.Add(sldrFontSize);
             mcSettingsGeneralUI.Controls.Add(cboFont);
+            mcSettingsGeneralUI.Controls.Add(sldrFontSize);
             mcSettingsGeneralUI.Controls.Add(txtTeammateID);
             mcSettingsGeneralUI.Controls.Add(lblSettingsGeneralUI);
             mcSettingsGeneralUI.Controls.Add(sldrZoomDistance);
@@ -2956,7 +2956,7 @@
             // 
             mcSettingsGeneralRadar.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             mcSettingsGeneralRadar.BackColor = Color.FromArgb(255, 255, 255);
-            mcSettingsGeneralRadar.Controls.Add(swRadarEnemyStats);
+            mcSettingsGeneralRadar.Controls.Add(swRadarEnemyCount);
             mcSettingsGeneralRadar.Controls.Add(swRadarVsync);
             mcSettingsGeneralRadar.Controls.Add(swRadarStats);
             mcSettingsGeneralRadar.Controls.Add(lblSettingsGeneralRadar);
@@ -5221,9 +5221,9 @@
         private MaterialSkin.Controls.MaterialLabel lblRadarAIScavs;
         private MaterialSkin.Controls.MaterialLabel lblRadarPMCs;
         private MaterialSkin.Controls.MaterialSwitch swRadarVsync;
-        private MaterialSkin.Controls.MaterialSwitch swRadarEnemyStats;
-        private MaterialSkin.Controls.MaterialComboBox cboFont;
+        private MaterialSkin.Controls.MaterialSwitch swRadarEnemyCount;
         private MaterialSkin.Controls.MaterialSlider sldrFontSize;
+        private MaterialSkin.Controls.MaterialComboBox cboFont;
     }
 }
 

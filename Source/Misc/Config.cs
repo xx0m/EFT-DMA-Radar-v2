@@ -24,8 +24,8 @@ namespace eft_dma_radar
         [JsonPropertyName("defaultZoom")]
         public int DefaultZoom { get; set; }
 
-        [JsonPropertyName("enemyStats")]
-        public bool EnemyStats { get; set; }
+        [JsonPropertyName("enemyCount")]
+        public bool EnemyCount { get; set; }
 
         [JsonPropertyName("extendedReach")]
         public bool ExtendedReach { get; set; }
@@ -244,7 +244,7 @@ namespace eft_dma_radar
             };
             ChamsEnabled = false;
             DefaultZoom = 100;
-            EnemyStats = false;
+            EnemyCount = false;
             ExtendedReach = false;
             Font = 0;
             FontSize = 13;
