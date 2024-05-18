@@ -118,14 +118,6 @@ namespace eft_dma_radar
         }
 
         /// <summary>
-        /// Radar is in the process of loading loot. Radar may be paused during this operation.
-        /// </summary>
-        private bool LoadingLoot
-        {
-            get => Memory.LoadingLoot;
-        }
-
-        /// <summary>
         /// Contains all 'Exfils' in Local Game World, and their status/position(s).
         /// </summary>
         private ReadOnlyCollection<Exfil> Exfils
@@ -339,7 +331,6 @@ namespace eft_dma_radar
             cboLootFilterItemsToAdd.DisplayMember = "Name";
 
             UpdateLootFilters();
-
         }
 
         private void InitiateFactions()
@@ -355,6 +346,47 @@ namespace eft_dma_radar
         {
             cboAutoRefreshMap.Items.AddRange(_config.AutoRefreshSettings.Keys.ToArray());
             cboAutoRefreshMap.SelectedIndex = _selectedMap is not null ? cboAutoRefreshMap.FindStringExact(_selectedMap.Name) : 0;
+        }
+
+        private void InitiateUIScaling()
+        {
+            _uiScale = (.01f * _config.UIScale);
+
+            #region Update Paints/Text
+            SKPaints.TextBaseOutline.StrokeWidth = 2 * _uiScale;
+            SKPaints.TextRadarStatus.TextSize = 48 * _uiScale;
+            SKPaints.PaintBase.StrokeWidth = 3 * _uiScale;
+            SKPaints.PaintMouseoverGroup.StrokeWidth = 3 * _uiScale;
+            SKPaints.PaintDeathMarker.StrokeWidth = 3 * _uiScale;
+            SKPaints.LootPaint.StrokeWidth = 3 * _uiScale;
+            SKPaints.PaintTransparentBacker.StrokeWidth = 1 * _uiScale;
+            SKPaints.PaintAimviewCrosshair.StrokeWidth = 1 * _uiScale;
+            SKPaints.PaintGrenades.StrokeWidth = 3 * _uiScale;
+            SKPaints.PaintExfilOpen.StrokeWidth = 1 * _uiScale;
+            SKPaints.PaintExfilPending.StrokeWidth = 1 * _uiScale;
+            SKPaints.PaintExfilClosed.StrokeWidth = 1 * _uiScale;
+            #endregion
+            _aimviewWindowSize = 200 * _uiScale;
+
+            InitiateFontSize();
+        }
+
+        private void InitiateFont()
+        {
+            var fontToUse = SKTypeface.FromFamilyName(cboFont.Text);
+            SKPaints.TextMouseoverGroup.Typeface = fontToUse;
+            SKPaints.TextBase.Typeface = fontToUse;
+            SKPaints.LootText.Typeface = fontToUse;
+            SKPaints.TextBaseOutline.Typeface = fontToUse;
+            SKPaints.TextRadarStatus.Typeface = fontToUse;
+        }
+
+        private void InitiateFontSize()
+        {
+            SKPaints.TextMouseoverGroup.TextSize = _config.FontSize * _uiScale;
+            SKPaints.TextBase.TextSize = _config.FontSize * _uiScale;
+            SKPaints.LootText.TextSize = _config.FontSize * _uiScale;
+            SKPaints.TextBaseOutline.TextSize = _config.FontSize * _uiScale;
         }
 
         private DialogResult ShowErrorDialog(string message)
@@ -411,17 +443,16 @@ namespace eft_dma_radar
             swShowLoot.Checked = _config.ShowLoot;
             swQuestHelper.Checked = _config.QuestHelperEnabled;
             swAimview.Checked = _config.AimviewEnabled;
-            swTextOutline.Checked = _config.ShowTextOutline;
             swExfilNames.Checked = _config.ShowExfilNames;
             swNames.Checked = _config.ShowNames;
             swHoverArmor.Checked = _config.ShowHoverArmor;
-
             txtTeammateID.Text = _config.PrimaryTeammateId;
-
             sldrAimlineLength.Value = _config.PlayerAimLineLength;
-            sldrUIScale.Value = _config.UIScale;
             sldrZoomDistance.Value = _config.DefaultZoom;
 
+            sldrUIScale.Value = _config.UIScale;
+            cboFont.SelectedIndex = _config.Font;
+            sldrFontSize.Value = _config.FontSize;
             #endregion
 
             #region Memory Writing
@@ -508,6 +539,8 @@ namespace eft_dma_radar
             InitiateLootFilter();
             InitiateWatchlist();
             InitiateColors();
+            InitiateFont();
+            InitiateUIScaling();
         }
         #endregion
 
@@ -706,7 +739,7 @@ namespace eft_dma_radar
 
                     #endregion
 
-                     _fpsWatch.Restart();
+                    _fpsWatch.Restart();
                     _fps = 0;
                 }
                 else
@@ -1719,7 +1752,7 @@ namespace eft_dma_radar
                         if (closestPlayer is not null)
                         {
                             var dist = Vector2.Distance(closestPlayer.ZoomedPosition, mouse);
-                            if (dist < 12) // See if 'closest object' is close enough.
+                            if (dist < (12 * _uiScale)) // See if 'closest object' is close enough.
                             {
                                 _closestPlayerToMouse = closestPlayer; // Save ref to closest player object
                                 if (closestPlayer.IsHumanHostile && closestPlayer.GroupID != -1)
@@ -1751,7 +1784,7 @@ namespace eft_dma_radar
                             if (closestItem is not null)
                             {
                                 var dist = Vector2.Distance(closestItem.ZoomedPosition, mouse);
-                                if (dist < 12) // See if 'closest object' is close enough.
+                                if (dist < (12 * _uiScale)) // See if 'closest object' is close enough.
                                 {
                                     _closestItemToMouse = closestItem; // Save ref to closest item object
                                 }
@@ -1782,7 +1815,7 @@ namespace eft_dma_radar
                         if (closestTaskItem is not null)
                         {
                             var dist = Vector2.Distance(closestTaskItem.ZoomedPosition, mouse);
-                            if (dist < 12) // See if 'closest object' is close enough.
+                            if (dist < (12 * _uiScale)) // See if 'closest object' is close enough.
                             {
                                 _closestTaskItemToMouse = closestTaskItem; // Save ref to closest quest item object
                             }
@@ -2013,11 +2046,6 @@ namespace eft_dma_radar
             _config.AimviewEnabled = swAimview.Checked;
         }
 
-        private void swTextOutline_CheckedChanged(object sender, EventArgs e)
-        {
-            _config.ShowTextOutline = swTextOutline.Checked;
-        }
-
         private void swExfilNames_CheckedChanged(object sender, EventArgs e)
         {
             _config.ShowExfilNames = swExfilNames.Checked;
@@ -2042,24 +2070,8 @@ namespace eft_dma_radar
         {
             _config.UIScale = newValue;
             _uiScale = (.01f * newValue);
-            #region UpdatePaints
-            SKPaints.TextMouseoverGroup.TextSize = 12 * _uiScale;
-            SKPaints.TextBase.TextSize = 12 * _uiScale;
-            SKPaints.LootText.TextSize = 13 * _uiScale;
-            SKPaints.TextBaseOutline.TextSize = 13 * _uiScale;
-            SKPaints.TextRadarStatus.TextSize = 48 * _uiScale;
-            SKPaints.PaintBase.StrokeWidth = 3 * _uiScale;
-            SKPaints.PaintMouseoverGroup.StrokeWidth = 3 * _uiScale;
-            SKPaints.PaintDeathMarker.StrokeWidth = 3 * _uiScale;
-            SKPaints.LootPaint.StrokeWidth = 3 * _uiScale;
-            SKPaints.PaintTransparentBacker.StrokeWidth = 1 * _uiScale;
-            SKPaints.PaintAimviewCrosshair.StrokeWidth = 1 * _uiScale;
-            SKPaints.PaintGrenades.StrokeWidth = 3 * _uiScale;
-            SKPaints.PaintExfilOpen.StrokeWidth = 1 * _uiScale;
-            SKPaints.PaintExfilPending.StrokeWidth = 1 * _uiScale;
-            SKPaints.PaintExfilClosed.StrokeWidth = 1 * _uiScale;
-            #endregion
-            _aimviewWindowSize = 200 * _uiScale;
+
+            InitiateUIScaling();
         }
 
         private void btnRestartRadar_Click(object sender, EventArgs e)
@@ -3753,6 +3765,18 @@ namespace eft_dma_radar
 
             _config.EnemyStats = enabled;
             mcRadarEnemyStats.Visible = enabled;
+        }
+
+        private void cboFont_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            _config.Font = cboFont.SelectedIndex;
+            InitiateFont();
+        }
+
+        private void sldrFontSize_onValueChanged(object sender, int newValue)
+        {
+            _config.FontSize = newValue;
+            InitiateFontSize();
         }
     }
 }

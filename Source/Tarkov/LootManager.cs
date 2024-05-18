@@ -770,7 +770,8 @@ namespace eft_dma_radar
                 }
             });
 
-            this.Filter = new ConcurrentBag<LootableObject>(filteredItems);
+            this.Filter = new(filteredItems.OrderByDescending(x => x.Important)
+                                            .ThenByDescending(x => x.Value));
         }
         /// <summary>
         /// Removes an item from the loot filter list

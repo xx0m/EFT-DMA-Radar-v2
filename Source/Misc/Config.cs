@@ -30,6 +30,12 @@ namespace eft_dma_radar
         [JsonPropertyName("extendedReach")]
         public bool ExtendedReach { get; set; }
 
+        [JsonPropertyName("font")]
+        public int Font { get; set; }
+
+        [JsonPropertyName("fontSize")]
+        public int FontSize { get; set; }
+
         [JsonPropertyName("freezeTimeOfDay")]
         public bool FreezeTimeOfDay { get; set; }
 
@@ -128,9 +134,6 @@ namespace eft_dma_radar
 
         [JsonPropertyName("showSubItems")]
         public bool ShowSubItems { get; set; }
-
-        [JsonPropertyName("showTextOutline")]
-        public bool ShowTextOutline { get; set; }
 
         [JsonPropertyName("thermalVision")]
         public bool ThermalVision { get; set; }
@@ -243,6 +246,8 @@ namespace eft_dma_radar
             DefaultZoom = 100;
             EnemyStats = false;
             ExtendedReach = false;
+            Font = 0;
+            FontSize = 13;
             FreezeTimeOfDay = false;
             ImportantLootOnly = false;
             InfiniteStamina = false;
@@ -296,7 +301,6 @@ namespace eft_dma_radar
             ShowNames = false;
             ShowRadarStats = false;
             ShowSubItems = false;
-            ShowTextOutline = true;
             ThermalVision = false;
             ThrowPowerStrength = 1;
             TimeOfDay = 12f;

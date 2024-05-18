@@ -35,7 +35,6 @@
             sldrZoomDistance = new MaterialSkin.Controls.MaterialSlider();
             sldrUIScale = new MaterialSkin.Controls.MaterialSlider();
             sldrAimlineLength = new MaterialSkin.Controls.MaterialSlider();
-            swTextOutline = new MaterialSkin.Controls.MaterialSwitch();
             swExfilNames = new MaterialSkin.Controls.MaterialSwitch();
             swQuestHelper = new MaterialSkin.Controls.MaterialSwitch();
             swHoverArmor = new MaterialSkin.Controls.MaterialSwitch();
@@ -129,6 +128,8 @@
             swRadarStats = new MaterialSkin.Controls.MaterialSwitch();
             swRadarVsync = new MaterialSkin.Controls.MaterialSwitch();
             swRadarEnemyStats = new MaterialSkin.Controls.MaterialSwitch();
+            cboFont = new MaterialSkin.Controls.MaterialComboBox();
+            sldrFontSize = new MaterialSkin.Controls.MaterialSlider();
             sldrThermalColorCoefficient = new MaterialSkin.Controls.MaterialSlider();
             sldrMinTemperature = new MaterialSkin.Controls.MaterialSlider();
             sldrThermalRampShift = new MaterialSkin.Controls.MaterialSlider();
@@ -432,23 +433,6 @@
             sldrAimlineLength.ValueMax = 1000;
             sldrAimlineLength.ValueSuffix = "m";
             // 
-            // swTextOutline
-            // 
-            swTextOutline.Depth = 0;
-            swTextOutline.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
-            swTextOutline.Location = new Point(486, 44);
-            swTextOutline.Margin = new Padding(0);
-            swTextOutline.MouseLocation = new Point(-1, -1);
-            swTextOutline.MouseState = MaterialSkin.MouseState.HOVER;
-            swTextOutline.Name = "swTextOutline";
-            swTextOutline.Ripple = true;
-            swTextOutline.Size = new Size(143, 28);
-            swTextOutline.TabIndex = 7;
-            swTextOutline.Text = "Text Outline";
-            toolTip.SetToolTip(swTextOutline, "Adds an outline to text on the radar");
-            swTextOutline.UseVisualStyleBackColor = true;
-            swTextOutline.CheckedChanged += swTextOutline_CheckedChanged;
-            // 
             // swExfilNames
             // 
             swExfilNames.Depth = 0;
@@ -487,7 +471,7 @@
             // 
             swHoverArmor.Depth = 0;
             swHoverArmor.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
-            swHoverArmor.Location = new Point(327, 85);
+            swHoverArmor.Location = new Point(172, 85);
             swHoverArmor.Margin = new Padding(0);
             swHoverArmor.MouseLocation = new Point(-1, -1);
             swHoverArmor.MouseState = MaterialSkin.MouseState.HOVER;
@@ -504,13 +488,13 @@
             // 
             swNames.Depth = 0;
             swNames.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
-            swNames.Location = new Point(172, 85);
+            swNames.Location = new Point(487, 44);
             swNames.Margin = new Padding(0);
             swNames.MouseLocation = new Point(-1, -1);
             swNames.MouseState = MaterialSkin.MouseState.HOVER;
             swNames.Name = "swNames";
             swNames.Ripple = true;
-            swNames.Size = new Size(146, 28);
+            swNames.Size = new Size(140, 28);
             swNames.TabIndex = 3;
             swNames.Text = "Names (F6)";
             toolTip.SetToolTip(swNames, "Shows player names on the radar");
@@ -560,7 +544,7 @@
             btnRestartRadar.Font = new Font("Segoe UI", 8F, FontStyle.Regular, GraphicsUnit.Point);
             btnRestartRadar.HighEmphasis = true;
             btnRestartRadar.Icon = null;
-            btnRestartRadar.Location = new Point(482, 48);
+            btnRestartRadar.Location = new Point(331, 77);
             btnRestartRadar.Margin = new Padding(4, 6, 4, 6);
             btnRestartRadar.MouseState = MaterialSkin.MouseState.HOVER;
             btnRestartRadar.Name = "btnRestartRadar";
@@ -582,7 +566,7 @@
             btnToggleMap.Depth = 0;
             btnToggleMap.HighEmphasis = true;
             btnToggleMap.Icon = null;
-            btnToggleMap.Location = new Point(482, 96);
+            btnToggleMap.Location = new Point(482, 77);
             btnToggleMap.Margin = new Padding(4, 6, 4, 6);
             btnToggleMap.MouseState = MaterialSkin.MouseState.HOVER;
             btnToggleMap.Name = "btnToggleMap";
@@ -2362,6 +2346,52 @@
             swRadarEnemyStats.UseVisualStyleBackColor = true;
             swRadarEnemyStats.CheckedChanged += swRadarEnemyStats_CheckedChanged;
             // 
+            // cboFont
+            // 
+            cboFont.AutoResize = false;
+            cboFont.BackColor = Color.FromArgb(255, 255, 255);
+            cboFont.Depth = 0;
+            cboFont.DrawMode = DrawMode.OwnerDrawVariable;
+            cboFont.DropDownHeight = 118;
+            cboFont.DropDownStyle = ComboBoxStyle.DropDownList;
+            cboFont.DropDownWidth = 121;
+            cboFont.Font = new Font("Microsoft Sans Serif", 14F, FontStyle.Bold, GraphicsUnit.Pixel);
+            cboFont.ForeColor = Color.FromArgb(222, 0, 0, 0);
+            cboFont.FormattingEnabled = true;
+            cboFont.Hint = "Font";
+            cboFont.IntegralHeight = false;
+            cboFont.ItemHeight = 29;
+            cboFont.Items.AddRange(new object[] { "Arial", "Segoe UI", "Tahoma", "Verdana", "Calibri", "Candara", "Corbel", "Consolas", "Constantia", "Trebuchet MS" });
+            cboFont.Location = new Point(15, 215);
+            cboFont.MaxDropDownItems = 6;
+            cboFont.MouseState = MaterialSkin.MouseState.OUT;
+            cboFont.Name = "cboFont";
+            cboFont.Size = new Size(171, 35);
+            cboFont.StartIndex = 0;
+            cboFont.TabIndex = 38;
+            toolTip.SetToolTip(cboFont, "The font to use for the text on the radar");
+            cboFont.UseTallSize = false;
+            cboFont.SelectedIndexChanged += cboFont_SelectedIndexChanged;
+            // 
+            // sldrFontSize
+            // 
+            sldrFontSize.Depth = 0;
+            sldrFontSize.ForeColor = Color.Black;
+            sldrFontSize.Location = new Point(208, 212);
+            sldrFontSize.MouseState = MaterialSkin.MouseState.HOVER;
+            sldrFontSize.Name = "sldrFontSize";
+            sldrFontSize.RangeMax = 36;
+            sldrFontSize.RangeMin = 1;
+            sldrFontSize.Size = new Size(241, 40);
+            sldrFontSize.TabIndex = 39;
+            sldrFontSize.Text = "Font Size";
+            toolTip.SetToolTip(sldrFontSize, "The font size to use for the text on the radar");
+            sldrFontSize.UseAccentColor = true;
+            sldrFontSize.Value = 13;
+            sldrFontSize.ValueMax = 36;
+            sldrFontSize.ValueSuffix = "px";
+            sldrFontSize.onValueChanged += sldrFontSize_onValueChanged;
+            // 
             // sldrThermalColorCoefficient
             // 
             sldrThermalColorCoefficient.Depth = 0;
@@ -2884,12 +2914,13 @@
             // 
             mcSettingsGeneralUI.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             mcSettingsGeneralUI.BackColor = Color.FromArgb(255, 255, 255);
+            mcSettingsGeneralUI.Controls.Add(sldrFontSize);
+            mcSettingsGeneralUI.Controls.Add(cboFont);
             mcSettingsGeneralUI.Controls.Add(txtTeammateID);
             mcSettingsGeneralUI.Controls.Add(lblSettingsGeneralUI);
             mcSettingsGeneralUI.Controls.Add(sldrZoomDistance);
             mcSettingsGeneralUI.Controls.Add(sldrUIScale);
             mcSettingsGeneralUI.Controls.Add(sldrAimlineLength);
-            mcSettingsGeneralUI.Controls.Add(swTextOutline);
             mcSettingsGeneralUI.Controls.Add(swExfilNames);
             mcSettingsGeneralUI.Controls.Add(swQuestHelper);
             mcSettingsGeneralUI.Controls.Add(swHoverArmor);
@@ -2898,12 +2929,12 @@
             mcSettingsGeneralUI.Controls.Add(swShowLoot);
             mcSettingsGeneralUI.Depth = 0;
             mcSettingsGeneralUI.ForeColor = Color.FromArgb(222, 0, 0, 0);
-            mcSettingsGeneralUI.Location = new Point(15, 179);
+            mcSettingsGeneralUI.Location = new Point(15, 166);
             mcSettingsGeneralUI.Margin = new Padding(14);
             mcSettingsGeneralUI.MouseState = MaterialSkin.MouseState.HOVER;
             mcSettingsGeneralUI.Name = "mcSettingsGeneralUI";
             mcSettingsGeneralUI.Padding = new Padding(14);
-            mcSettingsGeneralUI.Size = new Size(633, 220);
+            mcSettingsGeneralUI.Size = new Size(633, 271);
             mcSettingsGeneralUI.TabIndex = 31;
             // 
             // lblSettingsGeneralUI
@@ -2939,7 +2970,7 @@
             mcSettingsGeneralRadar.MouseState = MaterialSkin.MouseState.HOVER;
             mcSettingsGeneralRadar.Name = "mcSettingsGeneralRadar";
             mcSettingsGeneralRadar.Padding = new Padding(14);
-            mcSettingsGeneralRadar.Size = new Size(633, 150);
+            mcSettingsGeneralRadar.Size = new Size(633, 136);
             mcSettingsGeneralRadar.TabIndex = 30;
             // 
             // lblSettingsGeneralRadar
@@ -3034,7 +3065,7 @@
             mcSettingsMemoryWritingThermal.Controls.Add(sldrThermalRampShift);
             mcSettingsMemoryWritingThermal.Depth = 0;
             mcSettingsMemoryWritingThermal.ForeColor = Color.FromArgb(222, 0, 0, 0);
-            mcSettingsMemoryWritingThermal.Location = new Point(15, 334);
+            mcSettingsMemoryWritingThermal.Location = new Point(15, 335);
             mcSettingsMemoryWritingThermal.Margin = new Padding(14);
             mcSettingsMemoryWritingThermal.MouseState = MaterialSkin.MouseState.HOVER;
             mcSettingsMemoryWritingThermal.Name = "mcSettingsMemoryWritingThermal";
@@ -4944,7 +4975,6 @@
         private MaterialSkin.Controls.MaterialButton btnToggleMap;
         private MaterialSkin.Controls.MaterialCard mcSettingsGeneralUI;
         private MaterialSkin.Controls.MaterialSlider sldrAimlineLength;
-        private MaterialSkin.Controls.MaterialSwitch swTextOutline;
         private MaterialSkin.Controls.MaterialSwitch swExfilNames;
         private MaterialSkin.Controls.MaterialSwitch swQuestHelper;
         private MaterialSkin.Controls.MaterialSwitch swHoverArmor;
@@ -5192,6 +5222,8 @@
         private MaterialSkin.Controls.MaterialLabel lblRadarPMCs;
         private MaterialSkin.Controls.MaterialSwitch swRadarVsync;
         private MaterialSkin.Controls.MaterialSwitch swRadarEnemyStats;
+        private MaterialSkin.Controls.MaterialComboBox cboFont;
+        private MaterialSkin.Controls.MaterialSlider sldrFontSize;
     }
 }
 

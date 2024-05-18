@@ -6,7 +6,7 @@ namespace eft_dma_radar
     {
         #region Radar Paints
         public static readonly SKPaint PaintBase = new SKPaint() {
-            Color = SKColors.White,
+            Color = SKColors.WhiteSmoke,
             StrokeWidth = 3,
             Style = SKPaintStyle.Stroke,
             IsAntialias = true,
@@ -15,24 +15,24 @@ namespace eft_dma_radar
 
         public static readonly SKPaint TextBase = new SKPaint()
         {
-            Color = SKColors.White,
-            IsStroke = false,
-            TextSize = 12,
+            Style = SKPaintStyle.Fill,
+            Color = SKColors.WhiteSmoke,
+            TextSize = 13,
             TextEncoding = SKTextEncoding.Utf8,
             IsAntialias = true,
-            Typeface = SKTypeface.FromFamilyName("Arial", SKFontStyle.Bold),
+            Typeface = SKTypeface.FromFamilyName("Arial"),
             FilterQuality = SKFilterQuality.High
         };
 
         public static readonly SKPaint TextBaseOutline = new SKPaint()
         {
+            Style = SKPaintStyle.Stroke,
             Color = SKColors.Black,
-            IsStroke = true,
             StrokeWidth = 2,
-            TextSize = 12,
+            TextSize = 13,
             TextEncoding = SKTextEncoding.Utf8,
             IsAntialias = true,
-            Typeface = SKTypeface.FromFamilyName("Arial", SKFontStyle.Bold),
+            Typeface = SKTypeface.FromFamilyName("Arial"),
             FilterQuality = SKFilterQuality.High
         };
 
@@ -78,8 +78,8 @@ namespace eft_dma_radar
 
         public static readonly SKPaint LootText = new SKPaint()
         {
+            Style = SKPaintStyle.Fill,
             Color = SKColors.WhiteSmoke,
-            IsStroke = false,
             TextSize = 13,
             TextEncoding = SKTextEncoding.Utf8,
             IsAntialias = true,
