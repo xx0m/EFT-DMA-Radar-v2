@@ -184,14 +184,14 @@
             mcSettingsLootGeneral = new MaterialSkin.Controls.MaterialCard();
             lblSettingsLootGeneral = new MaterialSkin.Controls.MaterialLabel();
             tabSettingsAIFactions = new TabPage();
+            lstFactionEntries = new MaterialSkin.Controls.MaterialListView();
+            colFactionsAIName = new ColumnHeader();
             mcSettingsAIFactionsEntryManagement = new MaterialSkin.Controls.MaterialCard();
             lblSettingsAIFactionsEntryManagement = new MaterialSkin.Controls.MaterialLabel();
             mcSettingsAIFactionsFactions = new MaterialSkin.Controls.MaterialCard();
             lstFactions = new MaterialSkin.Controls.MaterialListView();
             colFactionName = new ColumnHeader();
             lblSettingsAIFactionsFactions = new MaterialSkin.Controls.MaterialLabel();
-            lstFactionEntries = new MaterialSkin.Controls.MaterialListView();
-            colFactionsAIName = new ColumnHeader();
             tabSettingsColors = new TabPage();
             mcSettingsColorsOther = new MaterialSkin.Controls.MaterialCard();
             picOtherAccent = new PictureBox();
@@ -270,7 +270,12 @@
             lblSettingsColorsAIBoss = new MaterialSkin.Controls.MaterialLabel();
             lblSettingsColorsAI = new MaterialSkin.Controls.MaterialLabel();
             tabPlayerLoadouts = new TabPage();
-            rchTxtPlayerInfo = new RichTextBox();
+            mcPlayerLoadoutsAI = new MaterialSkin.Controls.MaterialCard();
+            lblPlayerLoadoutsAI = new MaterialSkin.Controls.MaterialLabel();
+            flpPlayerLoadoutsAI = new FlowLayoutPanel();
+            mcPlayerLoadoutsPlayers = new MaterialSkin.Controls.MaterialCard();
+            lblPlayerLoadoutsPlayers = new MaterialSkin.Controls.MaterialLabel();
+            flpPlayerLoadoutsPlayers = new FlowLayoutPanel();
             tabWatchlist = new TabPage();
             mcWatchlistPlayerlist = new MaterialSkin.Controls.MaterialCard();
             lstWatchlistPlayerList = new MaterialSkin.Controls.MaterialListView();
@@ -363,6 +368,8 @@
             ((System.ComponentModel.ISupportInitialize)picAIBossGuard).BeginInit();
             ((System.ComponentModel.ISupportInitialize)picAIBoss).BeginInit();
             tabPlayerLoadouts.SuspendLayout();
+            mcPlayerLoadoutsAI.SuspendLayout();
+            mcPlayerLoadoutsPlayers.SuspendLayout();
             tabWatchlist.SuspendLayout();
             mcWatchlistPlayerlist.SuspendLayout();
             mcWatchlistProfiles.SuspendLayout();
@@ -2456,7 +2463,7 @@
             tabControlMain.Multiline = true;
             tabControlMain.Name = "tabControlMain";
             tabControlMain.SelectedIndex = 0;
-            tabControlMain.Size = new Size(1253, 746);
+            tabControlMain.Size = new Size(1305, 746);
             tabControlMain.TabIndex = 10;
             tabControlMain.SelectedIndexChanged += TabControl_SelectedIndexChanged;
             // 
@@ -2472,7 +2479,7 @@
             tabRadar.Location = new Point(4, 39);
             tabRadar.Name = "tabRadar";
             tabRadar.Padding = new Padding(3);
-            tabRadar.Size = new Size(1245, 703);
+            tabRadar.Size = new Size(1297, 703);
             tabRadar.TabIndex = 0;
             tabRadar.Text = "Radar";
             // 
@@ -2492,7 +2499,7 @@
             mcRadarEnemyStats.Controls.Add(lblRadarPMCs);
             mcRadarEnemyStats.Depth = 0;
             mcRadarEnemyStats.ForeColor = Color.FromArgb(222, 0, 0, 0);
-            mcRadarEnemyStats.Location = new Point(1040, 623);
+            mcRadarEnemyStats.Location = new Point(1091, 622);
             mcRadarEnemyStats.Margin = new Padding(14);
             mcRadarEnemyStats.MouseState = MaterialSkin.MouseState.HOVER;
             mcRadarEnemyStats.Name = "mcRadarEnemyStats";
@@ -2647,7 +2654,7 @@
             mcRadarStats.Controls.Add(lblRadarFPS);
             mcRadarStats.Depth = 0;
             mcRadarStats.ForeColor = Color.FromArgb(222, 0, 0, 0);
-            mcRadarStats.Location = new Point(1139, 623);
+            mcRadarStats.Location = new Point(1190, 622);
             mcRadarStats.Margin = new Padding(14);
             mcRadarStats.MouseState = MaterialSkin.MouseState.HOVER;
             mcRadarStats.Name = "mcRadarStats";
@@ -2793,7 +2800,7 @@
             mcRadarSettings.Controls.Add(btnToggleMapFree);
             mcRadarSettings.Depth = 0;
             mcRadarSettings.ForeColor = Color.FromArgb(222, 0, 0, 0);
-            mcRadarSettings.Location = new Point(1109, 14);
+            mcRadarSettings.Location = new Point(1173, 5);
             mcRadarSettings.Margin = new Padding(14);
             mcRadarSettings.MouseState = MaterialSkin.MouseState.HOVER;
             mcRadarSettings.Name = "mcRadarSettings";
@@ -2811,7 +2818,7 @@
             mcRadarMapSetup.Controls.Add(lblRadarMapSetup);
             mcRadarMapSetup.Depth = 0;
             mcRadarMapSetup.ForeColor = Color.FromArgb(222, 0, 0, 0);
-            mcRadarMapSetup.Location = new Point(15, 14);
+            mcRadarMapSetup.Location = new Point(5, 5);
             mcRadarMapSetup.Margin = new Padding(14);
             mcRadarMapSetup.MouseState = MaterialSkin.MouseState.HOVER;
             mcRadarMapSetup.Name = "mcRadarMapSetup";
@@ -2842,7 +2849,7 @@
             skMapCanvas.Location = new Point(3, 3);
             skMapCanvas.Margin = new Padding(4, 3, 4, 3);
             skMapCanvas.Name = "skMapCanvas";
-            skMapCanvas.Size = new Size(1239, 697);
+            skMapCanvas.Size = new Size(1291, 697);
             skMapCanvas.TabIndex = 13;
             skMapCanvas.VSync = true;
             skMapCanvas.PaintSurface += skMapCanvas_PaintSurface;
@@ -2859,7 +2866,7 @@
             tabSettings.Location = new Point(4, 39);
             tabSettings.Margin = new Padding(0);
             tabSettings.Name = "tabSettings";
-            tabSettings.Size = new Size(1245, 703);
+            tabSettings.Size = new Size(1297, 703);
             tabSettings.TabIndex = 1;
             tabSettings.Text = "Settings";
             // 
@@ -2874,13 +2881,14 @@
             tabSelector.Margin = new Padding(0);
             tabSelector.MouseState = MaterialSkin.MouseState.HOVER;
             tabSelector.Name = "tabSelector";
-            tabSelector.Size = new Size(1245, 36);
+            tabSelector.Size = new Size(1297, 36);
             tabSelector.TabIndex = 29;
             tabSelector.TabIndicatorHeight = 1;
             tabSelector.Text = "tabSelectorSettings";
             // 
             // tabControlSettings
             // 
+            tabControlSettings.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
             tabControlSettings.Controls.Add(tabSettingsGeneral);
             tabControlSettings.Controls.Add(tabSettingsMemoryWriting);
             tabControlSettings.Controls.Add(tabSettingsLoot);
@@ -2888,13 +2896,13 @@
             tabControlSettings.Controls.Add(tabSettingsColors);
             tabControlSettings.Depth = 0;
             tabControlSettings.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
-            tabControlSettings.Location = new Point(0, 45);
+            tabControlSettings.Location = new Point(0, 36);
             tabControlSettings.Margin = new Padding(0);
             tabControlSettings.MouseState = MaterialSkin.MouseState.HOVER;
             tabControlSettings.Multiline = true;
             tabControlSettings.Name = "tabControlSettings";
             tabControlSettings.SelectedIndex = 0;
-            tabControlSettings.Size = new Size(1172, 618);
+            tabControlSettings.Size = new Size(1289, 667);
             tabControlSettings.TabIndex = 28;
             // 
             // tabSettingsGeneral
@@ -2906,13 +2914,12 @@
             tabSettingsGeneral.Location = new Point(4, 24);
             tabSettingsGeneral.Margin = new Padding(0);
             tabSettingsGeneral.Name = "tabSettingsGeneral";
-            tabSettingsGeneral.Size = new Size(1164, 590);
+            tabSettingsGeneral.Size = new Size(1281, 639);
             tabSettingsGeneral.TabIndex = 0;
             tabSettingsGeneral.Text = "General";
             // 
             // mcSettingsGeneralUI
             // 
-            mcSettingsGeneralUI.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             mcSettingsGeneralUI.BackColor = Color.FromArgb(255, 255, 255);
             mcSettingsGeneralUI.Controls.Add(cboFont);
             mcSettingsGeneralUI.Controls.Add(sldrFontSize);
@@ -2934,7 +2941,7 @@
             mcSettingsGeneralUI.MouseState = MaterialSkin.MouseState.HOVER;
             mcSettingsGeneralUI.Name = "mcSettingsGeneralUI";
             mcSettingsGeneralUI.Padding = new Padding(14);
-            mcSettingsGeneralUI.Size = new Size(633, 271);
+            mcSettingsGeneralUI.Size = new Size(633, 270);
             mcSettingsGeneralUI.TabIndex = 31;
             // 
             // lblSettingsGeneralUI
@@ -2954,7 +2961,6 @@
             // 
             // mcSettingsGeneralRadar
             // 
-            mcSettingsGeneralRadar.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             mcSettingsGeneralRadar.BackColor = Color.FromArgb(255, 255, 255);
             mcSettingsGeneralRadar.Controls.Add(swRadarEnemyCount);
             mcSettingsGeneralRadar.Controls.Add(swRadarVsync);
@@ -2999,13 +3005,12 @@
             tabSettingsMemoryWriting.Location = new Point(4, 24);
             tabSettingsMemoryWriting.Name = "tabSettingsMemoryWriting";
             tabSettingsMemoryWriting.Padding = new Padding(3);
-            tabSettingsMemoryWriting.Size = new Size(1164, 590);
+            tabSettingsMemoryWriting.Size = new Size(1281, 639);
             tabSettingsMemoryWriting.TabIndex = 1;
             tabSettingsMemoryWriting.Text = "Memory Writing";
             // 
             // mcSettingsMemoryWritingSkillBuffs
             // 
-            mcSettingsMemoryWritingSkillBuffs.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             mcSettingsMemoryWritingSkillBuffs.BackColor = Color.FromArgb(255, 255, 255);
             mcSettingsMemoryWritingSkillBuffs.Controls.Add(swMaxAttention);
             mcSettingsMemoryWritingSkillBuffs.Controls.Add(swMaxHeavyVests);
@@ -3055,7 +3060,6 @@
             // 
             // mcSettingsMemoryWritingThermal
             // 
-            mcSettingsMemoryWritingThermal.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             mcSettingsMemoryWritingThermal.BackColor = Color.FromArgb(255, 255, 255);
             mcSettingsMemoryWritingThermal.Controls.Add(cboThermalColorScheme);
             mcSettingsMemoryWritingThermal.Controls.Add(cboThermalType);
@@ -3091,7 +3095,6 @@
             // 
             // mcSettingsMemoryWritingGlobal
             // 
-            mcSettingsMemoryWritingGlobal.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             mcSettingsMemoryWritingGlobal.BackColor = Color.FromArgb(255, 255, 255);
             mcSettingsMemoryWritingGlobal.Controls.Add(swInfiniteStamina);
             mcSettingsMemoryWritingGlobal.Controls.Add(lblSettingsMemoryWritingGlobal);
@@ -3126,7 +3129,6 @@
             // 
             // mcSettingsMemoryWritingGear
             // 
-            mcSettingsMemoryWritingGear.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             mcSettingsMemoryWritingGear.BackColor = Color.FromArgb(255, 255, 255);
             mcSettingsMemoryWritingGear.Controls.Add(swNightVision);
             mcSettingsMemoryWritingGear.Controls.Add(swOpticalThermal);
@@ -3168,13 +3170,12 @@
             tabSettingsLoot.Location = new Point(4, 24);
             tabSettingsLoot.Margin = new Padding(0);
             tabSettingsLoot.Name = "tabSettingsLoot";
-            tabSettingsLoot.Size = new Size(1164, 590);
+            tabSettingsLoot.Size = new Size(1281, 639);
             tabSettingsLoot.TabIndex = 2;
             tabSettingsLoot.Text = "Loot";
             // 
             // mcSettingsLootMinRubleValue
             // 
-            mcSettingsLootMinRubleValue.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             mcSettingsLootMinRubleValue.BackColor = Color.FromArgb(255, 255, 255);
             mcSettingsLootMinRubleValue.Controls.Add(sldrMinImportantLoot);
             mcSettingsLootMinRubleValue.Controls.Add(sldrMinSubItems);
@@ -3208,7 +3209,6 @@
             // 
             // mcSettingsLootGeneral
             // 
-            mcSettingsLootGeneral.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             mcSettingsLootGeneral.BackColor = Color.FromArgb(255, 255, 255);
             mcSettingsLootGeneral.Controls.Add(swProcessLoot);
             mcSettingsLootGeneral.Controls.Add(cboAutoRefreshMap);
@@ -3248,19 +3248,47 @@
             // tabSettingsAIFactions
             // 
             tabSettingsAIFactions.BackColor = Color.White;
+            tabSettingsAIFactions.Controls.Add(lstFactionEntries);
             tabSettingsAIFactions.Controls.Add(mcSettingsAIFactionsEntryManagement);
             tabSettingsAIFactions.Controls.Add(mcSettingsAIFactionsFactions);
-            tabSettingsAIFactions.Controls.Add(lstFactionEntries);
             tabSettingsAIFactions.Location = new Point(4, 24);
             tabSettingsAIFactions.Margin = new Padding(0);
             tabSettingsAIFactions.Name = "tabSettingsAIFactions";
-            tabSettingsAIFactions.Size = new Size(1164, 590);
+            tabSettingsAIFactions.Size = new Size(1281, 639);
             tabSettingsAIFactions.TabIndex = 3;
             tabSettingsAIFactions.Text = "AI Factions";
             // 
+            // lstFactionEntries
+            // 
+            lstFactionEntries.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
+            lstFactionEntries.AutoSizeTable = false;
+            lstFactionEntries.BackColor = Color.FromArgb(255, 255, 255);
+            lstFactionEntries.BorderStyle = BorderStyle.None;
+            lstFactionEntries.Columns.AddRange(new ColumnHeader[] { colFactionsAIName });
+            lstFactionEntries.Depth = 0;
+            lstFactionEntries.Font = new Font("Segoe UI", 14F, FontStyle.Bold, GraphicsUnit.Point);
+            lstFactionEntries.FullRowSelect = true;
+            lstFactionEntries.Location = new Point(15, 14);
+            lstFactionEntries.MaximumSize = new Size(420, 900);
+            lstFactionEntries.MinimumSize = new Size(200, 100);
+            lstFactionEntries.MouseLocation = new Point(-1, -1);
+            lstFactionEntries.MouseState = MaterialSkin.MouseState.OUT;
+            lstFactionEntries.MultiSelect = false;
+            lstFactionEntries.Name = "lstFactionEntries";
+            lstFactionEntries.OwnerDraw = true;
+            lstFactionEntries.Size = new Size(250, 622);
+            lstFactionEntries.TabIndex = 44;
+            lstFactionEntries.UseCompatibleStateImageBehavior = false;
+            lstFactionEntries.View = View.Details;
+            lstFactionEntries.SelectedIndexChanged += lstFactionEntries_SelectedIndexChanged;
+            // 
+            // colFactionsAIName
+            // 
+            colFactionsAIName.Text = "Name";
+            colFactionsAIName.Width = 250;
+            // 
             // mcSettingsAIFactionsEntryManagement
             // 
-            mcSettingsAIFactionsEntryManagement.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             mcSettingsAIFactionsEntryManagement.BackColor = Color.FromArgb(255, 255, 255);
             mcSettingsAIFactionsEntryManagement.Controls.Add(btnRemoveFactionEntry);
             mcSettingsAIFactionsEntryManagement.Controls.Add(txtFactionEntryName);
@@ -3292,7 +3320,6 @@
             // 
             // mcSettingsAIFactionsFactions
             // 
-            mcSettingsAIFactionsFactions.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             mcSettingsAIFactionsFactions.BackColor = Color.FromArgb(255, 255, 255);
             mcSettingsAIFactionsFactions.Controls.Add(lstFactions);
             mcSettingsAIFactionsFactions.Controls.Add(txtFactionName);
@@ -3351,33 +3378,6 @@
             lblSettingsAIFactionsFactions.Text = "Factions";
             lblSettingsAIFactionsFactions.UseAccent = true;
             // 
-            // lstFactionEntries
-            // 
-            lstFactionEntries.AutoSizeTable = false;
-            lstFactionEntries.BackColor = Color.FromArgb(255, 255, 255);
-            lstFactionEntries.BorderStyle = BorderStyle.None;
-            lstFactionEntries.Columns.AddRange(new ColumnHeader[] { colFactionsAIName });
-            lstFactionEntries.Depth = 0;
-            lstFactionEntries.Font = new Font("Segoe UI", 14F, FontStyle.Bold, GraphicsUnit.Point);
-            lstFactionEntries.FullRowSelect = true;
-            lstFactionEntries.Location = new Point(15, 14);
-            lstFactionEntries.MinimumSize = new Size(200, 100);
-            lstFactionEntries.MouseLocation = new Point(-1, -1);
-            lstFactionEntries.MouseState = MaterialSkin.MouseState.OUT;
-            lstFactionEntries.MultiSelect = false;
-            lstFactionEntries.Name = "lstFactionEntries";
-            lstFactionEntries.OwnerDraw = true;
-            lstFactionEntries.Size = new Size(250, 536);
-            lstFactionEntries.TabIndex = 40;
-            lstFactionEntries.UseCompatibleStateImageBehavior = false;
-            lstFactionEntries.View = View.Details;
-            lstFactionEntries.SelectedIndexChanged += lstFactionEntries_SelectedIndexChanged;
-            // 
-            // colFactionsAIName
-            // 
-            colFactionsAIName.Text = "Name";
-            colFactionsAIName.Width = 250;
-            // 
             // tabSettingsColors
             // 
             tabSettingsColors.BackColor = Color.White;
@@ -3389,13 +3389,12 @@
             tabSettingsColors.Location = new Point(4, 24);
             tabSettingsColors.Margin = new Padding(0);
             tabSettingsColors.Name = "tabSettingsColors";
-            tabSettingsColors.Size = new Size(1164, 590);
+            tabSettingsColors.Size = new Size(1281, 639);
             tabSettingsColors.TabIndex = 4;
             tabSettingsColors.Text = "Colors";
             // 
             // mcSettingsColorsOther
             // 
-            mcSettingsColorsOther.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             mcSettingsColorsOther.BackColor = Color.FromArgb(255, 255, 255);
             mcSettingsColorsOther.Controls.Add(btnResetTheme);
             mcSettingsColorsOther.Controls.Add(picOtherAccent);
@@ -3608,7 +3607,6 @@
             // 
             // mcSettingsColorsLootAndQuests
             // 
-            mcSettingsColorsLootAndQuests.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             mcSettingsColorsLootAndQuests.BackColor = Color.FromArgb(255, 255, 255);
             mcSettingsColorsLootAndQuests.Controls.Add(picQuestZone);
             mcSettingsColorsLootAndQuests.Controls.Add(lblSettingsQuestZones);
@@ -3742,7 +3740,6 @@
             // 
             // mcSettingsColorsExfiltration
             // 
-            mcSettingsColorsExfiltration.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             mcSettingsColorsExfiltration.BackColor = Color.FromArgb(255, 255, 255);
             mcSettingsColorsExfiltration.Controls.Add(picExfilClosedIcon);
             mcSettingsColorsExfiltration.Controls.Add(lblSettingsColorsExfilClosedIcon);
@@ -3928,7 +3925,6 @@
             // 
             // mcSettingsColorsPlayers
             // 
-            mcSettingsColorsPlayers.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             mcSettingsColorsPlayers.BackColor = Color.FromArgb(255, 255, 255);
             mcSettingsColorsPlayers.Controls.Add(picPlayersSpecial);
             mcSettingsColorsPlayers.Controls.Add(lblSettingsColorsPlayersSpecial);
@@ -4140,7 +4136,6 @@
             // 
             // mcSettingsColorsAI
             // 
-            mcSettingsColorsAI.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             mcSettingsColorsAI.BackColor = Color.FromArgb(255, 255, 255);
             mcSettingsColorsAI.Controls.Add(picAIOther);
             mcSettingsColorsAI.Controls.Add(lblSettingsColorsAIOther);
@@ -4405,24 +4400,102 @@
             // tabPlayerLoadouts
             // 
             tabPlayerLoadouts.BackColor = Color.White;
-            tabPlayerLoadouts.Controls.Add(rchTxtPlayerInfo);
+            tabPlayerLoadouts.Controls.Add(mcPlayerLoadoutsAI);
+            tabPlayerLoadouts.Controls.Add(mcPlayerLoadoutsPlayers);
             tabPlayerLoadouts.ImageKey = "loadouts.png";
             tabPlayerLoadouts.Location = new Point(4, 39);
             tabPlayerLoadouts.Name = "tabPlayerLoadouts";
-            tabPlayerLoadouts.Size = new Size(1245, 703);
+            tabPlayerLoadouts.Size = new Size(1297, 703);
             tabPlayerLoadouts.TabIndex = 2;
             tabPlayerLoadouts.Text = "Player Loadouts";
             // 
-            // rchTxtPlayerInfo
+            // mcPlayerLoadoutsAI
             // 
-            rchTxtPlayerInfo.Dock = DockStyle.Fill;
-            rchTxtPlayerInfo.Font = new Font("Arial", 9F, FontStyle.Regular, GraphicsUnit.Point);
-            rchTxtPlayerInfo.Location = new Point(0, 0);
-            rchTxtPlayerInfo.Name = "rchTxtPlayerInfo";
-            rchTxtPlayerInfo.ReadOnly = true;
-            rchTxtPlayerInfo.Size = new Size(1245, 703);
-            rchTxtPlayerInfo.TabIndex = 1;
-            rchTxtPlayerInfo.Text = "";
+            mcPlayerLoadoutsAI.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
+            mcPlayerLoadoutsAI.BackColor = Color.FromArgb(255, 255, 255);
+            mcPlayerLoadoutsAI.Controls.Add(lblPlayerLoadoutsAI);
+            mcPlayerLoadoutsAI.Controls.Add(flpPlayerLoadoutsAI);
+            mcPlayerLoadoutsAI.Depth = 0;
+            mcPlayerLoadoutsAI.ForeColor = Color.FromArgb(222, 0, 0, 0);
+            mcPlayerLoadoutsAI.Location = new Point(629, 5);
+            mcPlayerLoadoutsAI.Margin = new Padding(0);
+            mcPlayerLoadoutsAI.MaximumSize = new Size(600, 900);
+            mcPlayerLoadoutsAI.MouseState = MaterialSkin.MouseState.HOVER;
+            mcPlayerLoadoutsAI.Name = "mcPlayerLoadoutsAI";
+            mcPlayerLoadoutsAI.Padding = new Padding(14);
+            mcPlayerLoadoutsAI.Size = new Size(600, 677);
+            mcPlayerLoadoutsAI.TabIndex = 3;
+            // 
+            // lblPlayerLoadoutsAI
+            // 
+            lblPlayerLoadoutsAI.AutoSize = true;
+            lblPlayerLoadoutsAI.Depth = 0;
+            lblPlayerLoadoutsAI.Dock = DockStyle.Top;
+            lblPlayerLoadoutsAI.Font = new Font("Roboto Medium", 20F, FontStyle.Bold, GraphicsUnit.Pixel);
+            lblPlayerLoadoutsAI.FontType = MaterialSkin.MaterialSkinManager.fontType.H6;
+            lblPlayerLoadoutsAI.HighEmphasis = true;
+            lblPlayerLoadoutsAI.Location = new Point(14, 14);
+            lblPlayerLoadoutsAI.MouseState = MaterialSkin.MouseState.HOVER;
+            lblPlayerLoadoutsAI.Name = "lblPlayerLoadoutsAI";
+            lblPlayerLoadoutsAI.Size = new Size(360, 24);
+            lblPlayerLoadoutsAI.TabIndex = 31;
+            lblPlayerLoadoutsAI.Text = "Bosses / Rogues / Guards / AI Scavs etc";
+            lblPlayerLoadoutsAI.UseAccent = true;
+            // 
+            // flpPlayerLoadoutsAI
+            // 
+            flpPlayerLoadoutsAI.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            flpPlayerLoadoutsAI.AutoScroll = true;
+            flpPlayerLoadoutsAI.FlowDirection = FlowDirection.TopDown;
+            flpPlayerLoadoutsAI.Location = new Point(3, 50);
+            flpPlayerLoadoutsAI.Name = "flpPlayerLoadoutsAI";
+            flpPlayerLoadoutsAI.Size = new Size(594, 624);
+            flpPlayerLoadoutsAI.TabIndex = 0;
+            flpPlayerLoadoutsAI.WrapContents = false;
+            // 
+            // mcPlayerLoadoutsPlayers
+            // 
+            mcPlayerLoadoutsPlayers.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
+            mcPlayerLoadoutsPlayers.BackColor = Color.FromArgb(255, 255, 255);
+            mcPlayerLoadoutsPlayers.Controls.Add(lblPlayerLoadoutsPlayers);
+            mcPlayerLoadoutsPlayers.Controls.Add(flpPlayerLoadoutsPlayers);
+            mcPlayerLoadoutsPlayers.Depth = 0;
+            mcPlayerLoadoutsPlayers.ForeColor = Color.FromArgb(222, 0, 0, 0);
+            mcPlayerLoadoutsPlayers.Location = new Point(15, 5);
+            mcPlayerLoadoutsPlayers.Margin = new Padding(0);
+            mcPlayerLoadoutsPlayers.MaximumSize = new Size(600, 900);
+            mcPlayerLoadoutsPlayers.MouseState = MaterialSkin.MouseState.HOVER;
+            mcPlayerLoadoutsPlayers.Name = "mcPlayerLoadoutsPlayers";
+            mcPlayerLoadoutsPlayers.Padding = new Padding(14);
+            mcPlayerLoadoutsPlayers.Size = new Size(600, 677);
+            mcPlayerLoadoutsPlayers.TabIndex = 2;
+            // 
+            // lblPlayerLoadoutsPlayers
+            // 
+            lblPlayerLoadoutsPlayers.AutoSize = true;
+            lblPlayerLoadoutsPlayers.Depth = 0;
+            lblPlayerLoadoutsPlayers.Dock = DockStyle.Top;
+            lblPlayerLoadoutsPlayers.Font = new Font("Roboto Medium", 20F, FontStyle.Bold, GraphicsUnit.Pixel);
+            lblPlayerLoadoutsPlayers.FontType = MaterialSkin.MaterialSkinManager.fontType.H6;
+            lblPlayerLoadoutsPlayers.HighEmphasis = true;
+            lblPlayerLoadoutsPlayers.Location = new Point(14, 14);
+            lblPlayerLoadoutsPlayers.MouseState = MaterialSkin.MouseState.HOVER;
+            lblPlayerLoadoutsPlayers.Name = "lblPlayerLoadoutsPlayers";
+            lblPlayerLoadoutsPlayers.Size = new Size(68, 24);
+            lblPlayerLoadoutsPlayers.TabIndex = 31;
+            lblPlayerLoadoutsPlayers.Text = "Players";
+            lblPlayerLoadoutsPlayers.UseAccent = true;
+            // 
+            // flpPlayerLoadoutsPlayers
+            // 
+            flpPlayerLoadoutsPlayers.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            flpPlayerLoadoutsPlayers.AutoScroll = true;
+            flpPlayerLoadoutsPlayers.FlowDirection = FlowDirection.TopDown;
+            flpPlayerLoadoutsPlayers.Location = new Point(3, 50);
+            flpPlayerLoadoutsPlayers.Name = "flpPlayerLoadoutsPlayers";
+            flpPlayerLoadoutsPlayers.Size = new Size(594, 624);
+            flpPlayerLoadoutsPlayers.TabIndex = 0;
+            flpPlayerLoadoutsPlayers.WrapContents = false;
             // 
             // tabWatchlist
             // 
@@ -4434,7 +4507,7 @@
             tabWatchlist.ImageKey = "watchlist.png";
             tabWatchlist.Location = new Point(4, 39);
             tabWatchlist.Name = "tabWatchlist";
-            tabWatchlist.Size = new Size(1245, 703);
+            tabWatchlist.Size = new Size(1297, 703);
             tabWatchlist.TabIndex = 3;
             tabWatchlist.Text = "Watchlist";
             // 
@@ -4590,6 +4663,7 @@
             // 
             // lstWatchlistEntries
             // 
+            lstWatchlistEntries.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
             lstWatchlistEntries.AutoSizeTable = false;
             lstWatchlistEntries.BackColor = Color.FromArgb(255, 255, 255);
             lstWatchlistEntries.BorderStyle = BorderStyle.None;
@@ -4598,13 +4672,14 @@
             lstWatchlistEntries.Font = new Font("Segoe UI", 14F, FontStyle.Bold, GraphicsUnit.Point);
             lstWatchlistEntries.FullRowSelect = true;
             lstWatchlistEntries.Location = new Point(15, 5);
+            lstWatchlistEntries.MaximumSize = new Size(420, 900);
             lstWatchlistEntries.MinimumSize = new Size(200, 100);
             lstWatchlistEntries.MouseLocation = new Point(-1, -1);
             lstWatchlistEntries.MouseState = MaterialSkin.MouseState.OUT;
             lstWatchlistEntries.MultiSelect = false;
             lstWatchlistEntries.Name = "lstWatchlistEntries";
             lstWatchlistEntries.OwnerDraw = true;
-            lstWatchlistEntries.Size = new Size(420, 632);
+            lstWatchlistEntries.Size = new Size(420, 689);
             lstWatchlistEntries.TabIndex = 37;
             lstWatchlistEntries.UseCompatibleStateImageBehavior = false;
             lstWatchlistEntries.View = View.Details;
@@ -4634,7 +4709,7 @@
             tabLootFilter.ImageKey = "loot.png";
             tabLootFilter.Location = new Point(4, 39);
             tabLootFilter.Name = "tabLootFilter";
-            tabLootFilter.Size = new Size(1245, 703);
+            tabLootFilter.Size = new Size(1297, 703);
             tabLootFilter.TabIndex = 4;
             tabLootFilter.Text = "Loot Filter";
             // 
@@ -4801,6 +4876,7 @@
             // 
             // lstLootFilterEntries
             // 
+            lstLootFilterEntries.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
             lstLootFilterEntries.AutoSizeTable = false;
             lstLootFilterEntries.BackColor = Color.FromArgb(255, 255, 255);
             lstLootFilterEntries.BorderStyle = BorderStyle.None;
@@ -4809,13 +4885,14 @@
             lstLootFilterEntries.Font = new Font("Segoe UI", 14F, FontStyle.Bold, GraphicsUnit.Point);
             lstLootFilterEntries.FullRowSelect = true;
             lstLootFilterEntries.Location = new Point(15, 5);
+            lstLootFilterEntries.MaximumSize = new Size(550, 900);
             lstLootFilterEntries.MinimumSize = new Size(200, 100);
             lstLootFilterEntries.MouseLocation = new Point(-1, -1);
             lstLootFilterEntries.MouseState = MaterialSkin.MouseState.OUT;
             lstLootFilterEntries.MultiSelect = false;
             lstLootFilterEntries.Name = "lstLootFilterEntries";
             lstLootFilterEntries.OwnerDraw = true;
-            lstLootFilterEntries.Size = new Size(550, 632);
+            lstLootFilterEntries.Size = new Size(550, 689);
             lstLootFilterEntries.TabIndex = 28;
             lstLootFilterEntries.UseCompatibleStateImageBehavior = false;
             lstLootFilterEntries.View = View.Details;
@@ -4845,7 +4922,7 @@
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1253, 770);
+            ClientSize = new Size(1305, 770);
             Controls.Add(tabControlMain);
             DrawerShowIconsWhenHidden = true;
             DrawerTabControl = tabControlMain;
@@ -4935,6 +5012,10 @@
             ((System.ComponentModel.ISupportInitialize)picAIBossGuard).EndInit();
             ((System.ComponentModel.ISupportInitialize)picAIBoss).EndInit();
             tabPlayerLoadouts.ResumeLayout(false);
+            mcPlayerLoadoutsAI.ResumeLayout(false);
+            mcPlayerLoadoutsAI.PerformLayout();
+            mcPlayerLoadoutsPlayers.ResumeLayout(false);
+            mcPlayerLoadoutsPlayers.PerformLayout();
             tabWatchlist.ResumeLayout(false);
             mcWatchlistPlayerlist.ResumeLayout(false);
             mcWatchlistPlayerlist.PerformLayout();
@@ -4958,7 +5039,6 @@
         private TabPage tabRadar;
         private TabPage tabSettings;
         private TabPage tabPlayerLoadouts;
-        private RichTextBox rchTxtPlayerInfo;
         private TabPage tabWatchlist;
         private TabPage tabLootFilter;
         private MaterialSkin.Controls.MaterialTabControl tabControlSettings;
@@ -5029,8 +5109,6 @@
         private MaterialSkin.Controls.MaterialSwitch swFilteredOnly;
         private MaterialSkin.Controls.MaterialSlider sldrMinSubItems;
         private MaterialSkin.Controls.MaterialSlider sldrMinImportantLoot;
-        private MaterialSkin.Controls.MaterialListView lstFactionEntries;
-        private ColumnHeader colFactionsAIName;
         private MaterialSkin.Controls.MaterialCard mcSettingsAIFactionsFactions;
         private MaterialSkin.Controls.MaterialComboBox cboFactionType;
         private MaterialSkin.Controls.MaterialButton btnAddFaction;
@@ -5224,6 +5302,14 @@
         private MaterialSkin.Controls.MaterialSwitch swRadarEnemyCount;
         private MaterialSkin.Controls.MaterialSlider sldrFontSize;
         private MaterialSkin.Controls.MaterialComboBox cboFont;
+        private MaterialSkin.Controls.MaterialCard mcPlayerLoadoutsPlayers;
+        private FlowLayoutPanel flpPlayerLoadoutsPlayers;
+        private MaterialSkin.Controls.MaterialLabel lblPlayerLoadoutsPlayers;
+        private MaterialSkin.Controls.MaterialCard mcPlayerLoadoutsAI;
+        private MaterialSkin.Controls.MaterialLabel lblPlayerLoadoutsAI;
+        private FlowLayoutPanel flpPlayerLoadoutsAI;
+        private MaterialSkin.Controls.MaterialListView lstFactionEntries;
+        private ColumnHeader colFactionsAIName;
     }
 }
 

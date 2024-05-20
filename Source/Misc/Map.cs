@@ -29,7 +29,10 @@ namespace eft_dma_radar
         /// </summary>
         public float Height = 0;
 
-        private Config _config { get => Program.Config; }
+        private Config _config
+        {
+            get => Program.Config;
+        }
 
         /// <summary>
         /// Get exact player location (with optional X,Y offsets).

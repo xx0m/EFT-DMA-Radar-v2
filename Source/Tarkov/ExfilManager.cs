@@ -7,21 +7,33 @@ namespace eft_dma_radar
 {
     public class ExfilManager
     {
-        private bool IsAtHideout { get => Memory.InHideout; }
-        private bool IsScav { get => Memory.IsScav; }
+        private bool IsAtHideout
+        {
+            get => Memory.InHideout;
+        }
+
+        private bool IsScav
+        {
+            get => Memory.IsScav;
+        }
+
+        private ulong localGameWorld
+        {
+            get; set;
+        }
+
+        public ReadOnlyCollection<Exfil> Exfils
+        {
+            get; set;
+        }
+
         private readonly Stopwatch _swRefresh = new();
-        private ulong localGameWorld { get; set; }
-        /// <summary>
-        /// List of PMC Exfils in Local Game World and their position/status.
-        /// </summary>
-        public ReadOnlyCollection<Exfil> Exfils { get; set; }
 
         public ExfilManager(ulong localGameWorld)
         {
             this.localGameWorld = localGameWorld;
             this.Exfils = new ReadOnlyCollection<Exfil>(new Exfil[0]);
 
-            //If we are in hideout, we don't need to do anything.
             if (this.IsAtHideout)
             {
                 Debug.WriteLine("In Hideout, not loading exfils.");
@@ -32,9 +44,6 @@ namespace eft_dma_radar
             this._swRefresh.Start();
         }
 
-        /// <summary>
-        /// Checks if Exfils are due for a refresh, and then refreshes them.
-        /// </summary>
         public void RefreshExfils()
         {
             if (this._swRefresh.ElapsedMilliseconds >= 5000 && this.Exfils.Count > 0)
@@ -48,9 +57,6 @@ namespace eft_dma_radar
             }
         }
 
-        /// <summary>
-        /// Updates exfil statuses.
-        /// </summary>
         private void UpdateExfils()
         {
             var scatterMap = new ScatterReadMap(this.Exfils.Count);
@@ -74,7 +80,6 @@ namespace eft_dma_radar
 
         public void GetExfils()
         {
-
             var scatterReadMap = new ScatterReadMap(1);
             var round1 = scatterReadMap.AddRound();
             var round2 = scatterReadMap.AddRound();
@@ -186,35 +191,16 @@ namespace eft_dma_radar
             this.Position = new Transform(transform_internal, false).GetPosition();
         }
 
-        /// <summary>
-        /// Update status of exfil.
-        /// </summary>
-        public void UpdateStatus(int status)
+        public void UpdateStatus(int status) => this.Status = status switch
         {
-            switch (status)
-            {
-                case 1: // NotOpen
-                    this.Status = ExfilStatus.Closed;
-                    break;
-                case 2: // IncompleteRequirement
-                    this.Status = ExfilStatus.Pending;
-                    break;
-                case 3: // Countdown
-                    this.Status = ExfilStatus.Open;
-                    break;
-                case 4: // Open
-                    this.Status = ExfilStatus.Open;
-                    break;
-                case 5: // Pending
-                    this.Status = ExfilStatus.Pending;
-                    break;
-                case 6: // AwaitActivation
-                    this.Status = ExfilStatus.Pending;
-                    break;
-                default:
-                    break;
-            }
-        }
+            1 => ExfilStatus.Closed,
+            2 => ExfilStatus.Pending,
+            3 => ExfilStatus.Open,
+            4 => ExfilStatus.Open,
+            5 => ExfilStatus.Pending,
+            6 => ExfilStatus.Pending,
+            _ => ExfilStatus.Closed
+        };
 
         public void UpdateName()
         {

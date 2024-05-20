@@ -201,40 +201,18 @@ namespace eft_dma_radar
         /// <summary>
         /// Process hotkey presses.sc
         /// </summary>
-        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData) => keyData switch
         {
-            switch (keyData)
-            {
-                case Keys.F1:
-                    ZoomIn(5);
-                    return true;
-                case Keys.F2:
-                    ZoomOut(5);
-                    return true;
-                case Keys.F3:
-                    swShowLoot.Checked = !swShowLoot.Checked; // Toggle loot
-                    return true;
-                case Keys.F4:
-                    swAimview.Checked = !swAimview.Checked; // Toggle aimview
-                    return true;
-                case Keys.F5:
-                    ToggleMap(); // Toggle to next map
-                    return true;
-                case Keys.F6:
-                    swNames.Checked = !swNames.Checked; // Toggle Hide Names
-                    return true;
-                // Night Vision Ctrl + N
-                case Keys.Control | Keys.N:
-                    swNightVision.Checked = !swNightVision.Checked;
-                    return true;
-                // Thermal Vision Ctrl + T
-                case Keys.Control | Keys.T:
-                    swThermalVision.Checked = !swThermalVision.Checked;
-                    return true;
-                default:
-                    return base.ProcessCmdKey(ref msg, keyData);
-            }
-        }
+            Keys.F1 => ZoomIn(5),
+            Keys.F2 => ZoomOut(5),
+            Keys.F3 => swShowLoot.Checked = !swShowLoot.Checked,
+            Keys.F4 => swAimview.Checked = !swAimview.Checked,
+            Keys.F5 => ToggleMap(),
+            Keys.F6 => swNames.Checked = !swNames.Checked,
+            Keys.Control | Keys.N => swNightVision.Checked = !swNightVision.Checked,
+            Keys.Control | Keys.T => swThermalVision.Checked = !swThermalVision.Checked,
+            _ => base.ProcessCmdKey(ref msg, keyData),
+        };
 
         /// <summary>
         /// Process mousewheel events.
@@ -274,10 +252,10 @@ namespace eft_dma_radar
 
         #region GUI Events / Functions
         #region General Helper Functions
-        private void ToggleMap()
+        private bool ToggleMap()
         {
             if (!btnToggleMap.Enabled)
-                return;
+                return false;
 
             if (_mapSelectionIndex == _maps.Count - 1)
                 _mapSelectionIndex = 0; // Start over when end of maps reached
@@ -286,6 +264,8 @@ namespace eft_dma_radar
 
             tabRadar.Text = $"Radar ({_maps[_mapSelectionIndex].Name})";
             _mapChangeTimer.Restart(); // Start delay
+
+            return true;
         }
 
         private void InitiateWatchlist()
@@ -620,48 +600,197 @@ namespace eft_dma_radar
 
         private void TabControl_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (tabControlMain.SelectedIndex == 2) // Player Loadouts Tab
+            if (tabControlMain.SelectedIndex == 2)
             {
-                rchTxtPlayerInfo.Clear();
-                var enemyPlayers = this.AllPlayers
-                    ?.Select(x => x.Value)
-                    .Where(x => x.IsHumanHostileActive)
-                    .ToList()
-                    .OrderBy(x => x.GroupID)
-                    .ThenBy(x => x.Name);
-                if (this.InGame && enemyPlayers is not null)
+                GeneratePlayerCards();
+                GenerateAICards();
+            }
+        }
+
+        private void GeneratePlayerCards()
+        {
+            // Clear existing player cards
+            flpPlayerLoadoutsPlayers.Controls.Clear();
+
+            if (!this.InGame)
+                return;
+
+            var enemyPlayers = this.AllPlayers
+                ?.Select(x => x.Value)
+                .Where(x => x.IsHumanHostileActive)
+                .ToList()
+                .OrderByDescending(x => x.IsPMC)
+                .ThenBy(x => x.Value);
+
+            if (enemyPlayers is null)
+                return;
+
+            foreach (var player in enemyPlayers)
+            {
+                // Create a new MaterialCard for each player
+                var playerCard = new MaterialCard();
+                playerCard.Width = flpPlayerLoadoutsPlayers.Width - 30; // Adjust width to fill the FlowLayoutPanel
+                //playerCard.Padding = new Padding(10);
+                playerCard.Margin = new Padding(5, 0, 0, 10);
+
+                // Create a TableLayoutPanel to hold the labels
+                var tableLayoutPanel = new TableLayoutPanel();
+                tableLayoutPanel.ColumnCount = 1;
+                tableLayoutPanel.AutoSize = true;
+                tableLayoutPanel.Dock = DockStyle.Top;
+                playerCard.Controls.Add(tableLayoutPanel);
+
+                // Create player title label
+                var titleLabel = new MaterialLabel();
+                titleLabel.Text = $"{player.Name} ({player.Type})";
+
+                if (player.GroupID != -1)
+                    titleLabel.Text += $" G:{player.GroupID}";
+
+                if (player.KDA != -1f)
+                    titleLabel.Text += $" KD{player.KDA.ToString("n1")}";
+
+                titleLabel.AutoSize = true;
+                titleLabel.Dock = DockStyle.Top;
+                tableLayoutPanel.Controls.Add(titleLabel);
+
+                // Create a panel to hold the gear labels
+                var gearPanel = new FlowLayoutPanel();
+                gearPanel.FlowDirection = FlowDirection.TopDown;
+                gearPanel.AutoSize = true;
+                gearPanel.Dock = DockStyle.Top;
+                tableLayoutPanel.Controls.Add(gearPanel);
+
+                // Create gear labels
+                var gear = player.Gear;
+                int gearCount = 0;
+
+                if (gear is not null)
                 {
-                    var sb = new StringBuilder();
-                    sb.Append(@"{\rtf1\ansi");
-
-                    foreach (var player in enemyPlayers)
+                    foreach (var slot in gear)
                     {
-                        string title = $"*** {player.Name} ({player.Type})  L:{player.Lvl}";
-
-                        if (player.GroupID != -1)
-                            title += $" G:{player.GroupID}";
-                        if (player.KDA != -1f)
-                            title += $" KD{player.KDA.ToString("n1")}";
-
-                        sb.Append(@$"\b {title} \b0 ");
-                        sb.Append(@" \line ");
-
-                        var gear = player.Gear;
-
-                        if (gear is not null)
-                            foreach (var slot in gear)
-                            {
-                                sb.Append(@$"\b {slot.Key}: \b0 ");
-                                sb.Append(slot.Value.Long);
-                                sb.Append(@" \line ");
-                            }
-                        else
-                            sb.Append(@" ERROR retrieving gear \line");
-                        sb.Append(@" \line ");
+                        var gearLabel = new MaterialLabel();
+                        gearLabel.Text = $"{slot.Key}: {slot.Value.Long}";
+                        gearLabel.Margin = new Padding(0, 5, 0, 0);
+                        gearLabel.AutoSize = true;
+                        gearLabel.FontType = MaterialSkinManager.fontType.Body2;
+                        gearPanel.Controls.Add(gearLabel);
+                        gearCount++;
                     }
-                    sb.Append(@"}");
-                    rchTxtPlayerInfo.Rtf = sb.ToString();
                 }
+                else
+                {
+                    var errorLabel = new MaterialLabel();
+                    errorLabel.Text = "ERROR retrieving gear";
+                    errorLabel.Margin = new Padding(0, 5, 0, 0);
+                    errorLabel.AutoSize = true;
+                    gearPanel.Controls.Add(errorLabel);
+                    gearCount = 1;
+                }
+
+                // Calculate the height of the player card based on the gear panel's preferred size
+                int titleHeight = titleLabel.GetPreferredSize(new Size(playerCard.Width, 0)).Height;
+                int gearPanelHeight = gearPanel.GetPreferredSize(new Size(playerCard.Width, 0)).Height;
+                int playerCardHeight = titleHeight + gearPanelHeight;
+
+                playerCard.Height = playerCardHeight;
+
+                // Add player card to the FlowLayoutPanel
+                flpPlayerLoadoutsPlayers.Controls.Add(playerCard);
+            }
+        }
+
+        private void GenerateAICards()
+        {
+            // Clear existing player cards
+            flpPlayerLoadoutsAI.Controls.Clear();
+
+            if (!this.InGame)
+                return;
+
+            var enemyPlayers = this.AllPlayers
+                ?.Select(x => x.Value)
+                .Where(x => x.IsHostileActive && !x.IsHuman)
+                .ToList()
+                .OrderByDescending(x => x.Type == PlayerType.Boss)
+                .ThenByDescending(x => x.IsBossRaider)
+                .ThenBy(x => x.Value);
+
+            if (enemyPlayers is null)
+                return;
+
+            foreach (var player in enemyPlayers)
+            {
+                // Create a new MaterialCard for each player
+                var playerCard = new MaterialCard();
+                playerCard.Width = flpPlayerLoadoutsAI.Width - 30; // Adjust width to fill the FlowLayoutPanel
+                //playerCard.Padding = new Padding(10);
+                playerCard.Margin = new Padding(5, 0, 0, 10);
+
+                // Create a TableLayoutPanel to hold the labels
+                var tableLayoutPanel = new TableLayoutPanel();
+                tableLayoutPanel.ColumnCount = 1;
+                tableLayoutPanel.AutoSize = true;
+                tableLayoutPanel.Dock = DockStyle.Top;
+                playerCard.Controls.Add(tableLayoutPanel);
+
+                // Create player title label
+                var titleLabel = new MaterialLabel();
+                titleLabel.Text = $"{player.Name} ({player.Type})";
+
+                if (player.GroupID != -1)
+                    titleLabel.Text += $" G:{player.GroupID}";
+
+                if (player.KDA != -1f)
+                    titleLabel.Text += $" KD{player.KDA.ToString("n1")}";
+
+                titleLabel.AutoSize = true;
+                titleLabel.Dock = DockStyle.Top;
+                tableLayoutPanel.Controls.Add(titleLabel);
+
+                // Create a panel to hold the gear labels
+                var gearPanel = new FlowLayoutPanel();
+                gearPanel.FlowDirection = FlowDirection.TopDown;
+                gearPanel.AutoSize = true;
+                gearPanel.Dock = DockStyle.Top;
+                tableLayoutPanel.Controls.Add(gearPanel);
+
+                // Create gear labels
+                var gear = player.Gear;
+                int gearCount = 0;
+
+                if (gear is not null)
+                {
+                    foreach (var slot in gear)
+                    {
+                        var gearLabel = new MaterialLabel();
+                        gearLabel.Text = $"{slot.Key}: {slot.Value.Long}";
+                        gearLabel.Margin = new Padding(0, 5, 0, 0);
+                        gearLabel.AutoSize = true;
+                        gearLabel.FontType = MaterialSkinManager.fontType.Body2;
+                        gearPanel.Controls.Add(gearLabel);
+                        gearCount++;
+                    }
+                }
+                else
+                {
+                    var errorLabel = new MaterialLabel();
+                    errorLabel.Text = "ERROR retrieving gear";
+                    errorLabel.Margin = new Padding(0, 5, 0, 0);
+                    errorLabel.AutoSize = true;
+                    gearPanel.Controls.Add(errorLabel);
+                    gearCount = 1;
+                }
+
+                // Calculate the height of the player card based on the gear panel's preferred size
+                int titleHeight = titleLabel.GetPreferredSize(new Size(playerCard.Width, 0)).Height;
+                int gearPanelHeight = gearPanel.GetPreferredSize(new Size(playerCard.Width, 0)).Height;
+                int playerCardHeight = titleHeight + gearPanelHeight;
+
+                playerCard.Height = playerCardHeight;
+
+                // Add player card to the FlowLayoutPanel
+                flpPlayerLoadoutsAI.Controls.Add(playerCard);
             }
         }
         #endregion
@@ -685,9 +814,9 @@ namespace eft_dma_radar
                     #region Radar Stats
                     var fps = _fps;
                     var memTicks = Memory.Ticks;
-                    var looseLoot = Loot.TotalLooseLoot;
-                    var containers = Loot.TotalContainers;
-                    var corpses = Loot.TotalCorpses;
+                    var looseLoot = Loot?.TotalLooseLoot ?? 0;
+                    var containers = Loot?.TotalContainers ?? 0;
+                    var corpses = Loot?.TotalCorpses ?? 0;
 
                     if (lblRadarFPSValue.Text != fps.ToString())
                         lblRadarFPSValue.Text = $"{fps}";
@@ -1054,7 +1183,7 @@ namespace eft_dma_radar
                     lines = new string[2]
                     {
                         string.Empty,
-                        $"{(int)Math.Round(height)}, {(int)Math.Round(dist)}"
+                        $"{(int)Math.Round(height)},{(int)Math.Round(dist)}"
                     };
 
                     string name = player.Name;
@@ -1069,16 +1198,13 @@ namespace eft_dma_radar
                 }
                 else // just height & hp (for humans)
                 {
-                    lines = new string[1] { $"{(int)Math.Round(height)}, {(int)Math.Round(dist)}" };
+                    lines = new string[1] { $"{(int)Math.Round(height)},{(int)Math.Round(dist)}" };
 
                     if ((player.IsHuman || player.IsBossRaider) && player.Health != -1)
                         lines[0] += $" ({player.Health})";
                     if (player.ErrorCount > 10)
                         lines[0] = "ERROR"; // In case POS stops updating, let us know!
                 }
-
-                if (!string.IsNullOrEmpty(player.Category))
-                    lines[0] += $" [{player.Category}]";
 
                 playerZoomedPos.DrawPlayerText(
                     canvas,
@@ -2026,16 +2152,20 @@ namespace eft_dma_radar
             }
         }
 
-        private void ZoomIn(int amt)
+        private bool ZoomIn(int amt)
         {
             this.targetZoomValue = Math.Max(sldrZoomDistance.RangeMin, sldrZoomDistance.Value - amt);
             this.zoomTimer.Start();
+
+            return true;
         }
 
-        private void ZoomOut(int amt)
+        private bool ZoomOut(int amt)
         {
             this.targetZoomValue = Math.Min(sldrZoomDistance.RangeMax, sldrZoomDistance.Value + amt);
             this.zoomTimer.Start();
+
+            return false;
         }
 
         private void swRadarStats_CheckedChanged(object sender, EventArgs e)
@@ -2629,7 +2759,7 @@ namespace eft_dma_radar
             {
                 Text = entry,
                 Tag = entry,
-            }).OrderBy(entry => entry.Name).ToArray());
+            }).OrderByDescending(entry => entry.Name).ToArray());
         }
 
         private bool HasUnsavedFactionChanges()

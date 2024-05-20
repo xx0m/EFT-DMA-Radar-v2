@@ -393,17 +393,12 @@ namespace eft_dma_radar
         /// </summary>
         public static SKPaint GetPaint(this ExfilStatus status)
         {
-            switch (status)
+            return status switch
             {
-                case ExfilStatus.Open:
-                    return SKPaints.PaintExfilOpen;
-                case ExfilStatus.Pending:
-                    return SKPaints.PaintExfilPending;
-                case ExfilStatus.Closed:
-                    return SKPaints.PaintExfilClosed;
-                default:
-                    return SKPaints.PaintExfilClosed;
-            }
+                ExfilStatus.Open => SKPaints.PaintExfilOpen,
+                ExfilStatus.Pending => SKPaints.PaintExfilPending,
+                _ => SKPaints.PaintExfilClosed
+            };
         }
         #endregion
     }

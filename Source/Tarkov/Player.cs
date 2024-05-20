@@ -50,10 +50,6 @@ namespace eft_dma_radar
         /// </summary>
         public int Lvl { get; } = 0;
         /// <summary>
-        /// MemberCategory of Player Account (Developer,Sherpa,etc.) null if ordinary account/eod.
-        /// </summary>
-        public string Category { get; }
-        /// <summary>
         /// Player's Kill/Death Average
         /// </summary>
         public float KDA { get; private set; } = -1f;

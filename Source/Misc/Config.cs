@@ -200,28 +200,46 @@ namespace eft_dma_radar
         };
 
         [JsonIgnore]
-        public List<LootFilterManager.Filter> Filters { get => LootFilterManager.Filters; }
+        public List<LootFilterManager.Filter> Filters
+        {
+            get => LootFilterManager.Filters;
+        }
 
         [JsonIgnore]
-        private static readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions() { WriteIndented = true };
+        private static readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions()
+        {
+            WriteIndented = true
+        };
 
         [JsonIgnore]
         private static readonly object _lock = new();
 
         [JsonIgnore]
-        public LootFilterManager LootFilterManager { get => Program.LootFilterManager; }
+        public LootFilterManager LootFilterManager
+        {
+            get => Program.LootFilterManager;
+        }
 
         [JsonIgnore]
-        public ParallelOptions ParallelOptions { get; set; }
+        public ParallelOptions ParallelOptions
+        {
+            get; set;
+        }
 
         [JsonIgnore]
-        public List<Watchlist.Profile> Profiles { get => Watchlist.Profiles; }
+        public List<Watchlist.Profile> Profiles
+        {
+            get => Watchlist.Profiles;
+        }
 
         [JsonIgnore]
         private const string SettingsDirectory = "Configuration\\";
 
         [JsonIgnore]
-        public Watchlist Watchlist { get => Program.Watchlist; }
+        public Watchlist Watchlist
+        {
+            get => Program.Watchlist;
+        }
         #endregion
 
         public Config()

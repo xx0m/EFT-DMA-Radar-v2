@@ -44,68 +44,84 @@ namespace eft_dma_radar
         {
             get => _inGame;
         }
+
         // in InHideout means local game world not false and registered players is 1
         public bool InHideout
         {
             get => _inHideout;
         }
+
         public bool IsScav
         {
             get => _isScav;
         }
+
         public string MapName
         {
             get => _mapName;
         }
+
         public int PlayerSide
         {
             get => 0;
         }
+
         public bool LoadingLoot
         {
             get => _loadingLoot;
         }
+
         public ReadOnlyDictionary<string, Player> Players
         {
             get => _rgtPlayers?.Players;
         }
+
         public LootManager Loot
         {
             get => _lootManager;
         }
+
         public ReadOnlyCollection<Grenade> Grenades
         {
             get => _grenadeManager?.Grenades;
         }
+
         public ReadOnlyCollection<Exfil> Exfils
         {
             get => _exfilManager?.Exfils;
         }
+
         public CameraManager CameraManager
         {
             get => _cameraManager;
         }
+
         public PlayerManager PlayerManager
         {
             get => _playerManager;
         }
+
         public Toolbox Toolbox
         {
             get => _toolbox;
         }
+
         public QuestManager QuestManager
         {
 
             get => _questManager;
         }
+
         public Chams Chams
         {
             get => _chams;
         }
+
         public CorpseManager CorpseManager
         {
             get => _corpseManager;
         }
+
         public ReadOnlyCollection<PlayerCorpse> Corpses
         {
             get => _corpseManager?.Corpses;

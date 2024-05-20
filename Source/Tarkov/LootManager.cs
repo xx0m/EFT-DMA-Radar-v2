@@ -553,7 +553,7 @@ namespace eft_dma_radar
                 this.GetItemsInSlots(corpse.Slots, corpse.Position, corpse.Items);
             }
 
-            corpse.Items = corpse.Items.Where(item => item.TotalValue > 0).ToList();
+            corpse.Items = corpse.Items.Where(item => item?.TotalValue > 0).ToList();
 
             Parallel.ForEach(corpse.Items, Program.Config.ParallelOptions, (gearItem) =>
             {
@@ -878,40 +878,43 @@ namespace eft_dma_radar
 
                 Parallel.For(0, itemListCount, j =>
                 {
-                    if (!innerScatterReadMap.Results[j][0].TryGetResult<ulong>(out var childItem))
-                        return;
-                    if (!innerScatterReadMap.Results[j][1].TryGetResult<ulong>(out var childItemTemplate))
-                        return;
-                    if (!innerScatterReadMap.Results[j][3].TryGetResult<ulong>(out var childItemIdPtr))
-                        return;
-
-                    var childItemId = Memory.ReadUnityString(childItemIdPtr);
-
-                    if (childItemId is null)
-                        return;
-
-                    childItemId = childItemId.Replace("\\0", "");
-
-                    if (TarkovDevManager.AllItems.TryGetValue(childItemId, out var childLootItem))
+                    try
                     {
-                        var newItem = new LootItem
+                        if (!innerScatterReadMap.Results[j][0].TryGetResult<ulong>(out var childItem))
+                            return;
+                        if (!innerScatterReadMap.Results[j][1].TryGetResult<ulong>(out var childItemTemplate))
+                            return;
+                        if (!innerScatterReadMap.Results[j][3].TryGetResult<ulong>(out var childItemIdPtr))
+                            return;
+                        var childItemId = Memory.ReadUnityString(childItemIdPtr);
+
+                        if (childItemId is null)
+                            return;
+
+                        childItemId = childItemId.Replace("\\0", "");
+
+                        if (TarkovDevManager.AllItems.TryGetValue(childItemId, out var childLootItem))
                         {
-                            Name = childLootItem.Name,
-                            ID = childItemId,
-                            AlwaysShow = childLootItem.AlwaysShow,
-                            Important = childLootItem.Important,
-                            Position = position,
-                            Item = childLootItem.Item,
-                            Value = childLootItem.Value
-                        };
+                            var newItem = new LootItem
+                            {
+                                Name = childLootItem.Name,
+                                ID = childItemId,
+                                AlwaysShow = childLootItem.AlwaysShow,
+                                Important = childLootItem.Important,
+                                Position = position,
+                                Item = childLootItem.Item,
+                                Value = childLootItem.Value
+                            };
 
-                        cachedLootItems.Add(newItem);
+                            cachedLootItems.Add(newItem);
+                        }
+
+                        if (!innerScatterReadMap.Results[j][2].TryGetResult<ulong>(out var childGridsArrayPtr))
+                            return;
+
+                        this.GetItemsInGrid(childGridsArrayPtr, position, cachedLootItems, recurseDepth + 1);
                     }
-
-                    if (!innerScatterReadMap.Results[j][2].TryGetResult<ulong>(out var childGridsArrayPtr))
-                        return;
-
-                    this.GetItemsInGrid(childGridsArrayPtr, position, cachedLootItems, recurseDepth + 1);
+                    catch { return; }
                 });
             });
         }
@@ -949,63 +952,65 @@ namespace eft_dma_radar
 
             Parallel.For(0, slotDict.Count, i =>
             {
-                if (!scatterReadMap.Results[i][0].TryGetResult<ulong>(out var containedItem))
-                    return;
-                if (!scatterReadMap.Results[i][1].TryGetResult<ulong>(out var inventorytemplate))
-                    return;
-                if (!scatterReadMap.Results[i][4].TryGetResult<ulong>(out var idPtr))
-                    return;
-
-                var id = Memory.ReadUnityString(idPtr);
-                var slotName = slotNames[i];
-
-                SlotCacheEntry cacheEntry = this.slotCache.GetOrAdd(slotItemBase, _ => new SlotCacheEntry());
-
-                if (cacheEntry.CachedGearItems.TryGetValue(slotName, out var cachedGearItem))
+                try
                 {
-                    if (cachedGearItem.Loot.Count > 0)
+                    if (!scatterReadMap.Results[i][0].TryGetResult<ulong>(out var containedItem))
+                    return;
+                    if (!scatterReadMap.Results[i][1].TryGetResult<ulong>(out var inventorytemplate))
+                        return;
+                    if (!scatterReadMap.Results[i][4].TryGetResult<ulong>(out var idPtr))
+                        return;
+                    var id = Memory.ReadUnityString(idPtr);
+                    var slotName = slotNames[i];
+
+                    SlotCacheEntry cacheEntry = this.slotCache.GetOrAdd(slotItemBase, _ => new SlotCacheEntry());
+
+                    if (cacheEntry.CachedGearItems.TryGetValue(slotName, out var cachedGearItem))
                     {
-                        cachedGearItem.Loot.Clear();
-
-                        if (scatterReadMap.Results[i][2].TryGetResult<ulong>(out var slots))
-                            this.GetItemsInSlots(slots, position, cachedGearItem.Loot);
-
-                        if (scatterReadMap.Results[i][3].TryGetResult<ulong>(out var grids))
-                            this.GetItemsInGrid(grids, position, cachedGearItem.Loot);
-                    }
-
-                    gearItems.Add(cachedGearItem);
-                }
-                else
-                {
-                    var isPocket = (slotName == "Pockets");
-
-                    if (TarkovDevManager.AllItems.TryGetValue(id, out LootItem lootItem) || isPocket)
-                    {
-                        var longName = isPocket ? "Pocket" : lootItem?.Item.name ?? "Unknown";
-                        var shortName = isPocket ? "Pocket" : lootItem?.Item.shortName ?? "Unknown";
-                        var value = isPocket || lootItem is null ? 0 : lootItem.Value;
-
-                        var newGearItem = new GearItem
+                        if (cachedGearItem.Loot.Count > 0)
                         {
-                            ID = id,
-                            Long = longName,
-                            Short = shortName,
-                            Value = value,
-                            HasThermal = false,
-                            Loot = new List<LootItem>()
-                        };
+                            cachedGearItem.Loot.Clear();
 
-                        if (scatterReadMap.Results[i][2].TryGetResult<ulong>(out var slots))
-                            this.GetItemsInSlots(slots, position, newGearItem.Loot);
+                            if (scatterReadMap.Results[i][2].TryGetResult<ulong>(out var slots))
+                                this.GetItemsInSlots(slots, position, cachedGearItem.Loot);
 
-                        if (scatterReadMap.Results[i][3].TryGetResult<ulong>(out var grids))
-                            this.GetItemsInGrid(grids, position, newGearItem.Loot);
+                            if (scatterReadMap.Results[i][3].TryGetResult<ulong>(out var grids))
+                                this.GetItemsInGrid(grids, position, cachedGearItem.Loot);
+                        }
 
-                        gearItems.Add(newGearItem);
-                        cacheEntry.CachedGearItems[slotName] = newGearItem;
+                        gearItems.Add(cachedGearItem);
                     }
-                }
+                    else
+                    {
+                        var isPocket = (slotName == "Pockets");
+
+                        if (TarkovDevManager.AllItems.TryGetValue(id, out LootItem lootItem) || isPocket)
+                        {
+                            var longName = isPocket ? "Pocket" : lootItem?.Item.name ?? "Unknown";
+                            var shortName = isPocket ? "Pocket" : lootItem?.Item.shortName ?? "Unknown";
+                            var value = isPocket || lootItem is null ? 0 : lootItem.Value;
+
+                            var newGearItem = new GearItem
+                            {
+                                ID = id,
+                                Long = longName,
+                                Short = shortName,
+                                Value = value,
+                                HasThermal = false,
+                                Loot = new List<LootItem>()
+                            };
+
+                            if (scatterReadMap.Results[i][2].TryGetResult<ulong>(out var slots))
+                                this.GetItemsInSlots(slots, position, newGearItem.Loot);
+
+                            if (scatterReadMap.Results[i][3].TryGetResult<ulong>(out var grids))
+                                this.GetItemsInGrid(grids, position, newGearItem.Loot);
+
+                            gearItems.Add(newGearItem);
+                            cacheEntry.CachedGearItems[slotName] = newGearItem;
+                        }
+                    }
+                } catch { return; }
             });
         }
 
@@ -1042,15 +1047,15 @@ namespace eft_dma_radar
 
             Parallel.For(0, slotDict.Count, i =>
             {
-                if (!scatterReadMap.Results[i][0].TryGetResult<ulong>(out var containedItem))
-                    return;
-                if (!scatterReadMap.Results[i][1].TryGetResult<ulong>(out var inventorytemplate))
-                    return;
-                if (!scatterReadMap.Results[i][4].TryGetResult<ulong>(out var idPtr))
-                    return;
-
                 try
                 {
+                    if (!scatterReadMap.Results[i][0].TryGetResult<ulong>(out var containedItem))
+                    return;
+                    if (!scatterReadMap.Results[i][1].TryGetResult<ulong>(out var inventorytemplate))
+                        return;
+                    if (!scatterReadMap.Results[i][4].TryGetResult<ulong>(out var idPtr))
+                        return;
+
                     var id = Memory.ReadUnityString(idPtr);
                     var slotName = slotNames[i];
 
@@ -1092,51 +1097,50 @@ namespace eft_dma_radar
 
         private int CalculateChildrenCount(ulong gridsArrayPtr)
         {
-            int totalChildrenCount = 0;
-            var gridsArrayCount = 0;
-
             try
             {
-                gridsArrayCount = Memory.ReadValue<int>(gridsArrayPtr + Offsets.UnityList.Count);
+                var gridsArrayCount = Memory.ReadValue<int>(gridsArrayPtr + Offsets.UnityList.Count);
+
+                if (gridsArrayCount < 0 || gridsArrayCount > 4096)
+                    return 0;
+
+                int totalChildrenCount = 0;
+
+                var scatterReadMap = new ScatterReadMap(gridsArrayCount);
+                var round1 = scatterReadMap.AddRound();
+                var round2 = scatterReadMap.AddRound();
+                var round3 = scatterReadMap.AddRound();
+                var round4 = scatterReadMap.AddRound();
+
+                var gridItemBaseStart = gridsArrayPtr + Offsets.UnityListBase.Start;
+
+                for (int i = 0; i < gridsArrayCount; i++)
+                {
+                    var grid = round1.AddEntry<ulong>(i, 0, gridItemBaseStart, null, (uint)i * Offsets.Slot.Size);
+                    var gridEnumerableClass = round2.AddEntry<ulong>(i, 1, grid, null, Offsets.Grids.GridsEnumerableClass);
+                    var itemListPtr = round3.AddEntry<ulong>(i, 2, gridEnumerableClass, null, Offsets.UnityList.Count);
+                    var itemListCount = round4.AddEntry<int>(i, 3, itemListPtr, null, Offsets.UnityList.Count);
+                }
+
+                scatterReadMap.Execute();
+
+                Parallel.For(0, gridsArrayCount, i =>
+                {
+                    if (!scatterReadMap.Results[i][0].TryGetResult<ulong>(out var grid))
+                        return;
+                    if (!scatterReadMap.Results[i][1].TryGetResult<ulong>(out var gridEnumerableClass))
+                        return;
+                    if (!scatterReadMap.Results[i][2].TryGetResult<ulong>(out var itemListPtr))
+                        return;
+                    if (!scatterReadMap.Results[i][3].TryGetResult<int>(out var itemListCount))
+                        return;
+
+                    totalChildrenCount += itemListCount;
+                });
+
+                return totalChildrenCount;
             }
-            catch { }
-
-            if (gridsArrayCount < 0 || gridsArrayCount > 4096)
-                return 0;
-
-            var scatterReadMap = new ScatterReadMap(gridsArrayCount);
-            var round1 = scatterReadMap.AddRound();
-            var round2 = scatterReadMap.AddRound();
-            var round3 = scatterReadMap.AddRound();
-            var round4 = scatterReadMap.AddRound();
-
-            var gridItemBaseStart = gridsArrayPtr + Offsets.UnityListBase.Start;
-
-            for (int i = 0; i < gridsArrayCount; i++)
-            {
-                var grid = round1.AddEntry<ulong>(i, 0, gridItemBaseStart, null, (uint)i * Offsets.Slot.Size);
-                var gridEnumerableClass = round2.AddEntry<ulong>(i, 1, grid, null, Offsets.Grids.GridsEnumerableClass);
-                var itemListPtr = round3.AddEntry<ulong>(i, 2, gridEnumerableClass, null, Offsets.UnityList.Count);
-                var itemListCount = round4.AddEntry<int>(i, 3, itemListPtr, null, Offsets.UnityList.Count);
-            }
-
-            scatterReadMap.Execute();
-
-            Parallel.For(0, gridsArrayCount, i =>
-            {
-                if (!scatterReadMap.Results[i][0].TryGetResult<ulong>(out var grid))
-                    return;
-                if (!scatterReadMap.Results[i][1].TryGetResult<ulong>(out var gridEnumerableClass))
-                    return;
-                if (!scatterReadMap.Results[i][2].TryGetResult<ulong>(out var itemListPtr))
-                    return;
-                if (!scatterReadMap.Results[i][3].TryGetResult<int>(out var itemListCount))
-                    return;
-
-                totalChildrenCount += itemListCount;
-            });
-
-            return totalChildrenCount;
+            catch { return 0; }
         }
 
         private ConcurrentDictionary<string, ulong> GetSlotDictionary(ulong slotItemBase)
