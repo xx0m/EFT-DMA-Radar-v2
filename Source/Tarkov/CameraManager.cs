@@ -20,9 +20,21 @@ namespace eft_dma_radar
         private ulong _opticCamera;
         private ulong _fpsCamera;
 
-        public bool IsReady { get => this._opticCamera != 0 && this._fpsCamera != 0; }
-        public ulong NVGComponent { get => this.nvgComponent; }
-        public ulong ThermalComponent { get => this.thermalComponent; }
+        public bool IsReady
+        {
+            get => this._opticCamera != 0 && this._fpsCamera != 0;
+        }
+
+        public ulong NVGComponent
+        {
+            get => this.nvgComponent;
+        }
+
+        public ulong ThermalComponent
+        {
+            get => this.thermalComponent;
+        }
+
         public ulong FPSCamera
         {
             get
@@ -31,7 +43,10 @@ namespace eft_dma_radar
             }
         }
 
-        private Config _config { get => Program.Config; }
+        private Config _config
+        {
+            get => Program.Config;
+        }
 
         public CameraManager(ulong unityBase)
         {
@@ -184,6 +199,47 @@ namespace eft_dma_radar
             return 0;
         }
 
+        private ulong GetOpticComponent()
+        {
+            var count = 32;
+            var addr = Memory.ReadPtr(this._opticCamera + Offsets.GameObject.ObjectClass);
+
+            var scatterReadMap = new ScatterReadMap(count);
+            var round1 = scatterReadMap.AddRound();
+            var round2 = scatterReadMap.AddRound();
+            var round3 = scatterReadMap.AddRound();
+            var round4 = scatterReadMap.AddRound();
+            var round5 = scatterReadMap.AddRound();
+            var round6 = scatterReadMap.AddRound();
+
+            for (int i = 1; i < count; i++)
+            {
+                var fields = round1.AddEntry<ulong>(i, 0, addr, null, (uint)i * 0x8);
+                var fieldsPtr = round2.AddEntry<ulong>(i, 1, fields, null, 0x28);
+                var classNamePtr1 = round3.AddEntry<ulong>(i, 2, fieldsPtr, null, Offsets.UnityClass.Name[0]);
+                var classNamePtr2 = round4.AddEntry<ulong>(i, 3, classNamePtr1, null, Offsets.UnityClass.Name[1]);
+                var classNamePtr = round5.AddEntry<ulong>(i, 4, classNamePtr2, null, Offsets.UnityClass.Name[2]);
+                var className = round6.AddEntry<string>(i, 5, classNamePtr, 64);
+            }
+
+            scatterReadMap.Execute();
+
+            for (int i = 1; i < count; i++)
+            {
+                if (!scatterReadMap.Results[i][0].TryGetResult<ulong>(out var fields))
+                    continue;
+                if (!scatterReadMap.Results[i][5].TryGetResult<string>(out var className))
+                    continue;
+
+                className = className.Replace("\0", string.Empty);
+
+                if (className == "ThermalVision")
+                    return fields;
+            }
+
+            return 0;
+        }
+
         /// <summary>
         /// public function to turn nightvision on and off
         /// </summary>
@@ -299,23 +355,10 @@ namespace eft_dma_radar
 
             try
             {
-                ulong opticComponent = 0;
-                var component = Memory.ReadPtr(this._opticCamera + Offsets.GameObject.ObjectClass);
-                var opticThermal = this.GetComponentFromGameObject(this._opticCamera, "ThermalVision");
-                for (int i = 0x8; i < 0x100; i += 0x10)
-                {
-                    var fields = Memory.ReadPtr(component + (ulong)i);
-                    if (fields == 0)
-                        continue;
-                    var fieldsPtr_ = Memory.ReadPtr(fields + 0x28);
-                    var classNamePtr = Memory.ReadPtrChain(fieldsPtr_, Offsets.UnityClass.Name);
-                    var className = Memory.ReadString(classNamePtr, 64).Replace("\0", string.Empty);
-                    if (className == "ThermalVision")
-                    {
-                        opticComponent = fields;
-                        break;
-                    }
-                }
+                ulong opticComponent = GetOpticComponent();
+
+                if (opticComponent == 0)
+                    return;
 
                 entries.Add(new ScatterWriteDataEntry<bool>(opticComponent + 0x38, state));
                 entries.Add(new ScatterWriteDataEntry<bool>(this.opticThermalComponent + Offsets.ThermalVision.IsNoisy, !state));

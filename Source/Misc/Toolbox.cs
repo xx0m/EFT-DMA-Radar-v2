@@ -54,25 +54,23 @@ namespace eft_dma_radar
         private ulong HardSettings;
 
         private bool ToolboxMonoInitialized = false;
+        private bool ShouldInitializeToolboxMono => !this.ToolboxMonoInitialized && Memory.InGame && Memory.LocalPlayer is not null;
 
         public Toolbox()
         {
             if (this._config.MasterSwitch)
             {
+                Task.Run(() =>
+                {
+                    while (this.ShouldInitializeToolboxMono)
+                    {
+                        this.InitiateMonoAddresses();
+                        Thread.Sleep(5000);
+                    }
+                });
+
                 this.StartToolbox();
             }
-
-            Task.Run(() =>
-            {
-                int num = 0;
-                while (!this.ToolboxMonoInitialized)
-                {
-                    num++;
-
-                    this.InitiateMonoAddresses();
-                    Thread.Sleep(5000);
-                }
-            });
         }
 
         public void StartToolbox()
@@ -118,7 +116,10 @@ namespace eft_dma_radar
             {
                 if (this._config.MasterSwitch)
                 {
-                    Task.Run(() => { this.ToolboxWorker(); });
+                    Task.Run(() =>
+                    {
+                        this.ToolboxWorker();
+                    });
                     Thread.Sleep(250);
                 }
             }
@@ -132,7 +133,7 @@ namespace eft_dma_radar
 
         private void InitiateMonoAddresses()
         {
-            if (!this.ToolboxMonoInitialized && Memory.InGame && Memory.LocalPlayer is not null)
+            if (this.ShouldInitializeToolboxMono)
             {
                 try
                 {

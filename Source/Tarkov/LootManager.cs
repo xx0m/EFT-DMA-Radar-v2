@@ -1,4 +1,5 @@
 ﻿using Offsets;
+using OpenTK.Graphics.ES20;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
@@ -17,6 +18,10 @@ namespace eft_dma_radar
         public ulong localGameWorld;
 
         private bool hasCachedItems;
+
+        private const int BATCH_LOOSE_LOOT = 40;
+        private const int BATCH_CORPSES = 10;
+        private const int BATCH_CONTAINERS = 10;
 
         private ConcurrentDictionary<ulong, GridCacheEntry> gridCache;
         private ConcurrentDictionary<ulong, SlotCacheEntry> slotCache;
@@ -175,7 +180,7 @@ namespace eft_dma_radar
             sw.Stop();
             swTotal.Stop();
             ts = swTotal.Elapsed;
-            elapsedTime = String.Format("RunTime {0:00}:{1:00}:{2:00}.{3:00}", ts.Hours, ts.Minutes, ts.Seconds, ts.Milliseconds / 10);
+            elapsedTime = String.Format("{0:00}:{1:00}:{2:00}.{3:00}", ts.Hours, ts.Minutes, ts.Seconds, ts.Milliseconds / 10);
             Program.Log("[LootManager] RunTime " + elapsedTime);
             Program.Log($"[LootManager] Found {savedLootItemsInfo.Count} loose loot items");
             Program.Log($"[LootManager] Found {savedLootContainersInfo.Count} lootable containers");
@@ -256,6 +261,7 @@ namespace eft_dma_radar
             this.validLootEntities = new ConcurrentBag<(bool Valid, int Index, ulong Pointer)>(lootEntitiesLookup[true]);
             this.invalidLootEntities = new ConcurrentBag<(bool Valid, int Index, ulong Pointer)>(lootEntitiesLookup[false]);
         }
+
         /// <summary>
         /// Creates saved loot items from valid loot entities
         /// </summary>
@@ -358,25 +364,24 @@ namespace eft_dma_radar
                     return;
                 if (!validScatterMap.Results[i][2].TryGetResult<ulong>(out var lootBaseObject))
                     return;
-                if (!validScatterMap.Results[i][24].TryGetResult<ulong>(out var posToTransform))
+                if (!validScatterMap.Results[i][24].TryGetResult<ulong>(out var posToTransform) || posToTransform == 0)
                     return;
                 if (!validScatterMap.Results[i][20].TryGetResult<string>(out var containerName))
                     return;
                 if (!validScatterMap.Results[i][19].TryGetResult<string>(out var className))
                     return;
-
                 if (containerName.Contains("script", StringComparison.OrdinalIgnoreCase))
                     return;
 
-                try
+                if (className.Contains("Corpse", StringComparison.OrdinalIgnoreCase))
                 {
-                    if (className.Contains("Corpse", StringComparison.OrdinalIgnoreCase))
+                    if (!this.savedLootCorpsesInfo.Any(x => x.InteractiveClass == interactiveClass))
                     {
-                        if (!this.savedLootCorpsesInfo.Any(x => x.InteractiveClass == interactiveClass))
-                        {
-                            if (!validScatterMap.Results[i][22].TryGetResult<ulong>(out var slots))
-                                return;
+                        if (!validScatterMap.Results[i][22].TryGetResult<ulong>(out var slots))
+                            return;
 
+                        try
+                        {
                             Vector3 position = new Transform(posToTransform, false).GetPosition(null);
 
                             var playerNameSplit = containerName.Split('(', ')');
@@ -385,17 +390,22 @@ namespace eft_dma_radar
 
                             this.savedLootCorpsesInfo.Add(new CorpseInfo { InteractiveClass = interactiveClass, Position = position, Slots = slots, PlayerName = playerName });
                         }
-                    }
-                    else if (className.Equals("LootableContainer", StringComparison.OrdinalIgnoreCase))
-                    {
-                        if (!this.savedLootContainersInfo.Any(x => x.InteractiveClass == interactiveClass))
+                        catch (Exception ex)
                         {
-                            if (!validScatterMap.Results[i][5].TryGetResult<ulong>(out var containerIDPtr))
-                                return;
-
-                            if (!validScatterMap.Results[i][18].TryGetResult<ulong>(out var grids))
-                                return;
-
+                            Console.WriteLine($"Lootable Corpse Error - {ex.Message}\n{ex.StackTrace}");
+                        }
+                    }
+                }
+                else if (className.Equals("LootableContainer", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (!this.savedLootContainersInfo.Any(x => x.InteractiveClass == interactiveClass))
+                    {
+                        if (!validScatterMap.Results[i][5].TryGetResult<ulong>(out var containerIDPtr) || containerIDPtr == 0)
+                            return;
+                        if (!validScatterMap.Results[i][18].TryGetResult<ulong>(out var grids) || grids == 0)
+                            return;
+                        try
+                        {
                             Vector3 position = new Transform(posToTransform, false).GetPosition(null);
 
                             var containerID = Memory.ReadUnityString(containerIDPtr);
@@ -403,59 +413,59 @@ namespace eft_dma_radar
 
                             this.savedLootContainersInfo.Add(new ContainerInfo { InteractiveClass = interactiveClass, Position = position, Name = containerExists ? container.Name : containerName, Grids = grids });
                         }
-                    }
-                    else if (className.Equals("ObservedLootItem", StringComparison.OrdinalIgnoreCase)) // handle loose weapons / gear
-                    {
-                        var savedItemExists = this.savedLootItemsInfo.Any(x => x.InteractiveClass == interactiveClass);
-                        var savedSearchableExists = this.savedLootContainersInfo.Any(x => x.InteractiveClass == interactiveClass);
-
-                        if (!savedItemExists || !savedSearchableExists)
+                        catch (Exception ex)
                         {
-                            if (!validScatterMap.Results[i][15].TryGetResult<bool>(out var isQuestItem))
-                                return;
-                            if (!validScatterMap.Results[i][16].TryGetResult<ulong>(out var BSGIDPtr))
-                                return;
+                            Console.WriteLine($"Lootable Container Error - {ex.Message}\n{ex.StackTrace}");
+                        }
+                    }
+                }
+                else if (className.Equals("ObservedLootItem", StringComparison.OrdinalIgnoreCase)) // handle loose weapons / gear
+                {
+                    var savedItemExists = this.savedLootItemsInfo.Any(x => x.InteractiveClass == interactiveClass);
+                    var savedSearchableExists = this.savedLootContainersInfo.Any(x => x.InteractiveClass == interactiveClass);
 
+                    if (!savedItemExists || !savedSearchableExists)
+                    {
+                        if (!validScatterMap.Results[i][15].TryGetResult<bool>(out var isQuestItem))
+                            return;
+                        if (!validScatterMap.Results[i][16].TryGetResult<ulong>(out var BSGIDPtr) || BSGIDPtr == 0)
+                            return;
+
+                        try
+                        {
                             var id = Memory.ReadUnityString(BSGIDPtr);
-
-                            if (id is null)
-                                return;
 
                             var itemExists = TarkovDevManager.AllItems.TryGetValue(id, out var lootItem) && lootItem is not null;
                             var isSearchableItem = lootItem?.Item.categories.FirstOrDefault(x => x.name == "Weapon" || x.name == "Searchable item") is not null;
 
-                            if (isSearchableItem)
+                            if (isSearchableItem && !savedSearchableExists)
                             {
-                                if (!savedSearchableExists)
+                                Vector3 position = new Transform(posToTransform, false).GetPosition(null);
+                                var container = new ContainerInfo { InteractiveClass = interactiveClass, Position = position, Name = lootItem.Item.shortName ?? containerName };
+
+                                if (validScatterMap.Results[i][22].TryGetResult<ulong>(out var slots))
+                                    container.Slots = slots;
+
+                                if (validScatterMap.Results[i][17].TryGetResult<ulong>(out var rootItem))
                                 {
-                                    Vector3 position = new Transform(posToTransform, false).GetPosition(null);
-                                    var container = new ContainerInfo { InteractiveClass = interactiveClass, Position = position, Name = lootItem.Item.shortName ?? containerName };
-
-                                    if (validScatterMap.Results[i][22].TryGetResult<ulong>(out var slots))
-                                        container.Slots = slots;
-
-                                    if (validScatterMap.Results[i][17].TryGetResult<ulong>(out var rootItem))
-                                    {
-                                        var itemGrids = Memory.ReadPtr(rootItem + 0x70);
-                                        container.Grids = itemGrids;
-                                    }
-
-                                    this.savedLootContainersInfo.Add(container);
+                                    var itemGrids = Memory.ReadPtr(rootItem + 0x70);
+                                    container.Grids = itemGrids;
                                 }
+
+                                this.savedLootContainersInfo.Add(container);
                             }
-                            else
+                            else if (!savedItemExists)
                             {
-                                if (!savedItemExists)
-                                {
-                                    Vector3 position = new Transform(posToTransform, false).GetPosition(null);
-                                    this.savedLootItemsInfo.Add(new LootItemInfo { InteractiveClass = interactiveClass, QuestItem = isQuestItem, Position = position, ItemID = id });
-                                }
+                                Vector3 position = new Transform(posToTransform, false).GetPosition(null);
+                                this.savedLootItemsInfo.Add(new LootItemInfo { InteractiveClass = interactiveClass, QuestItem = isQuestItem, Position = position, ItemID = id });
                             }
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Lootable Item Error - {ex.Message}\n{ex.StackTrace}");
                         }
                     }
                 }
-                catch { }
-                
             });
         }
 
@@ -463,77 +473,116 @@ namespace eft_dma_radar
         {
             var loot = new ConcurrentBag<LootableObject>();
 
-            // create Loot items
-            await Task.Run(() =>
+            var savedLootItemsBatches = this.savedLootItemsInfo
+                .Select((item, index) => new { Item = item, Index = index })
+                .GroupBy(x => x.Index / BATCH_LOOSE_LOOT)
+                .Select(g => g.Select(x => x.Item).ToList())
+                .ToList();
+
+            foreach (var batch in savedLootItemsBatches)
             {
-                Parallel.ForEach(this.savedLootItemsInfo, Program.Config.ParallelOptions, (savedLootItem) =>
+                await Task.Run(() =>
                 {
-                    if (this.validLootEntities.Any(x => x.Pointer == savedLootItem.InteractiveClass))
+                    Parallel.ForEach(batch, Program.Config.ParallelOptions, (savedLootItem) =>
                     {
-                        if (!savedLootItem.QuestItem)
+                        if (this.validLootEntities.Any(x => x.Pointer == savedLootItem.InteractiveClass))
                         {
-                            if (TarkovDevManager.AllItems.TryGetValue(savedLootItem.ItemID, out var lootItem))
+                            if (!savedLootItem.QuestItem)
                             {
-                                loot.Add(CreateLootableItem(lootItem, savedLootItem.Position));
+                                if (TarkovDevManager.AllItems.TryGetValue(savedLootItem.ItemID, out var lootItem))
+                                    loot.Add(CreateLootableItem(lootItem, savedLootItem.Position));
+                            }
+                            else
+                            {
+                                if (this.QuestItems is not null)
+                                {
+                                    var questItem = this.QuestItems.Where(x => x.Id == savedLootItem.ItemID).FirstOrDefault();
+                                    if (questItem is not null)
+                                        questItem.Position = savedLootItem.Position;
+                                }
                             }
                         }
                         else
                         {
-                            if (this.QuestItems is not null)
-                            {
-                                var questItem = this.QuestItems.Where(x => x.Id == savedLootItem.ItemID).FirstOrDefault();
-                                if (questItem is not null)
-                                {
-                                    questItem.Position = savedLootItem.Position;
-                                }
-                            }
+                            this.savedLootItemsInfo = new ConcurrentBag<LootItemInfo>(this.savedLootItemsInfo.Where(x => x.InteractiveClass != savedLootItem.InteractiveClass));
                         }
-                    }
-                    else
+                    });
+
+                    if (!hasCachedItems)
                     {
-                        this.savedLootItemsInfo = new ConcurrentBag<LootItemInfo>(this.savedLootItemsInfo.Where(x => x.InteractiveClass != savedLootItem.InteractiveClass));
+                        this.Loot = new(loot);
+                        this.ApplyFilter();
                     }
                 });
-            });
+            }
 
-            // create Corpse objects
-            await Task.Run(() =>
+            var savedLootCorpsesBatches = this.savedLootCorpsesInfo
+                .Select((item, index) => new { Item = item, Index = index })
+                .GroupBy(x => x.Index / BATCH_CORPSES)
+                .Select(g => g.Select(x => x.Item).ToList())
+                .ToList();
+
+            foreach (var batch in savedLootCorpsesBatches)
             {
-                Parallel.ForEach(this.savedLootCorpsesInfo, Program.Config.ParallelOptions, (savedLootCorpse) =>
+                await Task.Run(() =>
                 {
-                    if (this.validLootEntities.Any(x => x.Pointer == savedLootCorpse.InteractiveClass))
+                    Parallel.ForEach(batch, Program.Config.ParallelOptions, (savedLootCorpse) =>
                     {
-                        loot.Add(CreateLootableCorpse(savedLootCorpse.PlayerName, savedLootCorpse.InteractiveClass, savedLootCorpse.Position, savedLootCorpse.Slots));
-                    }
-                    else
+                        if (this.validLootEntities.Any(x => x.Pointer == savedLootCorpse.InteractiveClass))
+                        {
+                            loot.Add(CreateLootableCorpse(savedLootCorpse.PlayerName, savedLootCorpse.InteractiveClass, savedLootCorpse.Position, savedLootCorpse.Slots));
+                        }
+                        else
+                        {
+                            this.savedLootCorpsesInfo = new ConcurrentBag<CorpseInfo>(this.savedLootCorpsesInfo.Where(x => x.InteractiveClass != savedLootCorpse.InteractiveClass));
+                        }
+                    });
+
+                    if (!hasCachedItems)
                     {
-                        this.savedLootCorpsesInfo = new ConcurrentBag<CorpseInfo>(this.savedLootCorpsesInfo.Where(x => x.InteractiveClass != savedLootCorpse.InteractiveClass));
+                        this.Loot = new(loot);
+                        this.ApplyFilter();
                     }
                 });
-            });
+            }
 
-            // create Container objects, merge dupe entries based on position + name
-            // (helps deal with multiple entries for the same container)
-            var groupedContainers = this.savedLootContainersInfo.GroupBy(container => (container.Position, container.Name)).ToList();
-            await Task.Run(() =>
+            var groupedContainers = this.savedLootContainersInfo
+                .GroupBy(container => (container.Position, container.Name))
+                .ToList();
+
+            var groupedContainersBatches = groupedContainers
+                .Select((item, index) => new { Item = item, Index = index })
+                .GroupBy(x => x.Index / BATCH_CONTAINERS)
+                .Select(g => g.Select(x => x.Item).ToList())
+                .ToList();
+
+            foreach (var batch in groupedContainersBatches)
             {
-                Parallel.ForEach(groupedContainers, Program.Config.ParallelOptions, (savedContainerItem) =>
+                await Task.Run(() =>
                 {
-                    var firstContainer = savedContainerItem.First();
+                    Parallel.ForEach(batch, Program.Config.ParallelOptions, (savedContainerItem) =>
+                    {
+                        var firstContainer = savedContainerItem.First();
 
-                    if (this.validLootEntities.Any(x => x.Pointer == firstContainer.InteractiveClass))
+                        if (this.validLootEntities.Any(x => x.Pointer == firstContainer.InteractiveClass))
+                        {
+                            loot.Add(CreateLootableContainer(firstContainer.Name, firstContainer.Position, firstContainer.Grids, firstContainer.Slots));
+                        }
+                        else
+                        {
+                            this.savedLootContainersInfo = new ConcurrentBag<ContainerInfo>(this.savedLootContainersInfo.Where(x => x.InteractiveClass != firstContainer.InteractiveClass));
+                        }
+                    });
+
+                    if (!hasCachedItems)
                     {
-                        loot.Add(CreateLootableContainer(firstContainer.Name, firstContainer.Position, firstContainer.Grids, firstContainer.Slots));
-                    }
-                    else
-                    {
-                        this.savedLootContainersInfo = new ConcurrentBag<ContainerInfo>(this.savedLootContainersInfo.Where(x => x.InteractiveClass != firstContainer.InteractiveClass));
+                        this.Loot = new(loot);
+                        this.ApplyFilter();
                     }
                 });
-            });
+            }
 
             this.Loot = new(loot);
-
             this.ApplyFilter();
         }
 
@@ -1000,11 +1049,14 @@ namespace eft_dma_radar
                                 Loot = new List<LootItem>()
                             };
 
-                            if (scatterReadMap.Results[i][2].TryGetResult<ulong>(out var slots))
-                                this.GetItemsInSlots(slots, position, newGearItem.Loot);
+                            if (slotName != "Scabbard")
+                            {
+                                if (scatterReadMap.Results[i][2].TryGetResult<ulong>(out var slots))
+                                    this.GetItemsInSlots(slots, position, newGearItem.Loot);
 
-                            if (scatterReadMap.Results[i][3].TryGetResult<ulong>(out var grids))
-                                this.GetItemsInGrid(grids, position, newGearItem.Loot);
+                                if (scatterReadMap.Results[i][3].TryGetResult<ulong>(out var grids))
+                                    this.GetItemsInGrid(grids, position, newGearItem.Loot);
+                            }
 
                             gearItems.Add(newGearItem);
                             cacheEntry.CachedGearItems[slotName] = newGearItem;
@@ -1085,11 +1137,14 @@ namespace eft_dma_radar
                         }
                     }
 
-                    if (scatterReadMap.Results[i][2].TryGetResult<ulong>(out var slots))
-                        this.GetItemsInSlots(slots, position, loot, recurseDepth + 1);
+                    if (slotName != "Scabbard")
+                    {
+                        if (scatterReadMap.Results[i][2].TryGetResult<ulong>(out var slots))
+                            this.GetItemsInSlots(slots, position, loot, recurseDepth + 1);
 
-                    if (scatterReadMap.Results[i][3].TryGetResult<ulong>(out var grids))
-                        this.GetItemsInGrid(grids, position, loot);
+                        if (scatterReadMap.Results[i][3].TryGetResult<ulong>(out var grids))
+                            this.GetItemsInGrid(grids, position, loot);
+                    }
                 }
                 catch { return; }
             });

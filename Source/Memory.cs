@@ -133,17 +133,13 @@ namespace eft_dma_radar
         {
             get
             {
-                Game game = Memory._game;
-                if (game == null)
+                var game = Memory._game;
+                if (game?.Players == null)
                 {
                     return null;
                 }
-                ReadOnlyDictionary<string, Player> players = game.Players;
-                if (players == null)
-                {
-                    return null;
-                }
-                return players.FirstOrDefault((KeyValuePair<string, Player> x) => x.Value.Type == PlayerType.LocalPlayer).Value;
+
+                return game.Players.FirstOrDefault((KeyValuePair<string, Player> x) => x.Value.Type == PlayerType.LocalPlayer).Value;
             }
         }
         #endregion

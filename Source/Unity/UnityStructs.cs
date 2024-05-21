@@ -1,6 +1,4 @@
-﻿// Unity Structures
-
-namespace eft_dma_radar
+﻿namespace eft_dma_radar
 {
     public struct GameObjectManager
     {

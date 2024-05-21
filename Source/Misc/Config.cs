@@ -108,8 +108,8 @@ namespace eft_dma_radar
         [JsonPropertyName("processLoot")]
         public bool ProcessLoot { get; set; }
 
-        [JsonPropertyName("questHelperEnabled")]
-        public bool QuestHelperEnabled { get; set; }
+        [JsonPropertyName("questHelper")]
+        public bool QuestHelper { get; set; }
 
         [JsonPropertyName("showCorpses")]
         public bool ShowCorpses { get; set; }
@@ -310,7 +310,7 @@ namespace eft_dma_radar
             PlayerAimLineLength = 1000;
             PrimaryTeammateId = null;
             ProcessLoot = true;
-            QuestHelperEnabled = true;
+            QuestHelper = true;
             ShowCorpses = false;
             ShowExfilNames = false;
             ShowHoverArmor = false;

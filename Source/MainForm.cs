@@ -421,7 +421,7 @@ namespace eft_dma_radar
 
             // User Interface
             swShowLoot.Checked = _config.ShowLoot;
-            swQuestHelper.Checked = _config.QuestHelperEnabled;
+            swQuestHelper.Checked = _config.QuestHelper;
             swAimview.Checked = _config.AimviewEnabled;
             swExfilNames.Checked = _config.ShowExfilNames;
             swNames.Checked = _config.ShowNames;
@@ -486,7 +486,8 @@ namespace eft_dma_radar
             // Thermal Features
             mcSettingsMemoryWritingThermal.Enabled = _config.MasterSwitch;
             mcSettingsMemoryWritingThermal.Visible = _config.ThermalVision || _config.OpticThermalVision;
-            cboThermalType.SelectedIndex = _config.MainThermalSetting.ColorScheme;
+            cboThermalType.SelectedIndex = _config.ThermalVision ? 0 : (_config.OpticThermalVision ? 1 : 0);
+            cboThermalColorScheme.SelectedIndex = _config.ThermalVision ? _config.MainThermalSetting.ColorScheme : (_config.OpticThermalVision ? _config.OpticThermalSetting.ColorScheme : 0);
             sldrThermalColorCoefficient.Value = (int)(_config.MainThermalSetting.ColorCoefficient * 100);
             sldrMinTemperature.Value = (int)((_config.MainThermalSetting.MinTemperature - 0.001f) / (0.01f - 0.001f) * 100.0f);
             sldrThermalRampShift.Value = (int)((_config.MainThermalSetting.RampShift + 1.0f) * 100.0f);
@@ -602,80 +603,66 @@ namespace eft_dma_radar
         {
             if (tabControlMain.SelectedIndex == 2)
             {
-                GeneratePlayerCards();
-                GenerateAICards();
+                GenerateCards(flpPlayerLoadoutsPlayers, x => x.IsHumanHostileActive, x => x.IsPMC, x => x.Value);
+                GenerateCards(flpPlayerLoadoutsAI, x => x.IsHostileActive && !x.IsHuman, x => x.Type == PlayerType.Boss, x => x.IsBossRaider, x => x.Value);
+
             }
         }
 
-        private void GeneratePlayerCards()
+        private void GenerateCards(FlowLayoutPanel panel, Func<Player, bool> filter, params Func<Player, IComparable>[] orderBy)
         {
-            // Clear existing player cards
-            flpPlayerLoadoutsPlayers.Controls.Clear();
+            panel.Controls.Clear();
 
             if (!this.InGame)
                 return;
 
-            var enemyPlayers = this.AllPlayers
-                ?.Select(x => x.Value)
-                .Where(x => x.IsHumanHostileActive)
-                .ToList()
-                .OrderByDescending(x => x.IsPMC)
-                .ThenBy(x => x.Value);
+            var enemyPlayers = this.AllPlayers?
+                .Select(x => x.Value)
+                .Where(filter)
+                .ToList();
 
             if (enemyPlayers is null)
                 return;
 
+            foreach (var orderByFunc in orderBy.Reverse())
+            {
+                enemyPlayers = enemyPlayers.OrderByDescending(orderByFunc).ToList();
+            }
+
             foreach (var player in enemyPlayers)
             {
-                // Create a new MaterialCard for each player
                 var playerCard = new MaterialCard();
-                playerCard.Width = flpPlayerLoadoutsPlayers.Width - 30; // Adjust width to fill the FlowLayoutPanel
-                //playerCard.Padding = new Padding(10);
+                playerCard.Width = panel.Width - 30;
                 playerCard.Margin = new Padding(5, 0, 0, 10);
 
-                // Create a TableLayoutPanel to hold the labels
                 var tableLayoutPanel = new TableLayoutPanel();
                 tableLayoutPanel.ColumnCount = 1;
                 tableLayoutPanel.AutoSize = true;
                 tableLayoutPanel.Dock = DockStyle.Top;
                 playerCard.Controls.Add(tableLayoutPanel);
 
-                // Create player title label
                 var titleLabel = new MaterialLabel();
-                titleLabel.Text = $"{player.Name} ({player.Type})";
-
-                if (player.GroupID != -1)
-                    titleLabel.Text += $" G:{player.GroupID}";
-
-                if (player.KDA != -1f)
-                    titleLabel.Text += $" KD{player.KDA.ToString("n1")}";
-
+                titleLabel.Text = $"{player.Name} ({player.Type}){(player.GroupID != -1 ? $" G:{player.GroupID}" : "")}";
                 titleLabel.AutoSize = true;
                 titleLabel.Dock = DockStyle.Top;
                 tableLayoutPanel.Controls.Add(titleLabel);
 
-                // Create a panel to hold the gear labels
                 var gearPanel = new FlowLayoutPanel();
                 gearPanel.FlowDirection = FlowDirection.TopDown;
                 gearPanel.AutoSize = true;
                 gearPanel.Dock = DockStyle.Top;
                 tableLayoutPanel.Controls.Add(gearPanel);
 
-                // Create gear labels
-                var gear = player.Gear;
-                int gearCount = 0;
-
-                if (gear is not null)
+                if (player.Gear is not null)
                 {
-                    foreach (var slot in gear)
+                    foreach (var slot in player.Gear)
                     {
                         var gearLabel = new MaterialLabel();
-                        gearLabel.Text = $"{slot.Key}: {slot.Value.Long}";
+                        gearLabel.Text = $"{GearManager.GetGearSlotName(slot.Key)}: {slot.Value.Long}";
                         gearLabel.Margin = new Padding(0, 5, 0, 0);
                         gearLabel.AutoSize = true;
                         gearLabel.FontType = MaterialSkinManager.fontType.Body2;
                         gearPanel.Controls.Add(gearLabel);
-                        gearCount++;
                     }
                 }
                 else
@@ -685,112 +672,13 @@ namespace eft_dma_radar
                     errorLabel.Margin = new Padding(0, 5, 0, 0);
                     errorLabel.AutoSize = true;
                     gearPanel.Controls.Add(errorLabel);
-                    gearCount = 1;
                 }
 
-                // Calculate the height of the player card based on the gear panel's preferred size
                 int titleHeight = titleLabel.GetPreferredSize(new Size(playerCard.Width, 0)).Height;
                 int gearPanelHeight = gearPanel.GetPreferredSize(new Size(playerCard.Width, 0)).Height;
-                int playerCardHeight = titleHeight + gearPanelHeight;
+                playerCard.Height = titleHeight + gearPanelHeight;
 
-                playerCard.Height = playerCardHeight;
-
-                // Add player card to the FlowLayoutPanel
-                flpPlayerLoadoutsPlayers.Controls.Add(playerCard);
-            }
-        }
-
-        private void GenerateAICards()
-        {
-            // Clear existing player cards
-            flpPlayerLoadoutsAI.Controls.Clear();
-
-            if (!this.InGame)
-                return;
-
-            var enemyPlayers = this.AllPlayers
-                ?.Select(x => x.Value)
-                .Where(x => x.IsHostileActive && !x.IsHuman)
-                .ToList()
-                .OrderByDescending(x => x.Type == PlayerType.Boss)
-                .ThenByDescending(x => x.IsBossRaider)
-                .ThenBy(x => x.Value);
-
-            if (enemyPlayers is null)
-                return;
-
-            foreach (var player in enemyPlayers)
-            {
-                // Create a new MaterialCard for each player
-                var playerCard = new MaterialCard();
-                playerCard.Width = flpPlayerLoadoutsAI.Width - 30; // Adjust width to fill the FlowLayoutPanel
-                //playerCard.Padding = new Padding(10);
-                playerCard.Margin = new Padding(5, 0, 0, 10);
-
-                // Create a TableLayoutPanel to hold the labels
-                var tableLayoutPanel = new TableLayoutPanel();
-                tableLayoutPanel.ColumnCount = 1;
-                tableLayoutPanel.AutoSize = true;
-                tableLayoutPanel.Dock = DockStyle.Top;
-                playerCard.Controls.Add(tableLayoutPanel);
-
-                // Create player title label
-                var titleLabel = new MaterialLabel();
-                titleLabel.Text = $"{player.Name} ({player.Type})";
-
-                if (player.GroupID != -1)
-                    titleLabel.Text += $" G:{player.GroupID}";
-
-                if (player.KDA != -1f)
-                    titleLabel.Text += $" KD{player.KDA.ToString("n1")}";
-
-                titleLabel.AutoSize = true;
-                titleLabel.Dock = DockStyle.Top;
-                tableLayoutPanel.Controls.Add(titleLabel);
-
-                // Create a panel to hold the gear labels
-                var gearPanel = new FlowLayoutPanel();
-                gearPanel.FlowDirection = FlowDirection.TopDown;
-                gearPanel.AutoSize = true;
-                gearPanel.Dock = DockStyle.Top;
-                tableLayoutPanel.Controls.Add(gearPanel);
-
-                // Create gear labels
-                var gear = player.Gear;
-                int gearCount = 0;
-
-                if (gear is not null)
-                {
-                    foreach (var slot in gear)
-                    {
-                        var gearLabel = new MaterialLabel();
-                        gearLabel.Text = $"{slot.Key}: {slot.Value.Long}";
-                        gearLabel.Margin = new Padding(0, 5, 0, 0);
-                        gearLabel.AutoSize = true;
-                        gearLabel.FontType = MaterialSkinManager.fontType.Body2;
-                        gearPanel.Controls.Add(gearLabel);
-                        gearCount++;
-                    }
-                }
-                else
-                {
-                    var errorLabel = new MaterialLabel();
-                    errorLabel.Text = "ERROR retrieving gear";
-                    errorLabel.Margin = new Padding(0, 5, 0, 0);
-                    errorLabel.AutoSize = true;
-                    gearPanel.Controls.Add(errorLabel);
-                    gearCount = 1;
-                }
-
-                // Calculate the height of the player card based on the gear panel's preferred size
-                int titleHeight = titleLabel.GetPreferredSize(new Size(playerCard.Width, 0)).Height;
-                int gearPanelHeight = gearPanel.GetPreferredSize(new Size(playerCard.Width, 0)).Height;
-                int playerCardHeight = titleHeight + gearPanelHeight;
-
-                playerCard.Height = playerCardHeight;
-
-                // Add player card to the FlowLayoutPanel
-                flpPlayerLoadoutsAI.Controls.Add(playerCard);
+                panel.Controls.Add(playerCard);
             }
         }
         #endregion
@@ -1278,7 +1166,7 @@ namespace eft_dma_radar
             var localPlayer = this.LocalPlayer;
             if (this.InGame && localPlayer is not null)
             {
-                if (_config.QuestHelperEnabled && !Memory.IsScav) // Draw quest items (if enabled)
+                if (_config.QuestHelper && !Memory.IsScav) // Draw quest items (if enabled)
                 {
                     if (this.QuestManager is not null)
                     {
@@ -2091,7 +1979,7 @@ namespace eft_dma_radar
                         if (_config.ProcessLoot && _config.ShowLoot)
                             DrawLoot(canvas);
 
-                        if (_config.QuestHelperEnabled)
+                        if (_config.QuestHelper)
                             DrawQuestItems(canvas);
 
                         DrawGrenades(canvas);
@@ -2200,7 +2088,7 @@ namespace eft_dma_radar
 
         private void swQuestHelper_CheckedChanged(object sender, EventArgs e)
         {
-            _config.QuestHelperEnabled = swQuestHelper.Checked;
+            _config.QuestHelper = swQuestHelper.Checked;
         }
 
         private void swAimview_CheckedChanged(object sender, EventArgs e)
@@ -3896,6 +3784,7 @@ namespace eft_dma_radar
                 {
                     _lootFilterManager.RemoveFilter(lstLootFilters.SelectedIndices[0]);
                     _lootFilterManager.AddEmptyProfile();
+                    UpdateLootFilters();
                 }
             }
             else
@@ -3904,10 +3793,9 @@ namespace eft_dma_radar
                 {
                     _lootFilterManager.RemoveFilter(selectedFilter);
                     UpdateLootFilterOrders();
+                    UpdateLootFilters();
                 }
             }
-
-            UpdateLootFilters();
         }
 
         private void txtLootFilterName_KeyDown(object sender, KeyEventArgs e)

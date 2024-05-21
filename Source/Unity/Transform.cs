@@ -30,9 +30,12 @@ namespace eft_dma_radar
 
 			_isPlayerTransform = isPlayerTransform;
 
-			if (isPlayerTransform) HierarchyIndex = 1;
-			else HierarchyIndex = Memory.ReadValue<int>(transformInternal + Offsets.TransformInternal.HierarchyIndex);
+			if (isPlayerTransform)
+				HierarchyIndex = 1;
+			else
+				HierarchyIndex = Memory.ReadValue<int>(transformInternal + Offsets.TransformInternal.HierarchyIndex);
 		}
+
 		public ulong IndicesAddr { get; }
 		public ulong VerticesAddr { get; }
 		private int HierarchyIndex { get; }

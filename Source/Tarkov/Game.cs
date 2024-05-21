@@ -244,7 +244,7 @@ namespace eft_dma_radar
                 Thread.Sleep(1500);
             }
             Thread.Sleep(1000);
-            Program.Log("Match found!");
+            Program.Log("Raid has started!!");
             this._inGame = true;
             Thread.Sleep(1500);
         }
@@ -380,7 +380,7 @@ namespace eft_dma_radar
                                 Memory.GameStatus = Game.GameStatus.InGame;
                                 found = true;
 
-                                Program.Log("Raid has started!!");
+                                Program.Log("Match started!!");
                             }
                         }
                     }
@@ -508,7 +508,7 @@ namespace eft_dma_radar
                 else
                     this._grenadeManager.Refresh();
 
-                if (this._config.QuestHelperEnabled && this._questManager is null)
+                if (this._config.QuestHelper && this._questManager is null)
                 {
                     try
                     {
