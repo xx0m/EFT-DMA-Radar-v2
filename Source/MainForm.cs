@@ -422,6 +422,8 @@ namespace eft_dma_radar
             // User Interface
             swShowLoot.Checked = _config.ShowLoot;
             swQuestHelper.Checked = _config.QuestHelper;
+            swUnknownQuestItems.Visible = _config.QuestHelper;
+            swUnknownQuestItems.Checked = _config.UnknownQuestItems;
             swAimview.Checked = _config.AimviewEnabled;
             swExfilNames.Checked = _config.ShowExfilNames;
             swNames.Checked = _config.ShowNames;
@@ -745,14 +747,14 @@ namespace eft_dma_radar
                         lblRadarPMCsValue.UseAccent = enemyPMCs > 0;
                         lblRadarPMCsValue.HighEmphasis = enemyPMCs > 0;
                     }
-                        
+
                     if (lblRadarPlayerScavsValue.Text != playerScavs.ToString())
                     {
                         lblRadarPlayerScavsValue.Text = $"{playerScavs}";
                         lblRadarPlayerScavsValue.UseAccent = playerScavs > 0;
                         lblRadarPlayerScavsValue.HighEmphasis = playerScavs > 0;
                     }
-                        
+
 
                     if (lblRadarAIScavsValue.Text != aiScavs.ToString())
                     {
@@ -760,7 +762,7 @@ namespace eft_dma_radar
                         lblRadarAIScavsValue.UseAccent = aiScavs > 0;
                         lblRadarAIScavsValue.HighEmphasis = aiScavs > 0;
                     }
-                        
+
 
                     if (lblRadarRoguesValue.Text != rogues.ToString())
                     {
@@ -1176,7 +1178,8 @@ namespace eft_dma_radar
                         var questItems = this.QuestManager.QuestItems;
                         if (questItems is not null)
                         {
-                            foreach (var item in questItems.Where(x => x.Position.X != 0))
+                            var items = _config.UnknownQuestItems ? questItems.Where(x => x?.Position.X != 0 && x?.Name == "????") : questItems.Where(x => x?.Position.X != 0 && x?.Name != "????");
+                            foreach (var item in items)
                             {
                                 float position = item.Position.Z - localPlayerMapPos.Height;
                                 var itemZoomedPos = item.Position
@@ -1714,6 +1717,26 @@ namespace eft_dma_radar
         {
             _closestTaskZoneToMouse = null;
         }
+
+        private T FindClosestObject<T>(IEnumerable<T> objects, Vector2 position, Func<T, Vector2> positionSelector, float threshold)
+            where T : class
+        {
+            if (objects is null || !objects.Any())
+                return null;
+
+            var closestObject = objects.Aggregate(
+                (x1, x2) =>
+                    x2 == null || Vector2.Distance(positionSelector(x1), position)
+                    < Vector2.Distance(positionSelector(x2), position)
+                        ? x1
+                        : x2
+            );
+
+            if (closestObject is not null && Vector2.Distance(positionSelector(closestObject), position) < threshold)
+                return closestObject;
+
+            return null;
+        }
         #endregion
 
         #region Event Handlers
@@ -1773,6 +1796,8 @@ namespace eft_dma_radar
         {
             if (this.InGame && this.LocalPlayer is not null) // Must be in-game
             {
+                var mouse = new Vector2(e.X, e.Y);
+
                 var players = this.AllPlayers
                     ?.Select(x => x.Value)
                     .Where(x => x.Type is not PlayerType.LocalPlayer && !x.HasExfild); // Get all players except LocalPlayer & Exfil'd Players
@@ -1781,132 +1806,29 @@ namespace eft_dma_radar
                 var tasksItems = this.QuestManager?.QuestItems?.Select(x => x);
                 var tasksZones = this.QuestManager?.QuestZones?.Select(x => x);
 
-                if ((players is not null && players.Any()) || (loot is not null && loot.Any()) || (tasksItems is not null && tasksItems.Any()) || (tasksZones is not null && tasksZones.Any()))
+                _closestPlayerToMouse = FindClosestObject(players, mouse, x => x.ZoomedPosition, 12 * _uiScale);
+                if (_closestPlayerToMouse is not null)
                 {
-                    var mouse = new Vector2(e.X, e.Y); // Get current mouse position in control
-
-                    if (players is not null && players.Any())
-                    {
-                        var closestPlayer = players.Aggregate(
-                            (x1, x2) =>
-                                Vector2.Distance(x1.ZoomedPosition, mouse)
-                                < Vector2.Distance(x2.ZoomedPosition, mouse)
-                                    ? x1
-                                    : x2
-                        ); // Get player object 'closest' to mouse position
-
-                        if (closestPlayer is not null)
-                        {
-                            var dist = Vector2.Distance(closestPlayer.ZoomedPosition, mouse);
-                            if (dist < (12 * _uiScale)) // See if 'closest object' is close enough.
-                            {
-                                _closestPlayerToMouse = closestPlayer; // Save ref to closest player object
-                                if (closestPlayer.IsHumanHostile && closestPlayer.GroupID != -1)
-                                    _mouseOverGroup = closestPlayer.GroupID; // Set group ID for closest player(s)
-                                else
-                                    _mouseOverGroup = null; // Clear Group ID
-                            }
-                            else
-                                ClearPlayerRefs();
-                        }
-                        else
-                            ClearPlayerRefs();
-                    }
+                    if (_closestPlayerToMouse.IsHumanHostile && _closestPlayerToMouse.GroupID != -1)
+                        _mouseOverGroup = _closestPlayerToMouse.GroupID;
                     else
-                        ClearPlayerRefs();
-
-                    if (_config.ProcessLoot && _config.ShowLoot)
-                    {
-                        if (loot is not null && loot.Any())
-                        {
-                            var closestItem = loot.Aggregate(
-                                (x1, x2) =>
-                                    Vector2.Distance(x1.ZoomedPosition, mouse)
-                                    < Vector2.Distance(x2.ZoomedPosition, mouse)
-                                        ? x1
-                                        : x2
-                            ); // Get loot object 'closest' to mouse position
-
-                            if (closestItem is not null)
-                            {
-                                var dist = Vector2.Distance(closestItem.ZoomedPosition, mouse);
-                                if (dist < (12 * _uiScale)) // See if 'closest object' is close enough.
-                                {
-                                    _closestItemToMouse = closestItem; // Save ref to closest item object
-                                }
-                                else
-                                    ClearItemRefs();
-                            }
-                            else
-                                ClearItemRefs();
-                        }
-                        else
-                            ClearItemRefs();
-                    }
-                    else
-                    {
-                        ClearItemRefs();
-                    }
-
-                    if (tasksItems is not null && tasksItems.Any())
-                    {
-                        var closestTaskItem = tasksItems.Aggregate(
-                            (x1, x2) =>
-                                Vector2.Distance(x1.ZoomedPosition, mouse)
-                                < Vector2.Distance(x2.ZoomedPosition, mouse)
-                                    ? x1
-                                    : x2
-                        ); // Get quest item object 'closest' to mouse position
-
-                        if (closestTaskItem is not null)
-                        {
-                            var dist = Vector2.Distance(closestTaskItem.ZoomedPosition, mouse);
-                            if (dist < (12 * _uiScale)) // See if 'closest object' is close enough.
-                            {
-                                _closestTaskItemToMouse = closestTaskItem; // Save ref to closest quest item object
-                            }
-                            else
-                                ClearTaskItemRefs();
-                        }
-                        else
-                            ClearTaskItemRefs();
-                    }
-                    else
-                        ClearTaskItemRefs();
-
-                    if (tasksZones is not null && tasksZones.Any())
-                    {
-                        var closestTaskZone = tasksZones.Aggregate(
-                            (x1, x2) =>
-                                Vector2.Distance(x1.ZoomedPosition, mouse)
-                                < Vector2.Distance(x2.ZoomedPosition, mouse)
-                                    ? x1
-                                    : x2
-                        ); // Get task zone 'closest' to mouse position
-
-                        if (closestTaskZone is not null)
-                        {
-                            var dist = Vector2.Distance(closestTaskZone.ZoomedPosition, mouse);
-                            if (dist < 12) // See if 'closest zone' is close enough.
-                            {
-                                _closestTaskZoneToMouse = closestTaskZone; // Save ref to closest zone object
-                            }
-                            else
-                                ClearTaskZoneRefs();
-                        }
-                        else
-                            ClearTaskZoneRefs();
-                    }
-                    else
-                        ClearTaskZoneRefs();
+                        _mouseOverGroup = null;
                 }
                 else
-                {
                     ClearPlayerRefs();
+
+                if (_config.ProcessLoot && _config.ShowLoot)
+                    _closestItemToMouse = FindClosestObject(loot, mouse, x => x.ZoomedPosition, 12 * _uiScale);
+                else
                     ClearItemRefs();
+
+                _closestTaskItemToMouse = FindClosestObject(tasksItems, mouse, x => x.ZoomedPosition, 12 * _uiScale);
+                if (_closestTaskItemToMouse == null)
                     ClearTaskItemRefs();
+
+                _closestTaskZoneToMouse = FindClosestObject(tasksZones, mouse, x => x.ZoomedPosition, 12);
+                if (_closestTaskZoneToMouse == null)
                     ClearTaskZoneRefs();
-                }
             }
             else if (this.InGame && Memory.LocalPlayer is null)
             {
@@ -2088,7 +2010,14 @@ namespace eft_dma_radar
 
         private void swQuestHelper_CheckedChanged(object sender, EventArgs e)
         {
-            _config.QuestHelper = swQuestHelper.Checked;
+            var enabled = swQuestHelper.Checked;
+            _config.QuestHelper = enabled;
+            swUnknownQuestItems.Visible = enabled;
+        }
+
+        private void swUnknownQuestItems_CheckedChanged(object sender, EventArgs e)
+        {
+            _config.UnknownQuestItems = swUnknownQuestItems.Checked;
         }
 
         private void swAimview_CheckedChanged(object sender, EventArgs e)

@@ -496,9 +496,26 @@ namespace eft_dma_radar
                             {
                                 if (this.QuestItems is not null)
                                 {
-                                    var questItem = this.QuestItems.Where(x => x.Id == savedLootItem.ItemID).FirstOrDefault();
+                                    var questItem = this.QuestItems.Where(x => x?.Id == savedLootItem.ItemID).FirstOrDefault();
+
                                     if (questItem is not null)
                                         questItem.Position = savedLootItem.Position;
+                                    else
+                                    {
+                                        if (!TarkovDevManager.AllQuestItems.TryGetValue(savedLootItem.ItemID, out var newQuestItem))
+                                        {
+                                            this.QuestItems.Add(new QuestItem()
+                                            {
+                                                Id = savedLootItem.ItemID,
+                                                Name = "????",
+                                                ShortName = "????",
+                                                NormalizedName = "????",
+                                                TaskName = "Unknown task",
+                                                Description = "Unknown task",
+                                                Position = savedLootItem.Position
+                                            });
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -582,8 +599,11 @@ namespace eft_dma_radar
                 });
             }
 
-            this.Loot = new(loot);
-            this.ApplyFilter();
+            if (hasCachedItems)
+            {
+                this.Loot = new(loot);
+                this.ApplyFilter();
+            }
         }
 
         private LootCorpse CreateLootableCorpse(string name, ulong interactiveClass, Vector3 position, ulong slots)

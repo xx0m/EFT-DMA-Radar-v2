@@ -130,6 +130,7 @@
             swRadarEnemyCount = new MaterialSkin.Controls.MaterialSwitch();
             sldrFontSize = new MaterialSkin.Controls.MaterialSlider();
             cboFont = new MaterialSkin.Controls.MaterialComboBox();
+            swUnknownQuestItems = new MaterialSkin.Controls.MaterialSwitch();
             sldrThermalColorCoefficient = new MaterialSkin.Controls.MaterialSlider();
             sldrMinTemperature = new MaterialSkin.Controls.MaterialSlider();
             sldrThermalRampShift = new MaterialSkin.Controls.MaterialSlider();
@@ -461,7 +462,7 @@
             // 
             swQuestHelper.Depth = 0;
             swQuestHelper.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
-            swQuestHelper.Location = new Point(172, 45);
+            swQuestHelper.Location = new Point(172, 94);
             swQuestHelper.Margin = new Padding(0);
             swQuestHelper.MouseLocation = new Point(-1, -1);
             swQuestHelper.MouseState = MaterialSkin.MouseState.HOVER;
@@ -478,7 +479,7 @@
             // 
             swHoverArmor.Depth = 0;
             swHoverArmor.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
-            swHoverArmor.Location = new Point(172, 85);
+            swHoverArmor.Location = new Point(172, 45);
             swHoverArmor.Margin = new Padding(0);
             swHoverArmor.MouseLocation = new Point(-1, -1);
             swHoverArmor.MouseState = MaterialSkin.MouseState.HOVER;
@@ -2399,6 +2400,23 @@
             cboFont.UseTallSize = false;
             cboFont.SelectedIndexChanged += cboFont_SelectedIndexChanged;
             // 
+            // swUnknownQuestItems
+            // 
+            swUnknownQuestItems.Depth = 0;
+            swUnknownQuestItems.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swUnknownQuestItems.Location = new Point(327, 94);
+            swUnknownQuestItems.Margin = new Padding(0);
+            swUnknownQuestItems.MouseLocation = new Point(-1, -1);
+            swUnknownQuestItems.MouseState = MaterialSkin.MouseState.HOVER;
+            swUnknownQuestItems.Name = "swUnknownQuestItems";
+            swUnknownQuestItems.Ripple = true;
+            swUnknownQuestItems.Size = new Size(220, 28);
+            swUnknownQuestItems.TabIndex = 40;
+            swUnknownQuestItems.Text = "Unknown Quest Items";
+            toolTip.SetToolTip(swUnknownQuestItems, "Displays all active quest tasks/items on the map. Must use 'Show Loot' to display quest items.");
+            swUnknownQuestItems.UseVisualStyleBackColor = true;
+            swUnknownQuestItems.CheckedChanged += swUnknownQuestItems_CheckedChanged;
+            // 
             // sldrThermalColorCoefficient
             // 
             sldrThermalColorCoefficient.Depth = 0;
@@ -2921,6 +2939,7 @@
             // mcSettingsGeneralUI
             // 
             mcSettingsGeneralUI.BackColor = Color.FromArgb(255, 255, 255);
+            mcSettingsGeneralUI.Controls.Add(swUnknownQuestItems);
             mcSettingsGeneralUI.Controls.Add(cboFont);
             mcSettingsGeneralUI.Controls.Add(sldrFontSize);
             mcSettingsGeneralUI.Controls.Add(txtTeammateID);
@@ -5310,6 +5329,7 @@
         private FlowLayoutPanel flpPlayerLoadoutsAI;
         private MaterialSkin.Controls.MaterialListView lstFactionEntries;
         private ColumnHeader colFactionsAIName;
+        private MaterialSkin.Controls.MaterialSwitch swUnknownQuestItems;
     }
 }
 

@@ -101,7 +101,6 @@ namespace eft_dma_radar
                                 }
                                 if (objective.Type == "findQuestItem")
                                 {
-                                    //Add to list
                                     questItems.Add(new QuestItem
                                     {
                                         Id = objective.QuestItem.Id,
@@ -119,8 +118,8 @@ namespace eft_dma_radar
                 }
                 catch {}
             }
-            QuestZones = new(questZones); // update readonly ref
-            QuestItems = new(questItems); // update readonly ref
+            QuestZones = new(questZones);
+            QuestItems = new(questItems);
         }
     }
 

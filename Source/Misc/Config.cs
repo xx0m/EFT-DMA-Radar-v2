@@ -12,6 +12,9 @@ namespace eft_dma_radar
         [JsonPropertyName("aimviewFOV")]
         public float AimViewFOV { get; set; }
 
+        [JsonPropertyName("unknownQuestItems")]
+        public bool UnknownQuestItems { get; set; }
+
         [JsonPropertyName("autoLootRefresh")]
         public bool AutoLootRefresh { get; set; }
 
@@ -246,6 +249,7 @@ namespace eft_dma_radar
         {
             AimviewEnabled = false;
             AimViewFOV = 30;
+            UnknownQuestItems = false;
             AutoLootRefresh = false;
             AutoRefreshSettings = new Dictionary<string, int>
             {
