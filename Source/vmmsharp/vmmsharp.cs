@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using eft_dma_radar;
 
 /*  
  *  C# API wrapper 'vmmsharp' for MemProcFS 'vmm.dll' and LeechCore 'leechcore.dll' APIs.
@@ -477,7 +478,7 @@ namespace vmmsharp
             IntPtr pMEM, pMEM_f, pMEM_qwA, pMEM_pb, pppMEMs;
             for (i = 0; i < MEMs.Length; i++)
             {
-                if ((MEMs[i].pb is null) || (MEMs[i].pb.Length != 0x1000))
+                if ((MEMs[i].pb == null) || (MEMs[i].pb.Length != 0x1000))
                 {
                     return;
                 }
@@ -545,7 +546,7 @@ namespace vmmsharp
                 uint cbDataOut;
                 IntPtr PtrDataOut;
                 DataOut = null;
-                if (DataIn is null)
+                if (DataIn == null)
                 {
                     result = lci.LcCommand(hLC, fOption, 0, null, out PtrDataOut, out cbDataOut);
                 }
@@ -909,8 +910,18 @@ namespace vmmsharp
         /// <param name="flags">VMM Flags.</param>
         /// <returns>Managed byte array containing number of bytes read.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe byte[] MemRead(uint pid, ulong qwA, uint cb, uint flags = 0) =>
-            MemReadArray<byte>(pid, qwA, cb, flags);
+        public unsafe byte[] MemRead(uint pid, ulong qwA, uint cb, uint flags = 0)
+        {
+            try
+            {
+                return MemReadArray<byte>(pid, qwA, cb, flags);
+            }
+            catch (Exception ex)
+            {
+                throw new DMAException($"ERROR MemRead - {ex.Message}\n{ex.StackTrace}");
+            }
+        }
+            
 
         /// <summary>
         /// Read Memory from a Virtual Address into unmanaged memory.
@@ -978,22 +989,30 @@ namespace vmmsharp
         public unsafe T[] MemReadArray<T>(uint pid, ulong qwA, uint count, uint flags = 0)
             where T : unmanaged
         {
-            uint cb = (uint)sizeof(T) * count;
-            uint cbRead;
-            T[] data = new T[count];
-            fixed (T* pb = data)
+            try
             {
-                if (!vmmi.VMMDLL_MemReadEx(hVMM, pid, qwA, (byte*)pb, cb, out cbRead, flags))
+                uint cb = (uint)sizeof(T) * count;
+                uint cbRead;
+                T[] data = new T[count];
+                fixed (T* pb = data)
                 {
-                    return null;
+                    if (!vmmi.VMMDLL_MemReadEx(hVMM, pid, qwA, (byte*)pb, cb, out cbRead, flags))
+                    {
+                        return null;
+                    }
+
                 }
+                if (cbRead != cb)
+                {
+                    int partialCount = (int)cbRead / sizeof(T);
+                    Array.Resize<T>(ref data, partialCount);
+                }
+                return data;
             }
-            if (cbRead != cb)
+            catch (Exception ex)
             {
-                int partialCount = (int)cbRead / sizeof(T);
-                Array.Resize<T>(ref data, partialCount);
+                return null;
             }
-            return data;
         }
 
         /// <summary>
@@ -1122,18 +1141,18 @@ namespace vmmsharp
         public unsafe ulong[] MemSearchM(uint pid, VMMDLL_MEM_SEARCHENTRY[] search, ulong vaMin = 0, ulong vaMax = 0xffffffffffffffff, uint cMaxResult = 0x10000, uint ReadFlags = 0)
         {
             // checks:
-            if (search is null || search.Length == 0 || search.Length > 16) { return new ulong[0]; }
+            if (search == null || search.Length == 0 || search.Length > 16) { return new ulong[0]; }
             // check search items and convert:
             vmmi.VMMDLL_MEM_SEARCH_CONTEXT_SEARCHENTRY[] es = new vmmi.VMMDLL_MEM_SEARCH_CONTEXT_SEARCHENTRY[16];
             for (int i = 0; i < search.Length; i++)
             {
-                if (search[i].pbSearch is null || search[i].pbSearch.Length == 0 || search[i].pbSearch.Length > 32) { return new ulong[0]; }
-                if ((search[i].pbSearchSkipMask is not null) && (search[i].pbSearchSkipMask.Length > search[i].pbSearch.Length)) { return new ulong[0]; }
+                if (search[i].pbSearch == null || search[i].pbSearch.Length == 0 || search[i].pbSearch.Length > 32) { return new ulong[0]; }
+                if ((search[i].pbSearchSkipMask != null) && (search[i].pbSearchSkipMask.Length > search[i].pbSearch.Length)) { return new ulong[0]; }
                 es[i].cbAlign = search[i].cbAlign;
                 es[i].cb = (uint)search[i].pbSearch.Length;
                 es[i].pb = new byte[32];
                 search[i].pbSearch.CopyTo(es[i].pb, 0);
-                if (search[i].pbSearchSkipMask is not null && search[i].pbSearchSkipMask.Length > 0)
+                if (search[i].pbSearchSkipMask != null && search[i].pbSearchSkipMask.Length > 0)
                 {
                     es[i].pbSkipMask = new byte[32];
                     search[i].pbSearchSkipMask.CopyTo(es[i].pbSkipMask, 0);
@@ -1266,7 +1285,7 @@ namespace vmmsharp
         public unsafe string ProcessGetInformationString(uint pid, uint fOptionString)
         {
             byte* pb = vmmi.VMMDLL_ProcessGetInformationString(hVMM, pid, fOptionString);
-            if (pb is null) { return ""; }
+            if (pb == null) { return ""; }
             string s = Marshal.PtrToStringAnsi((System.IntPtr)pb);
             vmmi.VMMDLL_MemFree(pb);
             return s;

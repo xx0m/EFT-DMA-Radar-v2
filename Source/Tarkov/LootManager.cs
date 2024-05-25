@@ -139,11 +139,11 @@ namespace eft_dma_radar
         {
             if (forceRefresh)
             {
-                await Task.Run(async () => { await this.StopAutoRefresh(); });
+                await this.StopAutoRefresh();
 
                 await Task.Run(() =>
                 {
-                    if (this._config.ProcessLoot && this._config.AutoLootRefresh)
+                    if (this._config.ProcessLoot && this._config.AutoLootRefresh && this.autoRefreshThread is null)
                     {
                         this.StartAutoRefresh();
                     }
@@ -382,7 +382,7 @@ namespace eft_dma_radar
 
                         try
                         {
-                            Vector3 position = new Transform(posToTransform, false).GetPosition(null);
+                            Vector3 position = new Transform(posToTransform, false).GetPosition();
 
                             var playerNameSplit = containerName.Split('(', ')');
                             var playerName = playerNameSplit.Count() > 1 ? playerNameSplit[1] : playerNameSplit[0];
@@ -390,10 +390,7 @@ namespace eft_dma_radar
 
                             this.savedLootCorpsesInfo.Add(new CorpseInfo { InteractiveClass = interactiveClass, Position = position, Slots = slots, PlayerName = playerName });
                         }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine($"Lootable Corpse Error - {ex.Message}\n{ex.StackTrace}");
-                        }
+                        catch { }
                     }
                 }
                 else if (className.Equals("LootableContainer", StringComparison.OrdinalIgnoreCase))
@@ -406,17 +403,14 @@ namespace eft_dma_radar
                             return;
                         try
                         {
-                            Vector3 position = new Transform(posToTransform, false).GetPosition(null);
+                            Vector3 position = new Transform(posToTransform, false).GetPosition();
 
                             var containerID = Memory.ReadUnityString(containerIDPtr);
                             var containerExists = TarkovDevManager.AllLootContainers.TryGetValue(containerID, out var container) && container is not null;
 
                             this.savedLootContainersInfo.Add(new ContainerInfo { InteractiveClass = interactiveClass, Position = position, Name = containerExists ? container.Name : containerName, Grids = grids });
                         }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine($"Lootable Container Error - {ex.Message}\n{ex.StackTrace}");
-                        }
+                        catch { }
                     }
                 }
                 else if (className.Equals("ObservedLootItem", StringComparison.OrdinalIgnoreCase)) // handle loose weapons / gear
@@ -440,7 +434,7 @@ namespace eft_dma_radar
 
                             if (isSearchableItem && !savedSearchableExists)
                             {
-                                Vector3 position = new Transform(posToTransform, false).GetPosition(null);
+                                Vector3 position = new Transform(posToTransform, false).GetPosition();
                                 var container = new ContainerInfo { InteractiveClass = interactiveClass, Position = position, Name = lootItem.Item.shortName ?? containerName };
 
                                 if (validScatterMap.Results[i][22].TryGetResult<ulong>(out var slots))
@@ -456,14 +450,11 @@ namespace eft_dma_radar
                             }
                             else if (!savedItemExists)
                             {
-                                Vector3 position = new Transform(posToTransform, false).GetPosition(null);
+                                Vector3 position = new Transform(posToTransform, false).GetPosition();
                                 this.savedLootItemsInfo.Add(new LootItemInfo { InteractiveClass = interactiveClass, QuestItem = isQuestItem, Position = position, ItemID = id });
                             }
                         }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine($"Lootable Item Error - {ex.Message}\n{ex.StackTrace}");
-                        }
+                        catch { }
                     }
                 }
             });
@@ -888,7 +879,7 @@ namespace eft_dma_radar
 
                 containerLoot.AddRange(newCachedLootItems);
             }
-            catch { }
+            catch {}
         }
 
         private void ProcessGrid(ulong gridsArrayPtr, Vector3 position, List<LootItem> cachedLootItems, int recurseDepth)
@@ -955,6 +946,7 @@ namespace eft_dma_radar
                             return;
                         if (!innerScatterReadMap.Results[j][3].TryGetResult<ulong>(out var childItemIdPtr))
                             return;
+
                         var childItemId = Memory.ReadUnityString(childItemIdPtr);
 
                         if (childItemId is null)
@@ -978,7 +970,7 @@ namespace eft_dma_radar
                             cachedLootItems.Add(newItem);
                         }
 
-                        if (!innerScatterReadMap.Results[j][2].TryGetResult<ulong>(out var childGridsArrayPtr))
+                        if (!innerScatterReadMap.Results[j][2].TryGetResult<ulong>(out var childGridsArrayPtr) || childGridsArrayPtr == 0)
                             return;
 
                         this.GetItemsInGrid(childGridsArrayPtr, position, cachedLootItems, recurseDepth + 1);
@@ -1278,7 +1270,7 @@ namespace eft_dma_radar
         {
             return
             lootItems
-            .GroupBy(lootItem => lootItem.ID)
+            .GroupBy(lootItem => lootItem?.ID)
             .Select(group =>
             {
                 var count = group.Count();
@@ -1317,95 +1309,6 @@ namespace eft_dma_radar
     }
 
     #region Classes
-    //Helper class or struct
-    public class MemArray
-    {
-        public ulong Address
-        {
-            get;
-        }
-        public int Count
-        {
-            get;
-        }
-        public ulong[] Data
-        {
-            get;
-        }
-
-        public MemArray(ulong address)
-        {
-            var type = typeof(ulong);
-
-            Address = address;
-            Count = Memory.ReadValue<int>(address + Offsets.UnityList.Count);
-            var arrayBase = address + Offsets.UnityListBase.Start;
-            var tSize = (uint)Marshal.SizeOf(type);
-
-            // Rudimentary sanity check
-            if (Count > 4096 || Count < 0)
-                Count = 0;
-
-            var retArray = new ulong[Count];
-            var buf = Memory.ReadBuffer(arrayBase, Count * (int)tSize);
-
-            for (uint i = 0; i < Count; i++)
-            {
-                var index = i * tSize;
-                var t = MemoryMarshal.Read<ulong>(buf.Slice((int)index, (int)tSize));
-                if (t == 0x0) throw new NullPtrException();
-                retArray[i] = t;
-            }
-
-            Data = retArray;
-        }
-    }
-
-    //Helper class or struct
-    public class MemList
-    {
-        public ulong Address
-        {
-            get;
-        }
-
-        public int Count
-        {
-            get;
-        }
-
-        public List<ulong> Data
-        {
-            get;
-        }
-
-        public MemList(ulong address)
-        {
-            var type = typeof(ulong);
-
-            Address = address;
-            Count = Memory.ReadValue<int>(address + Offsets.UnityList.Count);
-
-            if (Count > 4096 || Count < 0)
-                Count = 0;
-
-            var arrayBase = Memory.ReadPtr(address + Offsets.UnityList.Base) + Offsets.UnityListBase.Start;
-            var tSize = (uint)Marshal.SizeOf(type);
-            var retList = new List<ulong>(Count);
-            var buf = Memory.ReadBuffer(arrayBase, Count * (int)tSize);
-
-            for (uint i = 0; i < Count; i++)
-            {
-                var index = i * tSize;
-                var t = MemoryMarshal.Read<ulong>(buf.Slice((int)index, (int)tSize));
-                if (t == 0x0) throw new NullPtrException();
-                retList.Add(t);
-            }
-
-            Data = retList;
-        }
-    }
-
     public abstract class LootableObject
     {
         public string Name { get; set; }

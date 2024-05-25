@@ -444,7 +444,7 @@
             // swExfilNames
             // 
             swExfilNames.Depth = 0;
-            swExfilNames.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swExfilNames.Font = new Font("Segoe UI", 9F);
             swExfilNames.Location = new Point(15, 85);
             swExfilNames.Margin = new Padding(0);
             swExfilNames.MouseLocation = new Point(-1, -1);
@@ -461,7 +461,7 @@
             // swQuestHelper
             // 
             swQuestHelper.Depth = 0;
-            swQuestHelper.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swQuestHelper.Font = new Font("Segoe UI", 9F);
             swQuestHelper.Location = new Point(172, 94);
             swQuestHelper.Margin = new Padding(0);
             swQuestHelper.MouseLocation = new Point(-1, -1);
@@ -478,7 +478,7 @@
             // swHoverArmor
             // 
             swHoverArmor.Depth = 0;
-            swHoverArmor.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swHoverArmor.Font = new Font("Segoe UI", 9F);
             swHoverArmor.Location = new Point(172, 45);
             swHoverArmor.Margin = new Padding(0);
             swHoverArmor.MouseLocation = new Point(-1, -1);
@@ -495,7 +495,7 @@
             // swNames
             // 
             swNames.Depth = 0;
-            swNames.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swNames.Font = new Font("Segoe UI", 9F);
             swNames.Location = new Point(487, 44);
             swNames.Margin = new Padding(0);
             swNames.MouseLocation = new Point(-1, -1);
@@ -512,7 +512,7 @@
             // swAimview
             // 
             swAimview.Depth = 0;
-            swAimview.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swAimview.Font = new Font("Segoe UI", 9F);
             swAimview.Location = new Point(327, 44);
             swAimview.Margin = new Padding(0);
             swAimview.MouseLocation = new Point(-1, -1);
@@ -529,7 +529,7 @@
             // swShowLoot
             // 
             swShowLoot.Depth = 0;
-            swShowLoot.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swShowLoot.Font = new Font("Segoe UI", 9F);
             swShowLoot.Location = new Point(15, 45);
             swShowLoot.Margin = new Padding(0);
             swShowLoot.MouseLocation = new Point(-1, -1);
@@ -549,7 +549,7 @@
             btnRestartRadar.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             btnRestartRadar.Density = MaterialSkin.Controls.MaterialButton.MaterialButtonDensity.Default;
             btnRestartRadar.Depth = 0;
-            btnRestartRadar.Font = new Font("Segoe UI", 8F, FontStyle.Regular, GraphicsUnit.Point);
+            btnRestartRadar.Font = new Font("Segoe UI", 8F);
             btnRestartRadar.HighEmphasis = true;
             btnRestartRadar.Icon = null;
             btnRestartRadar.Location = new Point(331, 77);
@@ -591,7 +591,7 @@
             // swMapHelper
             // 
             swMapHelper.Depth = 0;
-            swMapHelper.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swMapHelper.Font = new Font("Segoe UI", 9F);
             swMapHelper.Location = new Point(15, 45);
             swMapHelper.Margin = new Padding(0);
             swMapHelper.MouseLocation = new Point(-1, -1);
@@ -608,7 +608,7 @@
             // swMasterSwitch
             // 
             swMasterSwitch.Depth = 0;
-            swMasterSwitch.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swMasterSwitch.Font = new Font("Segoe UI", 9F);
             swMasterSwitch.Location = new Point(15, 14);
             swMasterSwitch.Margin = new Padding(0);
             swMasterSwitch.MouseLocation = new Point(-1, -1);
@@ -625,7 +625,7 @@
             // swInfiniteStamina
             // 
             swInfiniteStamina.Depth = 0;
-            swInfiniteStamina.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swInfiniteStamina.Font = new Font("Segoe UI", 9F);
             swInfiniteStamina.Location = new Point(137, 45);
             swInfiniteStamina.Margin = new Padding(0);
             swInfiniteStamina.MouseLocation = new Point(-1, -1);
@@ -697,7 +697,7 @@
             // swExtendedReach
             // 
             swExtendedReach.Depth = 0;
-            swExtendedReach.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swExtendedReach.Font = new Font("Segoe UI", 9F);
             swExtendedReach.Location = new Point(333, 45);
             swExtendedReach.Margin = new Padding(0);
             swExtendedReach.MouseLocation = new Point(-1, -1);
@@ -714,7 +714,7 @@
             // swFreezeTime
             // 
             swFreezeTime.Depth = 0;
-            swFreezeTime.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swFreezeTime.Font = new Font("Segoe UI", 9F);
             swFreezeTime.Location = new Point(15, 85);
             swFreezeTime.Margin = new Padding(0);
             swFreezeTime.MouseLocation = new Point(-1, -1);
@@ -732,7 +732,7 @@
             // 
             swChams.Depth = 0;
             swChams.Enabled = false;
-            swChams.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swChams.Font = new Font("Segoe UI", 9F);
             swChams.Location = new Point(15, 45);
             swChams.Margin = new Padding(0);
             swChams.MouseLocation = new Point(-1, -1);
@@ -749,7 +749,7 @@
             // swNightVision
             // 
             swNightVision.Depth = 0;
-            swNightVision.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swNightVision.Font = new Font("Segoe UI", 9F);
             swNightVision.Location = new Point(381, 85);
             swNightVision.Margin = new Padding(0);
             swNightVision.MouseLocation = new Point(-1, -1);
@@ -766,7 +766,7 @@
             // swOpticalThermal
             // 
             swOpticalThermal.Depth = 0;
-            swOpticalThermal.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swOpticalThermal.Font = new Font("Segoe UI", 9F);
             swOpticalThermal.Location = new Point(194, 85);
             swOpticalThermal.Margin = new Padding(0);
             swOpticalThermal.MouseLocation = new Point(-1, -1);
@@ -783,7 +783,7 @@
             // swThermalVision
             // 
             swThermalVision.Depth = 0;
-            swThermalVision.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swThermalVision.Font = new Font("Segoe UI", 9F);
             swThermalVision.Location = new Point(14, 85);
             swThermalVision.Margin = new Padding(0);
             swThermalVision.MouseLocation = new Point(-1, -1);
@@ -819,7 +819,7 @@
             // swNoVisor
             // 
             swNoVisor.Depth = 0;
-            swNoVisor.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swNoVisor.Font = new Font("Segoe UI", 9F);
             swNoVisor.Location = new Point(381, 45);
             swNoVisor.Margin = new Padding(0);
             swNoVisor.MouseLocation = new Point(-1, -1);
@@ -836,7 +836,7 @@
             // swInstantADS
             // 
             swInstantADS.Depth = 0;
-            swInstantADS.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swInstantADS.Font = new Font("Segoe UI", 9F);
             swInstantADS.Location = new Point(194, 45);
             swInstantADS.Margin = new Padding(0);
             swInstantADS.MouseLocation = new Point(-1, -1);
@@ -853,7 +853,7 @@
             // swNoRecoilSway
             // 
             swNoRecoilSway.Depth = 0;
-            swNoRecoilSway.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swNoRecoilSway.Font = new Font("Segoe UI", 9F);
             swNoRecoilSway.Location = new Point(15, 45);
             swNoRecoilSway.Margin = new Padding(0);
             swNoRecoilSway.MouseLocation = new Point(-1, -1);
@@ -962,7 +962,7 @@
             // swCorpses
             // 
             swCorpses.Depth = 0;
-            swCorpses.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swCorpses.Font = new Font("Segoe UI", 9F);
             swCorpses.Location = new Point(15, 85);
             swCorpses.Margin = new Padding(0);
             swCorpses.MouseLocation = new Point(-1, -1);
@@ -979,7 +979,7 @@
             // swFilteredOnly
             // 
             swFilteredOnly.Depth = 0;
-            swFilteredOnly.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swFilteredOnly.Font = new Font("Segoe UI", 9F);
             swFilteredOnly.Location = new Point(177, 45);
             swFilteredOnly.Margin = new Padding(0);
             swFilteredOnly.MouseLocation = new Point(-1, -1);
@@ -996,7 +996,7 @@
             // swSubItems
             // 
             swSubItems.Depth = 0;
-            swSubItems.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swSubItems.Font = new Font("Segoe UI", 9F);
             swSubItems.Location = new Point(334, 85);
             swSubItems.Margin = new Padding(0);
             swSubItems.MouseLocation = new Point(-1, -1);
@@ -1013,7 +1013,7 @@
             // swItemValue
             // 
             swItemValue.Depth = 0;
-            swItemValue.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swItemValue.Font = new Font("Segoe UI", 9F);
             swItemValue.Location = new Point(177, 85);
             swItemValue.Margin = new Padding(0);
             swItemValue.MouseLocation = new Point(-1, -1);
@@ -1030,7 +1030,7 @@
             // swAutoRefresh
             // 
             swAutoRefresh.Depth = 0;
-            swAutoRefresh.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swAutoRefresh.Font = new Font("Segoe UI", 9F);
             swAutoRefresh.Location = new Point(15, 126);
             swAutoRefresh.Margin = new Padding(0);
             swAutoRefresh.MouseLocation = new Point(-1, -1);
@@ -1050,7 +1050,7 @@
             btnRefreshLoot.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             btnRefreshLoot.Density = MaterialSkin.Controls.MaterialButton.MaterialButtonDensity.Default;
             btnRefreshLoot.Depth = 0;
-            btnRefreshLoot.Font = new Font("Segoe UI", 8F, FontStyle.Regular, GraphicsUnit.Point);
+            btnRefreshLoot.Font = new Font("Segoe UI", 8F);
             btnRefreshLoot.HighEmphasis = true;
             btnRefreshLoot.Icon = null;
             btnRefreshLoot.Location = new Point(466, 45);
@@ -1363,7 +1363,7 @@
             btnResetTheme.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             btnResetTheme.Density = MaterialSkin.Controls.MaterialButton.MaterialButtonDensity.Default;
             btnResetTheme.Depth = 0;
-            btnResetTheme.Font = new Font("Segoe UI", 8F, FontStyle.Regular, GraphicsUnit.Point);
+            btnResetTheme.Font = new Font("Segoe UI", 8F);
             btnResetTheme.HighEmphasis = true;
             btnResetTheme.Icon = null;
             btnResetTheme.Location = new Point(74, 273);
@@ -1386,7 +1386,7 @@
             btnMapSetupApply.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             btnMapSetupApply.Density = MaterialSkin.Controls.MaterialButton.MaterialButtonDensity.Default;
             btnMapSetupApply.Depth = 0;
-            btnMapSetupApply.Font = new Font("Segoe UI", 8F, FontStyle.Regular, GraphicsUnit.Point);
+            btnMapSetupApply.Font = new Font("Segoe UI", 8F);
             btnMapSetupApply.HighEmphasis = true;
             btnMapSetupApply.Icon = null;
             btnMapSetupApply.Location = new Point(369, 45);
@@ -1941,7 +1941,7 @@
             // swLootFilterActive
             // 
             swLootFilterActive.Depth = 0;
-            swLootFilterActive.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swLootFilterActive.Font = new Font("Segoe UI", 9F);
             swLootFilterActive.Location = new Point(384, 135);
             swLootFilterActive.Margin = new Padding(0);
             swLootFilterActive.MouseLocation = new Point(-1, -1);
@@ -2000,7 +2000,7 @@
             // swMaxEndurance
             // 
             swMaxEndurance.Depth = 0;
-            swMaxEndurance.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swMaxEndurance.Font = new Font("Segoe UI", 9F);
             swMaxEndurance.Location = new Point(15, 45);
             swMaxEndurance.Margin = new Padding(0);
             swMaxEndurance.MouseLocation = new Point(-1, -1);
@@ -2017,7 +2017,7 @@
             // swMaxStrength
             // 
             swMaxStrength.Depth = 0;
-            swMaxStrength.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swMaxStrength.Font = new Font("Segoe UI", 9F);
             swMaxStrength.Location = new Point(174, 45);
             swMaxStrength.Margin = new Padding(0);
             swMaxStrength.MouseLocation = new Point(-1, -1);
@@ -2034,7 +2034,7 @@
             // swMaxVitality
             // 
             swMaxVitality.Depth = 0;
-            swMaxVitality.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swMaxVitality.Font = new Font("Segoe UI", 9F);
             swMaxVitality.Location = new Point(375, 45);
             swMaxVitality.Margin = new Padding(0);
             swMaxVitality.MouseLocation = new Point(-1, -1);
@@ -2051,7 +2051,7 @@
             // swMaxHealth
             // 
             swMaxHealth.Depth = 0;
-            swMaxHealth.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swMaxHealth.Font = new Font("Segoe UI", 9F);
             swMaxHealth.Location = new Point(15, 85);
             swMaxHealth.Margin = new Padding(0);
             swMaxHealth.MouseLocation = new Point(-1, -1);
@@ -2068,7 +2068,7 @@
             // swMaxStressResistance
             // 
             swMaxStressResistance.Depth = 0;
-            swMaxStressResistance.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swMaxStressResistance.Font = new Font("Segoe UI", 9F);
             swMaxStressResistance.Location = new Point(174, 85);
             swMaxStressResistance.Margin = new Padding(0);
             swMaxStressResistance.MouseLocation = new Point(-1, -1);
@@ -2085,7 +2085,7 @@
             // swMaxMetabolism
             // 
             swMaxMetabolism.Depth = 0;
-            swMaxMetabolism.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swMaxMetabolism.Font = new Font("Segoe UI", 9F);
             swMaxMetabolism.Location = new Point(375, 85);
             swMaxMetabolism.Margin = new Padding(0);
             swMaxMetabolism.MouseLocation = new Point(-1, -1);
@@ -2102,7 +2102,7 @@
             // swMaxImmunity
             // 
             swMaxImmunity.Depth = 0;
-            swMaxImmunity.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swMaxImmunity.Font = new Font("Segoe UI", 9F);
             swMaxImmunity.Location = new Point(15, 125);
             swMaxImmunity.Margin = new Padding(0);
             swMaxImmunity.MouseLocation = new Point(-1, -1);
@@ -2119,7 +2119,7 @@
             // swMaxPerception
             // 
             swMaxPerception.Depth = 0;
-            swMaxPerception.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swMaxPerception.Font = new Font("Segoe UI", 9F);
             swMaxPerception.Location = new Point(174, 125);
             swMaxPerception.Margin = new Padding(0);
             swMaxPerception.MouseLocation = new Point(-1, -1);
@@ -2136,7 +2136,7 @@
             // swMaxIntellect
             // 
             swMaxIntellect.Depth = 0;
-            swMaxIntellect.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swMaxIntellect.Font = new Font("Segoe UI", 9F);
             swMaxIntellect.Location = new Point(375, 125);
             swMaxIntellect.Margin = new Padding(0);
             swMaxIntellect.MouseLocation = new Point(-1, -1);
@@ -2153,7 +2153,7 @@
             // swMaxThrowables
             // 
             swMaxThrowables.Depth = 0;
-            swMaxThrowables.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swMaxThrowables.Font = new Font("Segoe UI", 9F);
             swMaxThrowables.Location = new Point(375, 165);
             swMaxThrowables.Margin = new Padding(0);
             swMaxThrowables.MouseLocation = new Point(-1, -1);
@@ -2170,7 +2170,7 @@
             // swMaxSurgery
             // 
             swMaxSurgery.Depth = 0;
-            swMaxSurgery.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swMaxSurgery.Font = new Font("Segoe UI", 9F);
             swMaxSurgery.Location = new Point(15, 205);
             swMaxSurgery.Margin = new Padding(0);
             swMaxSurgery.MouseLocation = new Point(-1, -1);
@@ -2187,7 +2187,7 @@
             // swMaxCovertMovement
             // 
             swMaxCovertMovement.Depth = 0;
-            swMaxCovertMovement.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swMaxCovertMovement.Font = new Font("Segoe UI", 9F);
             swMaxCovertMovement.Location = new Point(174, 165);
             swMaxCovertMovement.Margin = new Padding(0);
             swMaxCovertMovement.MouseLocation = new Point(-1, -1);
@@ -2204,7 +2204,7 @@
             // swMaxSearch
             // 
             swMaxSearch.Depth = 0;
-            swMaxSearch.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swMaxSearch.Font = new Font("Segoe UI", 9F);
             swMaxSearch.Location = new Point(174, 205);
             swMaxSearch.Margin = new Padding(0);
             swMaxSearch.MouseLocation = new Point(-1, -1);
@@ -2221,7 +2221,7 @@
             // swMaxMagDrills
             // 
             swMaxMagDrills.Depth = 0;
-            swMaxMagDrills.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swMaxMagDrills.Font = new Font("Segoe UI", 9F);
             swMaxMagDrills.Location = new Point(375, 205);
             swMaxMagDrills.Margin = new Padding(0);
             swMaxMagDrills.MouseLocation = new Point(-1, -1);
@@ -2238,7 +2238,7 @@
             // swMaxLightVests
             // 
             swMaxLightVests.Depth = 0;
-            swMaxLightVests.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swMaxLightVests.Font = new Font("Segoe UI", 9F);
             swMaxLightVests.Location = new Point(15, 245);
             swMaxLightVests.Margin = new Padding(0);
             swMaxLightVests.MouseLocation = new Point(-1, -1);
@@ -2255,7 +2255,7 @@
             // swMaxHeavyVests
             // 
             swMaxHeavyVests.Depth = 0;
-            swMaxHeavyVests.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swMaxHeavyVests.Font = new Font("Segoe UI", 9F);
             swMaxHeavyVests.Location = new Point(174, 245);
             swMaxHeavyVests.Margin = new Padding(0);
             swMaxHeavyVests.MouseLocation = new Point(-1, -1);
@@ -2272,7 +2272,7 @@
             // swMaxAttention
             // 
             swMaxAttention.Depth = 0;
-            swMaxAttention.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swMaxAttention.Font = new Font("Segoe UI", 9F);
             swMaxAttention.Location = new Point(17, 165);
             swMaxAttention.Margin = new Padding(0);
             swMaxAttention.MouseLocation = new Point(-1, -1);
@@ -2289,7 +2289,7 @@
             // swProcessLoot
             // 
             swProcessLoot.Depth = 0;
-            swProcessLoot.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swProcessLoot.Font = new Font("Segoe UI", 9F);
             swProcessLoot.Location = new Point(15, 45);
             swProcessLoot.Margin = new Padding(0);
             swProcessLoot.MouseLocation = new Point(-1, -1);
@@ -2306,7 +2306,7 @@
             // swRadarStats
             // 
             swRadarStats.Depth = 0;
-            swRadarStats.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swRadarStats.Font = new Font("Segoe UI", 9F);
             swRadarStats.Location = new Point(15, 85);
             swRadarStats.Margin = new Padding(0);
             swRadarStats.MouseLocation = new Point(-1, -1);
@@ -2323,7 +2323,7 @@
             // swRadarVsync
             // 
             swRadarVsync.Depth = 0;
-            swRadarVsync.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swRadarVsync.Font = new Font("Segoe UI", 9F);
             swRadarVsync.Location = new Point(172, 45);
             swRadarVsync.Margin = new Padding(0);
             swRadarVsync.MouseLocation = new Point(-1, -1);
@@ -2340,7 +2340,7 @@
             // swRadarEnemyCount
             // 
             swRadarEnemyCount.Depth = 0;
-            swRadarEnemyCount.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swRadarEnemyCount.Font = new Font("Segoe UI", 9F);
             swRadarEnemyCount.Location = new Point(172, 85);
             swRadarEnemyCount.Margin = new Padding(0);
             swRadarEnemyCount.MouseLocation = new Point(-1, -1);
@@ -2403,7 +2403,7 @@
             // swUnknownQuestItems
             // 
             swUnknownQuestItems.Depth = 0;
-            swUnknownQuestItems.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            swUnknownQuestItems.Font = new Font("Segoe UI", 9F);
             swUnknownQuestItems.Location = new Point(327, 94);
             swUnknownQuestItems.Margin = new Padding(0);
             swUnknownQuestItems.MouseLocation = new Point(-1, -1);
@@ -2913,7 +2913,7 @@
             tabControlSettings.Controls.Add(tabSettingsAIFactions);
             tabControlSettings.Controls.Add(tabSettingsColors);
             tabControlSettings.Depth = 0;
-            tabControlSettings.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            tabControlSettings.Font = new Font("Segoe UI", 9F);
             tabControlSettings.Location = new Point(0, 36);
             tabControlSettings.Margin = new Padding(0);
             tabControlSettings.MouseState = MaterialSkin.MouseState.HOVER;
@@ -3285,7 +3285,7 @@
             lstFactionEntries.BorderStyle = BorderStyle.None;
             lstFactionEntries.Columns.AddRange(new ColumnHeader[] { colFactionsAIName });
             lstFactionEntries.Depth = 0;
-            lstFactionEntries.Font = new Font("Segoe UI", 14F, FontStyle.Bold, GraphicsUnit.Point);
+            lstFactionEntries.Font = new Font("Segoe UI", 14F, FontStyle.Bold);
             lstFactionEntries.FullRowSelect = true;
             lstFactionEntries.Location = new Point(15, 14);
             lstFactionEntries.MaximumSize = new Size(420, 900);
@@ -4688,7 +4688,7 @@
             lstWatchlistEntries.BorderStyle = BorderStyle.None;
             lstWatchlistEntries.Columns.AddRange(new ColumnHeader[] { colWatchlistAccID, colWatchlistTag, colWatchlistUsername });
             lstWatchlistEntries.Depth = 0;
-            lstWatchlistEntries.Font = new Font("Segoe UI", 14F, FontStyle.Bold, GraphicsUnit.Point);
+            lstWatchlistEntries.Font = new Font("Segoe UI", 14F, FontStyle.Bold);
             lstWatchlistEntries.FullRowSelect = true;
             lstWatchlistEntries.Location = new Point(15, 5);
             lstWatchlistEntries.MaximumSize = new Size(420, 900);
@@ -4762,7 +4762,7 @@
             lstLootFilters.BorderStyle = BorderStyle.None;
             lstLootFilters.Columns.AddRange(new ColumnHeader[] { colLootFilterName });
             lstLootFilters.Depth = 0;
-            lstLootFilters.Font = new Font("Segoe UI", 14F, FontStyle.Bold, GraphicsUnit.Point);
+            lstLootFilters.Font = new Font("Segoe UI", 14F, FontStyle.Bold);
             lstLootFilters.FullRowSelect = true;
             lstLootFilters.Location = new Point(15, 45);
             lstLootFilters.MinimumSize = new Size(200, 100);
@@ -4901,7 +4901,7 @@
             lstLootFilterEntries.BorderStyle = BorderStyle.None;
             lstLootFilterEntries.Columns.AddRange(new ColumnHeader[] { colLootFilterItemName, colLootFilterItemValue });
             lstLootFilterEntries.Depth = 0;
-            lstLootFilterEntries.Font = new Font("Segoe UI", 14F, FontStyle.Bold, GraphicsUnit.Point);
+            lstLootFilterEntries.Font = new Font("Segoe UI", 14F, FontStyle.Bold);
             lstLootFilterEntries.FullRowSelect = true;
             lstLootFilterEntries.Location = new Point(15, 5);
             lstLootFilterEntries.MaximumSize = new Size(550, 900);

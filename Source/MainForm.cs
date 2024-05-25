@@ -1181,6 +1181,9 @@ namespace eft_dma_radar
                             var items = _config.UnknownQuestItems ? questItems.Where(x => x?.Position.X != 0 && x?.Name == "????") : questItems.Where(x => x?.Position.X != 0 && x?.Name != "????");
                             foreach (var item in items)
                             {
+                                if (item is null)
+                                    continue;
+
                                 float position = item.Position.Z - localPlayerMapPos.Height;
                                 var itemZoomedPos = item.Position
                                                         .ToMapPos(_selectedMap)
@@ -1893,8 +1896,6 @@ namespace eft_dma_radar
                     {
                         DrawMap(canvas);
 
-                        DrawPlayers(canvas);
-
                         if (!_config.ShowLoot && _config.ShowCorpses)
                             DrawCorpses(canvas);
 
@@ -1910,6 +1911,8 @@ namespace eft_dma_radar
 
                         if (_config.AimviewEnabled)
                             DrawAimview(canvas);
+
+                        DrawPlayers(canvas);
 
                         DrawToolTips(canvas);
                     }
