@@ -4,7 +4,6 @@ using System.Runtime.InteropServices;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using eft_dma_radar;
 
 /*  
  *  C# API wrapper 'vmmsharp' for MemProcFS 'vmm.dll' and LeechCore 'leechcore.dll' APIs.
@@ -910,18 +909,8 @@ namespace vmmsharp
         /// <param name="flags">VMM Flags.</param>
         /// <returns>Managed byte array containing number of bytes read.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe byte[] MemRead(uint pid, ulong qwA, uint cb, uint flags = 0)
-        {
-            try
-            {
-                return MemReadArray<byte>(pid, qwA, cb, flags);
-            }
-            catch (Exception ex)
-            {
-                throw new DMAException($"ERROR MemRead - {ex.Message}\n{ex.StackTrace}");
-            }
-        }
-            
+        public unsafe byte[] MemRead(uint pid, ulong qwA, uint cb, uint flags = 0) =>
+            MemReadArray<byte>(pid, qwA, cb, flags);
 
         /// <summary>
         /// Read Memory from a Virtual Address into unmanaged memory.
@@ -989,30 +978,22 @@ namespace vmmsharp
         public unsafe T[] MemReadArray<T>(uint pid, ulong qwA, uint count, uint flags = 0)
             where T : unmanaged
         {
-            try
+            uint cb = (uint)sizeof(T) * count;
+            uint cbRead;
+            T[] data = new T[count];
+            fixed (T* pb = data)
             {
-                uint cb = (uint)sizeof(T) * count;
-                uint cbRead;
-                T[] data = new T[count];
-                fixed (T* pb = data)
+                if (!vmmi.VMMDLL_MemReadEx(hVMM, pid, qwA, (byte*)pb, cb, out cbRead, flags))
                 {
-                    if (!vmmi.VMMDLL_MemReadEx(hVMM, pid, qwA, (byte*)pb, cb, out cbRead, flags))
-                    {
-                        return null;
-                    }
-
+                    return null;
                 }
-                if (cbRead != cb)
-                {
-                    int partialCount = (int)cbRead / sizeof(T);
-                    Array.Resize<T>(ref data, partialCount);
-                }
-                return data;
             }
-            catch (Exception ex)
+            if (cbRead != cb)
             {
-                return null;
+                int partialCount = (int)cbRead / sizeof(T);
+                Array.Resize<T>(ref data, partialCount);
             }
+            return data;
         }
 
         /// <summary>

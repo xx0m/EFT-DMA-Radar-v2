@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Numerics;
 
 namespace eft_dma_radar
 {
@@ -99,7 +100,8 @@ namespace eft_dma_radar
                                 Long = longName,
                                 Short = shortName,
                                 Value = totalGearValue,
-                                HasThermal = hasThermal
+                                HasThermal = hasThermal,
+                                Item = lootItem
                             };
 
                             gearDict.TryAdd(slotNames[i], gear);
@@ -219,9 +221,7 @@ namespace eft_dma_radar
                 var size = Memory.ReadValue<int>(slotItemBase + Offsets.UnityList.Count);
 
                 if (size < 1 || size > 25)
-                {
                     size = Math.Clamp(size, 0, 25);
-                }
 
                 var scatterReadMap = new ScatterReadMap(size);
                 var round1 = scatterReadMap.AddRound();
@@ -251,9 +251,7 @@ namespace eft_dma_radar
                             var name = Memory.ReadUnityString(namePtr);
 
                             if (!GearManager.slotsToSkip.Contains(name, StringComparer.OrdinalIgnoreCase))
-                            {
                                 slotDict[name] = slotPtr;
-                            }
                         }
                         catch { return; }
                     });

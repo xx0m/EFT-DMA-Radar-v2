@@ -80,9 +80,9 @@ namespace eft_dma_radar
         /// <summary>
         /// Ghetto helper method to get the Color from a PaintColor object by Key & return a new SKColor object based on it
         /// </summary>
-        public static SKColor SKColorFromPaintColor(string key) {
+        public static SKColor SKColorFromPaintColor(string key, byte alpha=0) {
             var col = Program.Config.PaintColors[key];
-            return new SKColor(col.R, col.G, col.B, col.A);
+            return new SKColor(col.R, col.G, col.B, alpha != 0 ? alpha : col.A);
         }
 
         /// <summary>

@@ -21,8 +21,8 @@ namespace eft_dma_radar
         [JsonPropertyName("autoRefreshSettings")]
         public Dictionary<string, int> AutoRefreshSettings { get; set; }
 
-        [JsonPropertyName("chamsEnabled")]
-        public bool ChamsEnabled { get; set; }
+        [JsonPropertyName("chams")]
+        public Dictionary<string, bool> Chams { get; set; }
 
         [JsonPropertyName("defaultZoom")]
         public int DefaultZoom { get; set; }
@@ -56,6 +56,12 @@ namespace eft_dma_radar
 
         [JsonPropertyName("loggingEnabled")]
         public bool LoggingEnabled { get; set; }
+
+        [JsonPropertyName("lootItemViewer")]
+        public bool LootItemViewer { get; set; }
+
+        [JsonPropertyName("lootPing")]
+        public Dictionary<string, int> LootPing { get; set; }
 
         [JsonPropertyName("magDrillSpeed")]
         public int MagDrillSpeed { get; set; }
@@ -150,6 +156,9 @@ namespace eft_dma_radar
         [JsonPropertyName("uiScale")]
         public int UIScale { get; set; }
 
+        [JsonPropertyName("zoomSensitivity")]
+        public int ZoomSensitivity { get; set; }
+
         [JsonPropertyName("vsync")]
         public bool VSync { get; set; }
         #endregion
@@ -191,6 +200,7 @@ namespace eft_dma_radar
             ["ImportantLoot"] = new PaintColor.Colors { A = 255, R = 64, G = 224, B = 208 },
             ["QuestItem"] = new PaintColor.Colors { A = 255, R = 255, G = 0, B = 128 },
             ["QuestZone"] = new PaintColor.Colors { A = 255, R = 255, G = 0, B = 128 },
+            ["LootPing"] = new PaintColor.Colors { A = 255, R = 255, G = 255, B = 0 },
 
             // Other
             ["TextOutline"] = new PaintColor.Colors { A = 255, R = 0, G = 0, B = 0 },
@@ -264,7 +274,20 @@ namespace eft_dma_radar
                 ["The Lab"] = 30,
                 ["Woods"] = 30
             };
-            ChamsEnabled = false;
+            Chams = new Dictionary<string, bool>
+            {
+                ["AlternateMethod"] = false,
+                ["Bosses"] = false,
+                ["Corpses"] = false,
+                ["Cultists"] = false,
+                ["Enabled"] = false,
+                ["PlayerScavs"] = false,
+                ["PMCs"] = false,
+                ["RevertOnClose"] = false,
+                ["Rogues"] = false,
+                ["Scavs"] = false,
+                ["Teammates"] = false
+            };
             DefaultZoom = 100;
             EnemyCount = false;
             ExtendedReach = false;
@@ -276,6 +299,12 @@ namespace eft_dma_radar
             InstantADS = false;
             JumpPowerStrength = 0;
             LoggingEnabled = false;
+            LootItemViewer = false;
+            LootPing = new Dictionary<string, int>
+            {
+                ["AnimationSpeed"] = 1000,
+                ["Radius"] = 20,
+            };
             MagDrillSpeed = 1;
             MainThermalSetting = new ThermalSettings(1f, 0.0011f, -0.1f, 0);
             MasterSwitch = false;
@@ -327,6 +356,7 @@ namespace eft_dma_radar
             ThrowPowerStrength = 1;
             TimeOfDay = 12f;
             UIScale = 100;
+            ZoomSensitivity = 25;
             VSync = true;
         }
 

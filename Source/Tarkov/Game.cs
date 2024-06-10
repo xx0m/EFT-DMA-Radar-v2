@@ -147,23 +147,26 @@ namespace eft_dma_radar
         {
             try
             {
+                if (!this._inGame)
+                {
+                    Memory.Chams?.ChamsDisable();
+                    throw new RaidEnded("Raid has ended!");
+                }
+
                 this._rgtPlayers.UpdateList();
                 this._rgtPlayers.UpdateAllPlayers();
                 this.UpdateMisc();
             }
             catch (DMAShutdown)
             {
-                Memory.Chams?.ChamsDisable();
                 HandleDMAShutdown();
             }
             catch (RaidEnded e)
             {
-                Memory.Chams?.ChamsDisable();
                 HandleRaidEnded(e);
             }
             catch (Exception ex)
             {
-                Memory.Chams?.ChamsDisable();
                 HandleUnexpectedException(ex);
             }
         }

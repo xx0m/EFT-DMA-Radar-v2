@@ -35,9 +35,19 @@ namespace eft_dma_radar
             Debug.WriteLine($"{_name} Stopwatch Runtime: {ts.Ticks} ticks");
         }
     }
-    /// <summary>
-    /// Global Program Configuration (Config.json)
-    /// </summary>
+
+    public class ItemAnimation
+    {
+        public LootItem Item { get; set; }
+        public float AnimationTime { get; set; }
+        public float MaxAnimationTime { get; set; } = 1f;
+
+        public ItemAnimation(LootItem item)
+        {
+            Item = item;
+            AnimationTime = 0f;
+        }
+    }
     #endregion
 
     #region Custom EFT Classes

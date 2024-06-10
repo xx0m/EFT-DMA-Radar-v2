@@ -94,15 +94,12 @@ namespace eft_dma_radar
                                         //remove player from active list
                                         player.IsAlive = false;
 
-                                        if (Program.Config.ChamsEnabled)
+                                        if (player.Type is not PlayerType.LocalPlayer && Program.Config.Chams["Enabled"])
                                         {
-                                            
-                                           Task.Run(async () =>
-                                           {
-                                                await Memory.Chams.RestorePointersForPlayerAsync(player);
+                                            Memory.Chams.RestorePointersForPlayer(player);
 
+                                            if (Program.Config.Chams["Corpses"])
                                                 Memory.Chams.SetPlayerBodyChams(player, Memory.Chams.ThermalMaterial);
-                                           });                                            
                                         }
 
                                         continue;

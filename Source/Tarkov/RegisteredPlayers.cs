@@ -337,26 +337,23 @@ namespace eft_dma_radar
                     {
                         scatterMap.Results[i][6].TryGetResult<ulong>(out var corpsePtr);
 
-                        if (corpsePtr > 0)
-                        {
-                            Program.Log($"{player.Name} died => {corpsePtr}");
-                            player.IsAlive = false;
-
-                            if (Program.Config.ChamsEnabled)
-                            {
-
-                                Task.Run(async () =>
-                                {
-                                    await Memory.Chams.RestorePointersForPlayerAsync(player);
-
-                                    Memory.Chams.SetPlayerBodyChams(player, Memory.Chams.ThermalMaterial);
-                                });
-                            }
-
-                        }
-
                         player.IsActive = false;
                         player.LastUpdate = false;
+
+                        if (corpsePtr > 0)
+                        {
+                            player.IsAlive = false;
+
+                            if (player.Type is not PlayerType.LocalPlayer && Program.Config.Chams["Enabled"])
+                            {
+                                Memory.Chams.RestorePointersForPlayer(player);
+
+                                if (Program.Config.Chams["Corpses"])
+                                    Memory.Chams.SetPlayerBodyChams(player, Memory.Chams.ThermalMaterial);
+                            }
+                        }
+
+                        Program.Log($"{player.Name} died/exfil'd");
                     }
                     else
                     {

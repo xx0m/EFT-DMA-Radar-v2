@@ -607,9 +607,7 @@ namespace eft_dma_radar
                 this.IsPMC = !isAI;
 
                 if (isAI)
-                {
                     this.Name = Helpers.TransliterateCyrillic(this.Name);
-                }
 
                 this.Type = this.GetOfflinePlayerType(isAI, this.Name);
 
@@ -657,9 +655,7 @@ namespace eft_dma_radar
                 this.IsPMC = (playerSide == 1 || playerSide == 2);
 
                 if (!this.IsPMC)
-                {
                     this.Name = Helpers.TransliterateCyrillic(this.Name);
-                }
             }
             else
             {

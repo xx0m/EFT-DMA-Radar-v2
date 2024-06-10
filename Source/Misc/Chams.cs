@@ -1,5 +1,9 @@
-﻿using System.Collections.ObjectModel;
+﻿using Offsets;
+using OpenTK.Input;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Drawing;
+using System.Net;
 using System.Numerics;
 using System.Reflection.Metadata.Ecma335;
 
@@ -11,16 +15,21 @@ namespace eft_dma_radar
         {
             get => Memory.CameraManager;
         }
+
         private ReadOnlyDictionary<string, Player> AllPlayers
         {
             get => Memory.Players;
         }
+
         private bool InGame
         {
             get => Memory.InGame;
         }
 
-        private static Dictionary<string, Player> PlayersWithChams = new Dictionary<string, Player>();
+        private Config _config
+        {
+            get => Program.Config;
+        }
 
         public int PlayersWithChamsCount
         {
@@ -42,6 +51,9 @@ namespace eft_dma_radar
             get => Extensions.Vector4FromPaintColor("Chams");
         }
 
+        private static Dictionary<string, Player> PlayersWithChams = new Dictionary<string, Player>();
+        private Dictionary<string, List<PointerBackup>> pointerBackups = new Dictionary<string, List<PointerBackup>>();
+
         private ulong _nvgMaterial;
         private ulong _thermalMaterial;
 
@@ -49,9 +61,9 @@ namespace eft_dma_radar
 
         public void ChamsEnable()
         {
-            if (!this.InGame)
+            if (!this.InGame || Memory.LocalPlayer is null)
             {
-                Console.WriteLine("Not in game");
+                Program.Log("Chams -> not in game");
                 return;
             }
 
@@ -60,24 +72,20 @@ namespace eft_dma_radar
 
             if (nightVisionComponent == 0 || fpsThermal == 0)
             {
-                Console.WriteLine("nvg or fps thermal component not found");
+                Program.Log("Chams -> nvg or fps thermal component not found");
                 Memory.CameraManager.UpdateCamera();
                 return;
             }
 
             if (_nvgMaterial == 0UL)
-            {
                 _nvgMaterial = Memory.ReadPtrChain(nightVisionComponent, new uint[] { 0x90, 0x10, 0x8 });
-            }
 
             if (_thermalMaterial == 0UL)
-            {
                 _thermalMaterial = Memory.ReadPtrChain(fpsThermal, new uint[] { 0x90, 0x10, 0x8 });
-            }
 
             if (_nvgMaterial == 0UL || _thermalMaterial == 0UL)
             {
-                Console.WriteLine("nvg or thermal material not found");
+                Program.Log("Chams -> nvg or thermal material not found");
                 return;
             }
 
@@ -88,22 +96,29 @@ namespace eft_dma_radar
             }
 
             var players = this.AllPlayers
-                          ?.Where(x => x.Value.IsAlive && x.Value.Type is not PlayerType.LocalPlayer && !Chams.PlayersWithChams.ContainsKey(x.Value.Base.ToString()))
-                          .Select(x => x.Value)
-                          .ToList();
+                              ?.Where(x => !x.Value.IsLocalPlayer && x.Value.Type != PlayerType.LocalPlayer)
+                              .Where(x => (_config.Chams["Corpses"] ? true : x.Value.IsAlive) &&
+                                          !Chams.PlayersWithChams.ContainsKey(x.Value.Base.ToString()) &&
+                                          (_config.Chams["PMCs"] && x.Value.IsPMC ||
+                                           _config.Chams["PlayerScavs"] && x.Value.Type == PlayerType.PlayerScav ||
+                                           _config.Chams["Bosses"] && x.Value.Type == PlayerType.Boss ||
+                                           _config.Chams["Rogues"] && x.Value.IsRogueRaider ||
+                                           _config.Chams["Cultists"] && x.Value.Type == PlayerType.Cultist ||
+                                           _config.Chams["Scavs"] && x.Value.Type == PlayerType.Scav ||
+                                           _config.Chams["Teammates"] && x.Value.Type == PlayerType.Teammate))
+                              .Select(x => x.Value)
+                              .ToList();
 
-            if (players is not null && players.Count > 0)
+            if (players?.Count > 0)
             {
                 foreach (var player in players)
                 {
                     try
                     {
-                        string key = player.Base.ToString();
-
-                        var materialTouse = player.IsHuman ? _nvgMaterial : _thermalMaterial;
+                        var materialTouse = (player.IsHuman || player.Type == PlayerType.Boss) && player.IsAlive ? _nvgMaterial : _thermalMaterial;
 
                         this.SetPlayerBodyChams(player, materialTouse);
-                        Chams.PlayersWithChams.TryAdd(key, player);
+                        Chams.PlayersWithChams.TryAdd(player.Base.ToString(), player);
                     }
                     catch (Exception ex)
                     {
@@ -161,12 +176,14 @@ namespace eft_dma_radar
                 var map3Round3 = scatterReadMap3.AddRound();
                 var map3Round4 = scatterReadMap3.AddRound();
 
+                if (lodsCount > 4)
+                    continue;
+
                 for (int j = 0; j < lodsCount; j++)
                 {
                     var pLodEntryPtr = map3Round1.AddEntry<ulong>(j, 0, pLodsArray, null, 0x20 + (0x8 * (uint)j));
 
                     var skinnedMeshRendererPtr = map3Round2.AddEntry<ulong>(j, 1, pLodEntryPtr, null, 0x20);
-
                     var pMaterialDictionaryPtr = map3Round3.AddEntry<ulong>(j, 2, skinnedMeshRendererPtr, null, 0x10);
 
                     var materialCountPtr = map3Round4.AddEntry<int>(j, 3, pMaterialDictionaryPtr, null, 0x158);
@@ -192,7 +209,7 @@ namespace eft_dma_radar
                     if (pLodEntry == 0)
                         continue;
 
-                    if (materialCount > 0 && materialCount < 5)
+                    if (materialCount > 0 && materialCount < 6)
                     {
                         var scatterReadMap4 = new ScatterReadMap(materialCount);
                         var map4Round1 = scatterReadMap4.AddRound();
@@ -213,12 +230,22 @@ namespace eft_dma_radar
                             {
                                 if (pMaterial == 0 || material == 0)
                                     continue;
-                                
-                                SavePointer(materialDictionaryBase + (0x50 * (uint)k), pMaterial, player);
-                                Memory.WriteValue(materialDictionaryBase + (0x50 * (uint)k), material);
+
+                                if (pMaterial == material)
+                                    continue;
+
+                                if (!this.InGame || Memory.LocalPlayer is null)
+                                    continue;
+
+                                if (!_config.Chams["AlternateMethod"])
+                                    SavePointer(materialDictionaryBase + (0x50 * (uint)k), pMaterial, player);
+                                else
+                                    SavePointer(materialDictionaryBase + (sizeof(uint) * (uint)k), pMaterial, player);
+
+                                Memory.WriteValue(materialDictionaryBase + (sizeof(uint) * (uint)k), material);
                                 setAnyMaterial = true;
-                            } catch
-                            { continue; }
+                            }
+                            catch { continue; }
                         }
                     }
                 }
@@ -229,38 +256,89 @@ namespace eft_dma_radar
 
         public void ChamsDisable()
         {
-            RestorePointers();
+            try
+            {
+                if ((!this.InGame && PlayersWithChams.Count == 0) || Memory.LocalPlayer is null)
+                    RemovePointers();
+                else
+                    RestorePointers();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to disable chams: {ex.Message}");
+            }
         }
 
-        private Dictionary<string, List<PointerBackup>> pointerBackups = new Dictionary<string, List<PointerBackup>>();
+        public void SoftChamsDisable()
+        {
+            try
+            {
+                if (PlayersWithChams.Count == 0)
+                {
+                    Program.Log("No players with chams enabled.");
+                    return;
+                }
+
+                SoftRestorePointers();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to disable chams: {ex.Message}");
+            }
+        }
 
         private void SavePointer(ulong address, ulong originalValue, Player player)
         {
             var key = player.Base.ToString();
 
             if (!pointerBackups.ContainsKey(key))
-            {
                 pointerBackups[key] = new List<PointerBackup>();
-            }
 
-            pointerBackups[key].Add(new PointerBackup { Address = address, OriginalValue = originalValue });
+            var existingBackup = pointerBackups[key].FirstOrDefault(b => b.Address == address);
+
+            if (existingBackup.Address == 0)
+                pointerBackups[key].Add(new PointerBackup { Address = address, OriginalValue = originalValue });
         }
 
         public void RestorePointers()
         {
-            foreach (var backups in pointerBackups.Values)
+            foreach (var backupList in pointerBackups.Values)
             {
-                foreach (var backup in backups)
+                foreach (var backup in backupList)
                 {
-                    Memory.WriteValue<ulong>(backup.Address, backup.OriginalValue);
+                    try
+                    {
+                        if (this.InGame && Memory.LocalPlayer is not null)
+                            Memory.WriteValue<ulong>(backup.Address, backup.OriginalValue);
+
+                    }
+                    catch { continue; }
                 }
             }
 
-            pointerBackups.Clear();
+            RemovePointers();
+        }
+
+        public void SoftRestorePointers()
+        {
+            foreach (var backupList in pointerBackups.Values)
+            {
+                foreach (var backup in backupList)
+                {
+                    try
+                    {
+                        if (this.InGame && Memory.LocalPlayer is not null)
+                            Memory.WriteValue<ulong>(backup.Address, backup.OriginalValue);
+
+                    }
+                    catch { continue; }
+                }
+            }
+
             PlayersWithChams.Clear();
         }
 
-        public async Task RestorePointersForPlayerAsync(Player player)
+        public void RestorePointersForPlayer(Player player)
         {
             var key = player.Base.ToString();
 
@@ -268,12 +346,34 @@ namespace eft_dma_radar
             {
                 foreach (var backup in pointerBackups[key])
                 {
-                    Memory.WriteValue<ulong>(backup.Address, backup.OriginalValue);
-                }
+                    try
+                    {
+                        if (!player.IsActive)
+                            continue;
 
-                pointerBackups.Remove(key);
-                PlayersWithChams.Remove(key);
+                        if (this.InGame && Memory.LocalPlayer is not null)
+                            Memory.WriteValue<ulong>(backup.Address, backup.OriginalValue);
+                    }
+                    catch { continue; }
+                }
             }
+        }
+
+        public void RemovePointersForPlayer(Player player)
+        {
+            var key = player.Base.ToString();
+
+            if (pointerBackups.ContainsKey(key))
+                pointerBackups.Remove(key);
+
+            if (PlayersWithChams.ContainsKey(key))
+                PlayersWithChams.Remove(key);
+        }
+
+        public void RemovePointers()
+        {
+            pointerBackups.Clear();
+            PlayersWithChams.Clear();
         }
     }
 

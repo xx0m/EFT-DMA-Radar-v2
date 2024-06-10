@@ -123,6 +123,12 @@ namespace eft_dma_radar
                     Thread.Sleep(250);
                 }
             }
+
+            if (this._config.Chams["RevertOnClose"])
+                this._chams?.ChamsDisable();
+            else if (!Memory.InGame || Memory.LocalPlayer is null)
+                this._chams?.RemovePointers();
+
             Program.Log("[ToolBox] Refresh thread stopped.");
         }
 
@@ -371,11 +377,11 @@ namespace eft_dma_radar
                         }
 
                         // Chams
-                        if (this._config.ChamsEnabled)
+                        if (this._config.Chams["Enabled"])
                         {
                             this._chams.ChamsEnable();
                         }
-                        else if (!this._config.ChamsEnabled && this._chams?.PlayersWithChamsCount > 0)
+                        else if (!this._config.Chams["Enabled"] && this._chams?.PlayersWithChamsCount > 0)
                         {
                             this._chams?.ChamsDisable();
                         }
