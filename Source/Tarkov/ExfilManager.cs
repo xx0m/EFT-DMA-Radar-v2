@@ -188,7 +188,7 @@ namespace eft_dma_radar
         {
             this.BaseAddr = baseAddr;
             var transform_internal = Memory.ReadPtrChain(baseAddr, Offsets.GameObject.To_TransformInternal);
-            this.Position = new Transform(transform_internal, false).GetPosition();
+            this.Position = new Transform(transform_internal).GetPosition();
         }
 
         public void UpdateStatus(int status) => this.Status = status switch

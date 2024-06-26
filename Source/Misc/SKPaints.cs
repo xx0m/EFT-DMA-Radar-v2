@@ -164,7 +164,7 @@ namespace eft_dma_radar
         #endregion
 }
 
-public class PaintColor {
+    public class PaintColor {
         public Colors Color { get; set; }
         public string Name { get; set; }
 

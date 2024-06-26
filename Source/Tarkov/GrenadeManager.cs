@@ -101,7 +101,7 @@ namespace eft_dma_radar
             try
             {
                 var posAddr = Memory.ReadPtrChain(baseAddr, Offsets.GameObject.To_TransformInternal);
-                this.Position = new Transform(posAddr, false).GetPosition();
+                this.Position = new Transform(posAddr).GetPosition();
             }
             catch (Exception ex)
             {

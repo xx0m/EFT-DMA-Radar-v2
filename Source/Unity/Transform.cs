@@ -62,7 +62,8 @@ namespace eft_dma_radar
 					throw new Exception("Invalid Position!");
 
                 var index = indices[HierarchyIndex]; // Indices + 4 * capacity   (was index_relation)
-                if (_isPlayerTransform) if (index != 0) throw new Exception("Invalid index!");
+                if (_isPlayerTransform && index != 0)
+					throw new Exception("Invalid index!");
 
                 var result = vertices[3 * HierarchyIndex]; // Vertices + 0x30 * capacity
 
@@ -70,12 +71,19 @@ namespace eft_dma_radar
                 while (index >= 0)
                 {
                     // perform validations....
-                    if (_isPlayerTransform) if (index > 1) throw new Exception("Invalid index!");
-                        else
-                        {
-                            if (index >= vertices.Count / 3) break;
-                        }
-                    if (iterations++ >= 100) throw new Exception("Max SIMD Iterations! Invalid state.");
+                    if (_isPlayerTransform)
+					{
+                        if (index > 1)
+                            throw new Exception("Invalid index!");
+                    }
+                    else
+                    {
+						if (index >= vertices.Count / 3)
+							break;
+                    }
+
+                    if (iterations++ >= 100)
+						throw new Exception("Max SIMD Iterations! Invalid state.");
 
                     // begin iteration...
                     var v9 = vertices[3 * index + 1].AsInt32(); // Vertices + 0x30 * index + 0x10
@@ -115,7 +123,9 @@ namespace eft_dma_radar
                 }
                 // return result
                 var pos = result.AsVector3();
-                if (pos.X == 0 && pos.Y == 0 && pos.Z == 0) throw new Exception("Invalid Position!");
+                if (pos.X == 0 && pos.Y == 0 && pos.Z == 0)
+					throw new Exception("Invalid Position!");
+
                 return new Vector3(pos.X, pos.Z, pos.Y); // Z & Y flipped
             }
 			catch (Exception ex)
@@ -132,10 +142,7 @@ namespace eft_dma_radar
 		/// <returns></returns>
 		public Tuple<ulong, int, ulong, int> GetScatterReadParameters()
 		{
-			return new Tuple<ulong, int, ulong, int>(IndicesAddr,
-				HierarchyIndex + 1,
-				VerticesAddr,
-				3 * HierarchyIndex + 3);
+			return new Tuple<ulong, int, ulong, int>(IndicesAddr, HierarchyIndex + 1, VerticesAddr, 3 * HierarchyIndex + 3);
 		}
 		/// <summary>
 		/// Standalone Indices Read.
@@ -143,21 +150,28 @@ namespace eft_dma_radar
 		/// <returns></returns>
 		private static List<int> ReadIndices(ulong address, int count)
 		{
-			if (count <= 0)
+			var list = new List<int>();
+			if (count < 1)
+				return list;
+
+			var scatterReadMap = new ScatterReadMap(count);
+			var round = scatterReadMap.AddRound();
+
+			for (int i = 0; i < count; i++)
 			{
-				return new List<int>();
+				round.AddEntry<int>(0, i, address, null, (uint)(i * 4));
 			}
 
-			var result = Memory.ReadBuffer(address, count * 4);
+			scatterReadMap.Execute();
 
-			var ret = new List<int>();
-
-			for (var index = 0; index < result.Length; index += 4)
+			for (int i = 0; i < count; i++)
 			{
-				ret.Add(MemoryMarshal.Read<int>(result.Slice(index, 4)));
+				scatterReadMap.Results[0][i].TryGetResult<int>(out int result);
+
+				list.Add(result);
 			}
 
-			return ret;
+			return list;
 		}
 
 		/// <summary>
@@ -175,7 +189,7 @@ namespace eft_dma_radar
 					buffer[i], buffer[i + 1], buffer[i + 2], buffer[i + 3], buffer[i + 4], buffer[i + 5],
 					buffer[i + 6], buffer[i + 7], buffer[i + 8], buffer[i + 9], buffer[i + 10], buffer[i + 11],
 					buffer[i + 12], buffer[i + 13], buffer[i + 14], buffer[i + 15])
-					.AsSingle();
+					.AsSingle<byte>();
 
 				ret.Add(result);
 			}

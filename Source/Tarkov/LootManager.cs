@@ -56,6 +56,11 @@ namespace eft_dma_radar
         /// </summary>
         public ConcurrentBag<LootableObject> Loot { get; set; }
 
+        public bool HasCachedItems
+        {
+            get => hasCachedItems;
+        }
+
         public int TotalLooseLoot
         {
             get => savedLootItemsInfo.Count;
@@ -408,7 +413,7 @@ namespace eft_dma_radar
 
                         try
                         {
-                            Vector3 position = new Transform(posToTransform, false).GetPosition();
+                            Vector3 position = new Transform(posToTransform).GetPosition();
 
                             var playerNameSplit = containerName.Split('(', ')');
                             var playerName = playerNameSplit.Count() > 1 ? playerNameSplit[1] : playerNameSplit[0];
@@ -429,7 +434,7 @@ namespace eft_dma_radar
                             return;
                         try
                         {
-                            Vector3 position = new Transform(posToTransform, false).GetPosition();
+                            Vector3 position = new Transform(posToTransform).GetPosition();
 
                             var containerID = Memory.ReadUnityString(containerIDPtr);
                             var containerExists = TarkovDevManager.AllLootContainers.TryGetValue(containerID, out var container) && container is not null;
@@ -460,7 +465,7 @@ namespace eft_dma_radar
 
                             if (isSearchableItem && !savedSearchableExists)
                             {
-                                Vector3 position = new Transform(posToTransform, false).GetPosition();
+                                Vector3 position = new Transform(posToTransform).GetPosition();
                                 var container = new ContainerInfo { InteractiveClass = interactiveClass, Position = position, Name = lootItem.Item.shortName ?? containerName };
 
                                 if (validScatterMap.Results[i][22].TryGetResult<ulong>(out var slots))

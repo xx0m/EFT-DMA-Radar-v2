@@ -11,7 +11,9 @@ using System.Windows.Forms;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
-using static vmmsharp.LeechCore;
+using static Vmmsharp.LeechCore;
+using System.ComponentModel;
+using System.Linq;
 
 namespace eft_dma_radar
 {
@@ -63,6 +65,8 @@ namespace eft_dma_radar
         private System.Windows.Forms.Timer itemAnimationTimer;
         private bool isAnimationRunning = false;
         private List<ItemAnimation> activeItemAnimations = new List<ItemAnimation>();
+        private LootItem itemToPing = null;
+        private bool _isRefreshingLootItems = false;
 
         #region Getters
         /// <summary>
@@ -419,8 +423,30 @@ namespace eft_dma_radar
             }
         }
 
+        private void CheckConfigDictionaries()
+        {
+            UpdateDictionary(_config.AutoRefreshSettings, _config.DefaultAutoRefreshSettings);
+            UpdateDictionary(_config.Chams, _config.DefaultChamsSettings);
+            UpdateDictionary(_config.LootPing, _config.DefaultLootPingSettings);
+            UpdateDictionary(_config.MaxSkills, _config.DefaultMaxSkillsSettings);
+        }
+
+        private void UpdateDictionary<TKey, TValue>(Dictionary<TKey, TValue> dictionary, Dictionary<TKey, TValue> defaultDictionary)
+        {
+            if (dictionary.Count != defaultDictionary.Count)
+            {
+                foreach (var setting in defaultDictionary)
+                {
+                    if (!dictionary.ContainsKey(setting.Key))
+                        dictionary.TryAdd(setting.Key, setting.Value);
+                }
+            }
+        }
+
         private void LoadConfig()
         {
+            this.CheckConfigDictionaries();
+
             #region Settings
             #region General
             // Radar
@@ -552,6 +578,7 @@ namespace eft_dma_radar
             // Loot Ping
             sldrLootPingAnimationSpeed.Value = _config.LootPing["AnimationSpeed"];
             sldrLootPingMaxRadius.Value = _config.LootPing["Radius"];
+            sldrLootPingRepetition.Value = _config.LootPing["Repetition"];
             #endregion
             #endregion
 
@@ -725,6 +752,42 @@ namespace eft_dma_radar
 
         #region Radar Tab
         #region Helper Functions
+        private void ResetVariables()
+        {
+            this._selectedMap = null;
+
+            lblRadarFPSValue.Text = "0";
+            lblRadarMemSValue.Text = "0";
+            lblRadarLooseLootValue.Text = "0";
+            lblRadarContainersValue.Text = "0";
+            lblRadarCorpsesValue.Text = "0";
+
+            lblRadarPMCsValue.Text = "0";
+            lblRadarPMCsValue.UseAccent = false;
+            lblRadarPMCsValue.HighEmphasis = false;
+            lblRadarPlayerScavsValue.Text = "0";
+            lblRadarPlayerScavsValue.UseAccent = false;
+            lblRadarPlayerScavsValue.HighEmphasis = false;
+            lblRadarAIScavsValue.Text = "0";
+            lblRadarAIScavsValue.UseAccent = false;
+            lblRadarAIScavsValue.HighEmphasis = false;
+            lblRadarRoguesValue.Text = "0";
+            lblRadarRoguesValue.UseAccent = false;
+            lblRadarRoguesValue.HighEmphasis = false;
+            lblRadarBossesValue.Text = "0";
+            lblRadarBossesValue.UseAccent = false;
+            lblRadarBossesValue.HighEmphasis = false;
+
+            lastLootItemCount = 0;
+            itemToPing = null;
+            lstLootItems.Items.Clear();
+
+            ClearItemRefs();
+            ClearPlayerRefs();
+            ClearTaskItemRefs();
+            ClearTaskZoneRefs();
+        }
+
         private void UpdateWindowTitle()
         {
             bool inGame = this.InGame;
@@ -1205,7 +1268,7 @@ namespace eft_dma_radar
                             var mapParams = GetMapLocation();
 
                             // ghetto auto refresh but works
-                            if (loot.Loot?.Count != lastLootItemCount)
+                            if (loot.HasCachedItems && loot.Loot?.Count != lastLootItemCount)
                             {
                                 lastLootItemCount = loot.Loot.Count;
 
@@ -1508,31 +1571,7 @@ namespace eft_dma_radar
                 statusText = "Waiting for Raid Start...";
 
                 if (selectedMap is not null)
-                {
-                    this._selectedMap = null;
-
-                    lblRadarFPSValue.Text = "0";
-                    lblRadarMemSValue.Text = "0";
-                    lblRadarLooseLootValue.Text = "0";
-                    lblRadarContainersValue.Text = "0";
-                    lblRadarCorpsesValue.Text = "0";
-
-                    lblRadarPMCsValue.Text = "0";
-                    lblRadarPMCsValue.UseAccent = false;
-                    lblRadarPMCsValue.HighEmphasis = false;
-                    lblRadarPlayerScavsValue.Text = "0";
-                    lblRadarPlayerScavsValue.UseAccent = false;
-                    lblRadarPlayerScavsValue.HighEmphasis = false;
-                    lblRadarAIScavsValue.Text = "0";
-                    lblRadarAIScavsValue.UseAccent = false;
-                    lblRadarAIScavsValue.HighEmphasis = false;
-                    lblRadarRoguesValue.Text = "0";
-                    lblRadarRoguesValue.UseAccent = false;
-                    lblRadarRoguesValue.HighEmphasis = false;
-                    lblRadarBossesValue.Text = "0";
-                    lblRadarBossesValue.UseAccent = false;
-                    lblRadarBossesValue.HighEmphasis = false;
-                }
+                    ResetVariables();
             }
             else if (localPlayer is null)
             {
@@ -1723,6 +1762,24 @@ namespace eft_dma_radar
             }
         }
 
+        private SKPoint GetScreenPosition(SKCanvas canvas, SKRect drawingLocation, Vector3 myPosition, Vector3 bonePosition, float normalizedDirection, float pitch)
+        {
+            float dist = Vector3.Distance(myPosition, bonePosition);
+            float heightDiff = bonePosition.Z - myPosition.Z;
+            float angleY = CalculateAngleY(heightDiff, dist, pitch);
+            float y = CalculateYPosition(angleY, _aimviewWindowSize);
+
+            float opposite = bonePosition.Y - myPosition.Y;
+            float adjacent = bonePosition.X - myPosition.X;
+            float angleX = CalculateAngleX(opposite, adjacent, normalizedDirection);
+            float x = CalculateXPosition(angleX, _aimviewWindowSize);
+
+            float drawX = drawingLocation.Right - x;
+            float drawY = drawingLocation.Bottom - y;
+
+            return new SKPoint(drawX, drawY);
+        }
+
         public Vector2 GetScreen(Vector3 playerPos, Vector3 localPos, Vector4 screen, Vector2 Angles, float fov)
         {
             float num = playerPos.Z - localPos.Z;
@@ -1890,10 +1947,14 @@ namespace eft_dma_radar
             {
                 animation.AnimationTime += 0.016f;
 
-                if (animation.AnimationTime < animation.MaxAnimationTime)
+                if (animation.AnimationTime >= animation.MaxAnimationTime)
                 {
-                    shouldStopAnimation = false;
+                    animation.AnimationTime = 0f;
+                    animation.RepetitionCount++;
                 }
+
+                if (animation.RepetitionCount < animation.MaxRepetitions)
+                    shouldStopAnimation = false;
             }
 
             if (shouldStopAnimation)
@@ -1903,7 +1964,7 @@ namespace eft_dma_radar
                 isAnimationRunning = false;
             }
 
-            activeItemAnimations.RemoveAll(animation => animation.AnimationTime >= animation.MaxAnimationTime);
+            activeItemAnimations.RemoveAll(animation => animation.RepetitionCount >= animation.MaxRepetitions);
 
             _mapCanvas.Invalidate();
         }
@@ -1943,42 +2004,53 @@ namespace eft_dma_radar
 
         private void RefreshLootListItems()
         {
-            if (this.Loot?.Loot?.Count < 1 || !_config.LootItemViewer)
+            if (_isRefreshingLootItems)
                 return;
+
+            _isRefreshingLootItems = true;
+
+            if (this.Loot?.Loot?.Count < 1 || !_config.LootItemViewer)
+            {
+                _isRefreshingLootItems = false;
+                return;
+            }
 
             lstLootItems.Items.Clear();
 
             var lootItems = this.GetLootAndContainerItems();
 
             if (lootItems.Count < 1)
+            {
+                _isRefreshingLootItems = false;
                 return;
+            }
 
             var itemToFind = txtLootItemFilter.Text.Trim();
 
             var mergedLootItems = lootItems
-             .GroupBy(lootItem => lootItem.ID)
-             .Select(group =>
-             {
-                 var count = group.Count();
-                 var firstItem = group.First();
-
-                 return new
+                 .GroupBy(lootItem => lootItem.ID)
+                 .Select(group =>
                  {
-                     LootItem = new LootItem
+                     var count = group.Count();
+                     var firstItem = group.First();
+
+                     return new
                      {
-                         ID = firstItem.ID,
-                         Name = firstItem.Name,
-                         Position = firstItem.Position,
-                         Important = firstItem.Important,
-                         AlwaysShow = firstItem.AlwaysShow,
-                         Value = firstItem.Value,
-                         Color = firstItem.Color
-                     },
-                     Quantity = count
-                 };
-             })
-             .OrderByDescending(x => x.LootItem.Value)
-             .ToList();
+                         LootItem = new LootItem
+                         {
+                             ID = firstItem.ID,
+                             Name = firstItem.Name,
+                             Position = firstItem.Position,
+                             Important = firstItem.Important,
+                             AlwaysShow = firstItem.AlwaysShow,
+                             Value = firstItem.Value,
+                             Color = firstItem.Color
+                         },
+                         Quantity = count
+                     };
+                 })
+                 .OrderByDescending(x => x.LootItem.Value)
+                 .ToList();
 
             if (!string.IsNullOrEmpty(itemToFind))
             {
@@ -1990,7 +2062,7 @@ namespace eft_dma_radar
             if (mergedLootItems.Count < 1)
                 return;
 
-            lstLootItems.Items.AddRange(mergedLootItems.Select(item => new ListViewItem
+            var listViewItems = mergedLootItems.Select(item => new ListViewItem
             {
                 Text = item.Quantity.ToString(),
                 Tag = item.LootItem,
@@ -1999,7 +2071,24 @@ namespace eft_dma_radar
                     item.LootItem.Name,
                     TarkovDevManager.FormatNumber(item.LootItem.Value)
                 }
-            }).ToArray());
+            }).ToArray();
+
+            lstLootItems.Items.AddRange(listViewItems);
+
+            if (itemToPing is not null)
+            {
+                int itemIndex = lstLootItems.Items.Cast<ListViewItem>()
+                                                  .ToList()
+                                                  .FindIndex(item => item.SubItems[1].Text == itemToPing.Name);
+
+                if (itemIndex != -1)
+                {
+                    lstLootItems.SelectedIndices.Clear();
+                    lstLootItems.SelectedIndices.Add(itemIndex);
+                }
+            }
+
+            _isRefreshingLootItems = false;
         }
         #endregion
 
@@ -2204,14 +2293,11 @@ namespace eft_dma_radar
 
         private void btnPingSelectedItem_Click(object sender, EventArgs e)
         {
-            var localPlayer = this.LocalPlayer;
-            var selectedItem = lstLootItems.SelectedItems.Count > 0 ? lstLootItems.SelectedItems[0]?.Tag as LootItem : null;
-
-            if (selectedItem is null || localPlayer is null)
+            if (itemToPing is null)
                 return;
 
             var lootItems = this.GetLootAndContainerItems();
-            var itemsToPing = lootItems.Where(item => item.ID == selectedItem.ID).ToList();
+            var itemsToPing = lootItems.Where(item => item.ID == itemToPing.ID).ToList();
 
             activeItemAnimations.Clear();
 
@@ -2219,7 +2305,8 @@ namespace eft_dma_radar
             {
                 activeItemAnimations.Add(new ItemAnimation(item)
                 {
-                    MaxAnimationTime = ((float)_config.LootPing["AnimationSpeed"] / 1000)
+                    MaxAnimationTime = ((float)_config.LootPing["AnimationSpeed"] / 1000),
+                    MaxRepetitions = _config.LootPing["Repetition"]
                 });
             }
 
@@ -2244,6 +2331,13 @@ namespace eft_dma_radar
             mcRadarLootItemViewer.Visible = _config.LootItemViewer = !_config.LootItemViewer;
             if (_config.LootItemViewer)
                 this.RefreshLootListItems();
+        }
+
+        private void lstLootItems_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            var selectedItem = lstLootItems.SelectedItems.Count > 0 ? lstLootItems.SelectedItems[0]?.Tag as LootItem : null;
+
+            itemToPing = selectedItem;
         }
         #endregion
         #endregion
@@ -2707,6 +2801,7 @@ namespace eft_dma_radar
 
         private void btnRefreshLoot_Click(object sender, EventArgs e)
         {
+            lstLootItems.Items.Clear();
             Memory.Loot?.RefreshLoot(true);
         }
 
@@ -2824,6 +2919,14 @@ namespace eft_dma_radar
         private void sldrLootPingMaxRadius_onValueChanged(object sender, int newValue)
         {
             _config.LootPing["Radius"] = newValue;
+        }
+
+        private void sldrLootPingRepetition_onValueChanged(object sender, int newValue)
+        {
+            if (newValue < 1)
+                newValue = 1;
+
+            _config.LootPing["Repetition"] = newValue;
         }
         #endregion
         #endregion

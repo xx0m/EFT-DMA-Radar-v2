@@ -1,7 +1,9 @@
 ﻿using Offsets;
 using OpenTK.Input;
+using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Diagnostics.Metrics;
 using System.Drawing;
 using System.Net;
 using System.Numerics;
@@ -96,18 +98,18 @@ namespace eft_dma_radar
             }
 
             var players = this.AllPlayers
-                              ?.Where(x => !x.Value.IsLocalPlayer && x.Value.Type != PlayerType.LocalPlayer)
-                              .Where(x => (_config.Chams["Corpses"] ? true : x.Value.IsAlive) &&
-                                          !Chams.PlayersWithChams.ContainsKey(x.Value.Base.ToString()) &&
-                                          (_config.Chams["PMCs"] && x.Value.IsPMC ||
-                                           _config.Chams["PlayerScavs"] && x.Value.Type == PlayerType.PlayerScav ||
-                                           _config.Chams["Bosses"] && x.Value.Type == PlayerType.Boss ||
-                                           _config.Chams["Rogues"] && x.Value.IsRogueRaider ||
-                                           _config.Chams["Cultists"] && x.Value.Type == PlayerType.Cultist ||
-                                           _config.Chams["Scavs"] && x.Value.Type == PlayerType.Scav ||
-                                           _config.Chams["Teammates"] && x.Value.Type == PlayerType.Teammate))
-                              .Select(x => x.Value)
-                              .ToList();
+                             ?.Where(x => !x.Value.IsLocalPlayer && x.Value.Type != PlayerType.LocalPlayer)
+                             .Where(x => (_config.Chams["Corpses"] ? true : x.Value.IsAlive) &&
+                                         !Chams.PlayersWithChams.ContainsKey(x.Value.Base.ToString()) &&
+                                         ((_config.Chams["PMCs"] && x.Value.IsPMC && x.Value.Type != PlayerType.Teammate) ||
+                                          (_config.Chams["Teammates"] && x.Value.IsPMC && x.Value.Type == PlayerType.Teammate) ||
+                                          _config.Chams["PlayerScavs"] && x.Value.Type == PlayerType.PlayerScav ||
+                                          _config.Chams["Bosses"] && x.Value.Type == PlayerType.Boss ||
+                                          _config.Chams["Rogues"] && x.Value.IsRogueRaider ||
+                                          _config.Chams["Cultists"] && x.Value.Type == PlayerType.Cultist ||
+                                          _config.Chams["Scavs"] && x.Value.Type == PlayerType.Scav))
+                             .Select(x => x.Value)
+                             .ToList();
 
             if (players?.Count > 0)
             {
@@ -259,14 +261,11 @@ namespace eft_dma_radar
             try
             {
                 if ((!this.InGame && PlayersWithChams.Count == 0) || Memory.LocalPlayer is null)
-                    RemovePointers();
+                    this.RemovePointers();
                 else
-                    RestorePointers();
+                    this.RestorePointers();
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Failed to disable chams: {ex.Message}");
-            }
+            catch { }
         }
 
         public void SoftChamsDisable()
@@ -279,12 +278,9 @@ namespace eft_dma_radar
                     return;
                 }
 
-                SoftRestorePointers();
+                this.SoftRestorePointers();
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Failed to disable chams: {ex.Message}");
-            }
+            catch { }
         }
 
         private void SavePointer(ulong address, ulong originalValue, Player player)
@@ -310,7 +306,6 @@ namespace eft_dma_radar
                     {
                         if (this.InGame && Memory.LocalPlayer is not null)
                             Memory.WriteValue<ulong>(backup.Address, backup.OriginalValue);
-
                     }
                     catch { continue; }
                 }
@@ -329,7 +324,6 @@ namespace eft_dma_radar
                     {
                         if (this.InGame && Memory.LocalPlayer is not null)
                             Memory.WriteValue<ulong>(backup.Address, backup.OriginalValue);
-
                     }
                     catch { continue; }
                 }
@@ -349,7 +343,10 @@ namespace eft_dma_radar
                     try
                     {
                         if (!player.IsActive)
+                        {
+                            this.RemovePointersForPlayer(player);
                             continue;
+                        }
 
                         if (this.InGame && Memory.LocalPlayer is not null)
                             Memory.WriteValue<ulong>(backup.Address, backup.OriginalValue);
@@ -363,11 +360,12 @@ namespace eft_dma_radar
         {
             var key = player.Base.ToString();
 
-            if (pointerBackups.ContainsKey(key))
-                pointerBackups.Remove(key);
+            if (pointerBackups.Remove(key))
+                Program.Log($"Cleaned pointer backups for {player.Name}");
 
-            if (PlayersWithChams.ContainsKey(key))
-                PlayersWithChams.Remove(key);
+            if (PlayersWithChams.Remove(key))
+                Program.Log($"Removed {player.Name} from players w/ chams");
+
         }
 
         public void RemovePointers()

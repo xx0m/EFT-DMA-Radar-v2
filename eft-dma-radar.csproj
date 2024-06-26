@@ -34,9 +34,22 @@
 		<Content Include="vmm.dll">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>
+		<Content Include="vmmsharp.dll">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
 		<Content Include="Maps\*">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Remove="vmmsharp.dll" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Reference Include="vmmsharp">
+			<HintPath>vmmsharp.dll</HintPath>
+		</Reference>
 	</ItemGroup>
 
 	<ItemGroup>

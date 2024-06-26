@@ -5,6 +5,9 @@ using System.Collections.ObjectModel;
 using System.Text;
 using static eft_dma_radar.Config;
 using Offsets;
+using System.Runtime.InteropServices;
+using System.Runtime.Intrinsics;
+using System.Runtime.CompilerServices;
 
 namespace eft_dma_radar
 {
@@ -75,25 +78,21 @@ namespace eft_dma_radar
         public ulong PlayerBody { get; set; }
 
         private Vector3 _pos = new Vector3(0, 0, 0); // backing field
+
         /// <summary>
         /// Player's Unity Position in Local Game World.
         /// </summary>
-        ///
         public Vector3 Position // 96 bits, cannot set atomically
         {
             get
             {
                 lock (_posLock)
-                {
                     return _pos;
-                }
             }
             private set
             {
                 lock (_posLock)
-                {
                     _pos = value;
-                }
             }
         }
         /// <summary>
@@ -137,9 +136,21 @@ namespace eft_dma_radar
         public int ErrorCount { get; set; } = 0;
         public bool isOfflinePlayer { get; set; } = false;
         public int PlayerSide { get; set; }
+
+        public List<ulong> BonePointers { get; } = new List<ulong>();
+        public List<Vector3> BonePositions { get; } = new List<Vector3>();
+        public List<Transform> BoneTransforms { get; } = new List<Transform>();
         #endregion
 
         #region Getters
+        public List<PlayerBones> RequiredBones { get; } = new List<PlayerBones>
+        {
+            PlayerBones.HumanPelvis, PlayerBones.HumanHead, PlayerBones.HumanLForearm2,
+            PlayerBones.HumanLPalm, PlayerBones.HumanRForearm2, PlayerBones.HumanRPalm,
+            PlayerBones.HumanLThigh2, PlayerBones.HumanLFoot,
+            PlayerBones.HumanRThigh2, PlayerBones.HumanRFoot
+        };
+
         /// <summary>
         /// Contains 'Acct UUIDs' of tracked players for the Key, and the 'Reason' for the Value.
         /// </summary>
@@ -208,7 +219,7 @@ namespace eft_dma_radar
                 this.Type is PlayerType.BossFollower ||
                 this.Type is PlayerType.BossGuard ||
                 this.Type is PlayerType.Rogue ||
-                this.Type is PlayerType.Cultist || 
+                this.Type is PlayerType.Cultist ||
                 this.Type is PlayerType.Boss);
         }
 
@@ -689,6 +700,26 @@ namespace eft_dma_radar
             {
                 this.GroupID = -1;
             }
+
+            this.SetupBones();
+        }
+
+        /// <summary>
+        /// Gets the pointers/transforms of the required bones
+        /// </summary>
+        private void SetupBones()
+        {
+            //var boneMatrix = Memory.ReadPtrChain(this.PlayerBody, [0x28, 0x28, 0x10]);
+
+            //foreach (var bone in RequiredBones)
+            //{
+            //    var boneIndex = (uint)bone;
+            //    var pointer = Memory.ReadPtrChain(boneMatrix, [0x20 + (boneIndex * 0x8), 0x10]);
+
+            //    this.BonePointers.Add(pointer);
+            //    this.BoneTransforms.Add(new Transform(pointer, false));
+            //    this.BonePositions.Add(new Vector3(0f, 0f, 0f));
+            //}
         }
 
         /// <summary>
@@ -714,7 +745,7 @@ namespace eft_dma_radar
                 if (entry.IsStreamer)
                 {
                     isLive = await Watchlist.IsLive(entry);
-                    
+
                     if (isLive)
                         this.Name += " (LIVE)";
                 }

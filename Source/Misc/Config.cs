@@ -213,6 +213,67 @@ namespace eft_dma_radar
         };
 
         [JsonIgnore]
+        public Dictionary<string, int> DefaultAutoRefreshSettings = new Dictionary<string, int>()
+        {
+            ["Customs"] = 30,
+            ["Factory"] = 30,
+            ["Ground Zero"] = 30,
+            ["Interchange"] = 30,
+            ["Lighthouse"] = 30,
+            ["Reserve"] = 30,
+            ["Shoreline"] = 30,
+            ["Streets of Tarkov"] = 30,
+            ["The Lab"] = 30,
+            ["Woods"] = 30
+        };
+
+        [JsonIgnore]
+        public Dictionary<string, bool> DefaultChamsSettings = new Dictionary<string, bool>()
+        {
+            ["AlternateMethod"] = false,
+            ["Bosses"] = false,
+            ["Corpses"] = false,
+            ["Cultists"] = false,
+            ["Enabled"] = false,
+            ["PlayerScavs"] = false,
+            ["PMCs"] = false,
+            ["RevertOnClose"] = false,
+            ["Rogues"] = false,
+            ["Scavs"] = false,
+            ["Teammates"] = false
+        };
+
+        [JsonIgnore]
+        public Dictionary<string, int> DefaultLootPingSettings = new Dictionary<string, int>()
+        {
+            ["AnimationSpeed"] = 1000,
+            ["Radius"] = 20,
+            ["Repetition"] = 1
+        };
+
+        [JsonIgnore]
+        public Dictionary<string, bool> DefaultMaxSkillsSettings = new Dictionary<string, bool>()
+        {
+            ["Endurance"] = false,
+            ["Strength"] = false,
+            ["Vitality"] = false,
+            ["Health"] = false,
+            ["Stress Resistance"] = false,
+            ["Metabolism"] = false,
+            ["Immunity"] = false,
+            ["Perception"] = false,
+            ["Intellect"] = false,
+            ["Attention"] = false,
+            ["Covert Movement"] = false,
+            ["Throwables"] = false,
+            ["Surgery"] = false,
+            ["Search"] = false,
+            ["Mag Drills"] = false,
+            ["Light Vests"] = false,
+            ["Heavy Vests"] = false,
+        };
+
+        [JsonIgnore]
         public List<LootFilterManager.Filter> Filters
         {
             get => LootFilterManager.Filters;
@@ -261,33 +322,8 @@ namespace eft_dma_radar
             AimViewFOV = 30;
             UnknownQuestItems = false;
             AutoLootRefresh = false;
-            AutoRefreshSettings = new Dictionary<string, int>
-            {
-                ["Customs"] = 30,
-                ["Factory"] = 30,
-                ["Ground Zero"] = 30,
-                ["Interchange"] = 30,
-                ["Lighthouse"] = 30,
-                ["Reserve"] = 30,
-                ["Shoreline"] = 30,
-                ["Streets of Tarkov"] = 30,
-                ["The Lab"] = 30,
-                ["Woods"] = 30
-            };
-            Chams = new Dictionary<string, bool>
-            {
-                ["AlternateMethod"] = false,
-                ["Bosses"] = false,
-                ["Corpses"] = false,
-                ["Cultists"] = false,
-                ["Enabled"] = false,
-                ["PlayerScavs"] = false,
-                ["PMCs"] = false,
-                ["RevertOnClose"] = false,
-                ["Rogues"] = false,
-                ["Scavs"] = false,
-                ["Teammates"] = false
-            };
+            AutoRefreshSettings = DefaultAutoRefreshSettings;
+            Chams = DefaultChamsSettings;
             DefaultZoom = 100;
             EnemyCount = false;
             ExtendedReach = false;
@@ -300,35 +336,12 @@ namespace eft_dma_radar
             JumpPowerStrength = 0;
             LoggingEnabled = false;
             LootItemViewer = false;
-            LootPing = new Dictionary<string, int>
-            {
-                ["AnimationSpeed"] = 1000,
-                ["Radius"] = 20,
-            };
+            LootPing = DefaultLootPingSettings;
             MagDrillSpeed = 1;
             MainThermalSetting = new ThermalSettings(1f, 0.0011f, -0.1f, 0);
             MasterSwitch = false;
             MaxDistance = 325;
-            MaxSkills = new Dictionary<string, bool>
-            {
-                ["Endurance"] = false,
-                ["Strength"] = false,
-                ["Vitality"] = false,
-                ["Health"] = false,
-                ["Stress Resistance"] = false,
-                ["Metabolism"] = false,
-                ["Immunity"] = false,
-                ["Perception"] = false,
-                ["Intellect"] = false,
-                ["Attention"] = false,
-                ["Covert Movement"] = false,
-                ["Throwables"] = false,
-                ["Surgery"] = false,
-                ["Search"] = false,
-                ["Mag Drills"] = false,
-                ["Light Vests"] = false,
-                ["Heavy Vests"] = false,
-            };
+            MaxSkills = DefaultMaxSkillsSettings;
             MinCorpseValue = 100000;
             MinImportantLootValue = 300000;
             MinLootValue = 90000;

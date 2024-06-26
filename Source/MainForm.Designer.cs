@@ -144,6 +144,7 @@
             btnToggleLootItemViewer = new MaterialSkin.Controls.MaterialButton();
             sldrLootPingMaxRadius = new MaterialSkin.Controls.MaterialSlider();
             sldrLootPingAnimationSpeed = new MaterialSkin.Controls.MaterialSlider();
+            sldrLootPingRepetition = new MaterialSkin.Controls.MaterialSlider();
             sldrThermalColorCoefficient = new MaterialSkin.Controls.MaterialSlider();
             sldrMinTemperature = new MaterialSkin.Controls.MaterialSlider();
             sldrThermalRampShift = new MaterialSkin.Controls.MaterialSlider();
@@ -151,9 +152,9 @@
             tabRadar = new TabPage();
             mcRadarLootItemViewer = new MaterialSkin.Controls.MaterialCard();
             lstLootItems = new MaterialSkin.Controls.MaterialListView();
-            columnHeader1 = new ColumnHeader();
-            columnHeader2 = new ColumnHeader();
-            columnHeader3 = new ColumnHeader();
+            colItemQuantity = new ColumnHeader();
+            colItemName = new ColumnHeader();
+            colItemValue = new ColumnHeader();
             mcRadarEnemyStats = new MaterialSkin.Controls.MaterialCard();
             lblRadarBossesValue = new MaterialSkin.Controls.MaterialLabel();
             lblRadarPlayerScavsValue = new MaterialSkin.Controls.MaterialLabel();
@@ -2668,7 +2669,7 @@
             // 
             sldrLootPingMaxRadius.Depth = 0;
             sldrLootPingMaxRadius.ForeColor = Color.Black;
-            sldrLootPingMaxRadius.Location = new Point(341, 45);
+            sldrLootPingMaxRadius.Location = new Point(341, 40);
             sldrLootPingMaxRadius.MouseState = MaterialSkin.MouseState.HOVER;
             sldrLootPingMaxRadius.Name = "sldrLootPingMaxRadius";
             sldrLootPingMaxRadius.RangeMax = 75;
@@ -2687,11 +2688,11 @@
             // 
             sldrLootPingAnimationSpeed.Depth = 0;
             sldrLootPingAnimationSpeed.ForeColor = Color.Black;
-            sldrLootPingAnimationSpeed.Location = new Point(15, 45);
+            sldrLootPingAnimationSpeed.Location = new Point(15, 40);
             sldrLootPingAnimationSpeed.MouseState = MaterialSkin.MouseState.HOVER;
             sldrLootPingAnimationSpeed.Name = "sldrLootPingAnimationSpeed";
             sldrLootPingAnimationSpeed.RangeMax = 4000;
-            sldrLootPingAnimationSpeed.RangeMin = 500;
+            sldrLootPingAnimationSpeed.RangeMin = 1;
             sldrLootPingAnimationSpeed.Size = new Size(320, 40);
             sldrLootPingAnimationSpeed.TabIndex = 30;
             sldrLootPingAnimationSpeed.Text = "Animation Speed";
@@ -2701,6 +2702,23 @@
             sldrLootPingAnimationSpeed.ValueMax = 4000;
             sldrLootPingAnimationSpeed.ValueSuffix = "ms";
             sldrLootPingAnimationSpeed.onValueChanged += sldrLootPingAnimationSpeed_onValueChanged;
+            // 
+            // sldrLootPingRepetition
+            // 
+            sldrLootPingRepetition.Depth = 0;
+            sldrLootPingRepetition.ForeColor = Color.Black;
+            sldrLootPingRepetition.Location = new Point(15, 80);
+            sldrLootPingRepetition.MouseState = MaterialSkin.MouseState.HOVER;
+            sldrLootPingRepetition.Name = "sldrLootPingRepetition";
+            sldrLootPingRepetition.RangeMax = 5;
+            sldrLootPingRepetition.Size = new Size(304, 40);
+            sldrLootPingRepetition.TabIndex = 36;
+            sldrLootPingRepetition.Text = "Repetition Count";
+            toolTip.SetToolTip(sldrLootPingRepetition, "The amount of times for the pinging animation to repeat");
+            sldrLootPingRepetition.UseAccentColor = true;
+            sldrLootPingRepetition.Value = 1;
+            sldrLootPingRepetition.ValueMax = 5;
+            sldrLootPingRepetition.onValueChanged += sldrLootPingRepetition_onValueChanged;
             // 
             // sldrThermalColorCoefficient
             // 
@@ -2809,7 +2827,7 @@
             lstLootItems.AutoSizeTable = false;
             lstLootItems.BackColor = Color.FromArgb(255, 255, 255);
             lstLootItems.BorderStyle = BorderStyle.None;
-            lstLootItems.Columns.AddRange(new ColumnHeader[] { columnHeader1, columnHeader2, columnHeader3 });
+            lstLootItems.Columns.AddRange(new ColumnHeader[] { colItemQuantity, colItemName, colItemValue });
             lstLootItems.Depth = 0;
             lstLootItems.Font = new Font("Segoe UI", 8.25F, FontStyle.Underline | FontStyle.Strikeout, GraphicsUnit.Point, 0);
             lstLootItems.FullRowSelect = true;
@@ -2823,21 +2841,22 @@
             lstLootItems.TabIndex = 50;
             lstLootItems.UseCompatibleStateImageBehavior = false;
             lstLootItems.View = View.Details;
+            lstLootItems.SelectedIndexChanged += lstLootItems_SelectedIndexChanged;
             // 
-            // columnHeader1
+            // colItemQuantity
             // 
-            columnHeader1.Text = "Qty";
-            columnHeader1.Width = 54;
+            colItemQuantity.Text = "Qty";
+            colItemQuantity.Width = 54;
             // 
-            // columnHeader2
+            // colItemName
             // 
-            columnHeader2.Text = "Name";
-            columnHeader2.Width = 327;
+            colItemName.Text = "Name";
+            colItemName.Width = 327;
             // 
-            // columnHeader3
+            // colItemValue
             // 
-            columnHeader3.Text = "Value";
-            columnHeader3.Width = 76;
+            colItemValue.Text = "Value";
+            colItemValue.Width = 76;
             // 
             // mcRadarEnemyStats
             // 
@@ -3592,6 +3611,7 @@
             // mcSettingsLootPing
             // 
             mcSettingsLootPing.BackColor = Color.FromArgb(255, 255, 255);
+            mcSettingsLootPing.Controls.Add(sldrLootPingRepetition);
             mcSettingsLootPing.Controls.Add(lblSettingsLootPing);
             mcSettingsLootPing.Controls.Add(sldrLootPingMaxRadius);
             mcSettingsLootPing.Controls.Add(sldrLootPingAnimationSpeed);
@@ -3602,7 +3622,7 @@
             mcSettingsLootPing.MouseState = MaterialSkin.MouseState.HOVER;
             mcSettingsLootPing.Name = "mcSettingsLootPing";
             mcSettingsLootPing.Padding = new Padding(14);
-            mcSettingsLootPing.Size = new Size(586, 100);
+            mcSettingsLootPing.Size = new Size(586, 125);
             mcSettingsLootPing.TabIndex = 38;
             // 
             // lblSettingsLootPing
@@ -5804,9 +5824,9 @@
         private MaterialSkin.Controls.MaterialCard mcRadarLootItemViewer;
         private MaterialSkin.Controls.MaterialButton btnPingSelectedItem;
         private MaterialSkin.Controls.MaterialListView lstLootItems;
-        private ColumnHeader columnHeader1;
-        private ColumnHeader columnHeader2;
-        private ColumnHeader columnHeader3;
+        private ColumnHeader colItemQuantity;
+        private ColumnHeader colItemName;
+        private ColumnHeader colItemValue;
         private MaterialSkin.Controls.MaterialTextBox2 txtLootItemFilter;
         private PictureBox picLootPing;
         private MaterialSkin.Controls.MaterialLabel lblSettingsColorsLootPing;
@@ -5815,6 +5835,7 @@
         private MaterialSkin.Controls.MaterialLabel lblSettingsLootPing;
         private MaterialSkin.Controls.MaterialSlider sldrLootPingMaxRadius;
         private MaterialSkin.Controls.MaterialSlider sldrLootPingAnimationSpeed;
+        private MaterialSkin.Controls.MaterialSlider sldrLootPingRepetition;
     }
 }
 

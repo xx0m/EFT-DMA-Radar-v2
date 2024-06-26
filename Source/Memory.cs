@@ -3,23 +3,19 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
-using vmmsharp;
+using Vmmsharp;
 
 namespace eft_dma_radar
 {
     internal static class Memory
     {
-        /// <summary>
-        /// Adjust this to achieve desired mem/sec performance. Higher = slower, Lower = faster.
-        /// </summary>
         private static Vmm vmmInstance;
-
         private static volatile bool _running = false;
         private static volatile bool _restart = false;
         private static volatile bool _ready = false;
         private static Thread _workerThread;
         private static CancellationTokenSource _workerCancellationTokenSource;
-        private static uint _pid;
+        private static VmmProcess _process;
         private static ulong _unityBase;
         private static Game _game;
         private static int _ticksCounter = 0;
@@ -162,7 +158,7 @@ namespace eft_dma_radar
                 else
                 {
                     Program.Log("MemMap found, loading...");
-                    vmmInstance = new Vmm("-printf", "-v", "-device", "fpga", "-memmap", "mmap.txt");
+                    vmmInstance = new Vmm("-printf", "-v", "-device", "fpga://algo=0", "-memmap", "mmap.txt");
                 }
 
                 InitiateMemoryWorker();
@@ -197,7 +193,7 @@ namespace eft_dma_radar
 
         private static void GenerateMMap()
         {
-            vmmInstance = new Vmm("-printf", "-v", "-device", "fpga", "-waitinitialize");
+            vmmInstance = new Vmm("-printf", "-v", "-device", "fpga://algo=0", "-waitinitialize");
             GetMemMap();
         }
 
@@ -231,11 +227,11 @@ namespace eft_dma_radar
             try
             {
                 ThrowIfDMAShutdown();
-                if (!vmmInstance.PidGetFromName("EscapeFromTarkov.exe", out _pid))
+                if (!vmmInstance.ProcessGetFromName("EscapeFromTarkov.exe", out _process))
                     throw new DMAException("Unable to obtain PID. Game is not running.");
                 else
                 {
-                    Program.Log($"EscapeFromTarkov.exe is running at PID {_pid}");
+                    Program.Log($"EscapeFromTarkov.exe is running at PID {_process.PID}");
                     return true;
                 }
             }
@@ -255,8 +251,11 @@ namespace eft_dma_radar
             try
             {
                 ThrowIfDMAShutdown();
-                _unityBase = vmmInstance.ProcessGetModuleBase(_pid, "UnityPlayer.dll");
-                if (_unityBase == 0) throw new DMAException("Unable to obtain Base Module Address. Game may not be running");
+
+                _unityBase = _process.GetModuleBase("UnityPlayer.dll");
+
+                if (_unityBase == 0)
+                    throw new DMAException("Unable to obtain Base Module Address. Game may not be running");
                 else
                 {
                     Program.Log($"Found UnityPlayer.dll at 0x{_unityBase.ToString("x")}");
@@ -282,8 +281,11 @@ namespace eft_dma_radar
             try
             {
                 ThrowIfDMAShutdown();
-                monoBase = vmmInstance.ProcessGetModuleBase(_pid, "mono-2.0-bdwgc.dll");
-                if (monoBase == 0) throw new DMAException("Unable to obtain Module Base Address. Game may not be running");
+
+                monoBase = _process.GetModuleBase("mono-2.0-bdwgc.dll");
+
+                if (monoBase == 0)
+                    throw new DMAException("Unable to obtain Module Base Address. Game may not be running");
                 else
                 {
                     Program.Log($"Found mono-2.0-bdwgc.dll at 0x{monoBase:x}");
@@ -475,7 +477,7 @@ namespace eft_dma_radar
                     pagesToRead.Add(page);
                 }
             }
-            var scatters = vmmInstance.MemReadScatter(_pid, Vmm.FLAG_NOCACHE, pagesToRead.ToArray()); // execute scatter read
+            var scatters = vmmInstance.MemReadScatter(_process.PID, Vmm.FLAG_NOCACHE, pagesToRead.ToArray()); // execute scatter read
 
             foreach (var entry in entries) // Second loop through all entries - PARSE RESULTS
             {
@@ -531,7 +533,7 @@ namespace eft_dma_radar
         {
             if ((uint)size > PAGE_SIZE * 1500) throw new DMAException("Buffer length outside expected bounds!");
             ThrowIfDMAShutdown();
-            var buf = vmmInstance.MemRead(_pid, addr, (uint)size, Vmm.FLAG_NOCACHE);
+            var buf = vmmInstance.MemRead(_process.PID, addr, (uint)size, Vmm.FLAG_NOCACHE);
             if (buf.Length != size) throw new DMAException("Incomplete memory read!");
             return buf;
         }
@@ -582,7 +584,7 @@ namespace eft_dma_radar
             {
                 int size = Marshal.SizeOf(typeof(T));
                 ThrowIfDMAShutdown();
-                var buf = vmmInstance.MemRead(_pid, addr, (uint)size, Vmm.FLAG_NOCACHE);
+                var buf = vmmInstance.MemRead(_process.PID, addr, (uint)size, Vmm.FLAG_NOCACHE);
                 return MemoryMarshal.Read<T>(buf);
             }
             catch (Exception ex)
@@ -602,7 +604,7 @@ namespace eft_dma_radar
             {
                 if (length > PAGE_SIZE) throw new DMAException("String length outside expected bounds!");
                 ThrowIfDMAShutdown();
-                var buf = vmmInstance.MemRead(_pid, addr, length, Vmm.FLAG_NOCACHE);
+                var buf = vmmInstance.MemRead(_process.PID, addr, length, Vmm.FLAG_NOCACHE);
                 return Encoding.Default.GetString(buf).Split('\0')[0];
             }
             catch (Exception ex)
@@ -621,7 +623,7 @@ namespace eft_dma_radar
                 var length = (uint)ReadValue<int>(addr + Offsets.UnityString.Length);
                 if (length > PAGE_SIZE) throw new DMAException("String length outside expected bounds!");
                 ThrowIfDMAShutdown();
-                var buf = vmmInstance.MemRead(_pid, addr + Offsets.UnityString.Value, length * 2, Vmm.FLAG_NOCACHE);
+                var buf = vmmInstance.MemRead(_process.PID, addr + Offsets.UnityString.Value, length * 2, Vmm.FLAG_NOCACHE);
                 return Encoding.Unicode.GetString(buf).TrimEnd('\0'); ;
             }
             catch (Exception ex)
@@ -647,7 +649,7 @@ namespace eft_dma_radar
         {
             try
             {
-                if (!vmmInstance.MemWriteStruct(_pid, addr, value))
+                if (!vmmInstance.MemWriteStruct(_process.PID, addr, value))
                     throw new Exception("Memory Write Failed!");
             }
             catch (Exception ex)
@@ -662,7 +664,7 @@ namespace eft_dma_radar
         /// <param name="entries">A collection of entries defining the memory writes.</param>
         public static void WriteScatter(IEnumerable<IScatterWriteEntry> entries)
         {
-            using (var scatter = vmmInstance.Scatter_Initialize(_pid, Vmm.FLAG_NOCACHE))
+            using (var scatter = vmmInstance.Scatter_Initialize(_process.PID, Vmm.FLAG_NOCACHE))
             {
                 if (scatter == null)
                     throw new InvalidOperationException("Failed to initialize scatter.");

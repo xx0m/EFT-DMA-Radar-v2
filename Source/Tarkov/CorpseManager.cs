@@ -96,8 +96,6 @@ namespace eft_dma_radar
 
                                         if (player.Type is not PlayerType.LocalPlayer && Program.Config.Chams["Enabled"])
                                         {
-                                            Memory.Chams.RestorePointersForPlayer(player);
-
                                             if (Program.Config.Chams["Corpses"])
                                                 Memory.Chams.SetPlayerBodyChams(player, Memory.Chams.ThermalMaterial);
                                         }

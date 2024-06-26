@@ -18,6 +18,7 @@ namespace eft_dma_radar
         private readonly ConcurrentDictionary<string, Player> _players = new(StringComparer.OrdinalIgnoreCase);
 
         private int _localPlayerGroup = -100;
+        private readonly Vector3 DEFAULT_POSITION = new Vector3(0, 0, -9999);
 
         #region Getters
         public ReadOnlyDictionary<string, Player> Players { get; }
@@ -280,9 +281,7 @@ namespace eft_dma_radar
                     var localPlayer = this._players.FirstOrDefault(x => x.Value.Type is PlayerType.LocalPlayer).Value;
 
                     if (localPlayer is not null)
-                    {
                         this._localPlayerGroup = localPlayer.GroupID;
-                    }
                 }
 
                 bool checkHealth = this._healthSw.ElapsedMilliseconds > 500;
@@ -335,25 +334,25 @@ namespace eft_dma_radar
 
                     if (player.LastUpdate) // player may be dead/exfil'd
                     {
-                        scatterMap.Results[i][6].TryGetResult<ulong>(out var corpsePtr);
-
-                        player.IsActive = false;
-                        player.LastUpdate = false;
-
-                        if (corpsePtr > 0)
+                        if (player.Position == DEFAULT_POSITION)
+                        {
+                            player.IsActive = false;
+                            Program.Log($"{player.Name} exfiltrated");
+                            Memory.Chams.RemovePointersForPlayer(player);
+                        }
+                        else
                         {
                             player.IsAlive = false;
+                            Program.Log($"{player.Name} died");
 
                             if (player.Type is not PlayerType.LocalPlayer && Program.Config.Chams["Enabled"])
                             {
-                                Memory.Chams.RestorePointersForPlayer(player);
-
                                 if (Program.Config.Chams["Corpses"])
                                     Memory.Chams.SetPlayerBodyChams(player, Memory.Chams.ThermalMaterial);
                             }
                         }
 
-                        Program.Log($"{player.Name} died/exfil'd");
+                        player.LastUpdate = false;
                     }
                     else
                     {
