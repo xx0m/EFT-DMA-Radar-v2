@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.Intrinsics;
+using System.Security.Policy;
 
 namespace eft_dma_radar
 {
@@ -349,6 +350,8 @@ namespace eft_dma_radar
                             {
                                 if (Program.Config.Chams["Corpses"])
                                     Memory.Chams.SetPlayerBodyChams(player, Memory.Chams.ThermalMaterial);
+                                else
+                                    Memory.Chams.RestorePointersForPlayer(player);
                             }
                         }
 
