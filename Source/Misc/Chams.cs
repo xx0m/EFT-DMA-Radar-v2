@@ -260,7 +260,7 @@ namespace eft_dma_radar
         {
             try
             {
-                if ((!this.InGame && PlayersWithChams.Count == 0) || Memory.LocalPlayer is null)
+                if ((!this.InGame || PlayersWithChams.Count == 0) || Memory.LocalPlayer is null)
                     this.RemovePointers();
                 else
                     this.RestorePointers();

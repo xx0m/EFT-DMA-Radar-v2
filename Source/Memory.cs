@@ -703,9 +703,7 @@ namespace eft_dma_radar
         public static void Restart()
         {
             if (InGame)
-            {
                 _restart = true;
-            }
         }
 
         /// <summary>

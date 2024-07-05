@@ -148,10 +148,7 @@ namespace eft_dma_radar
             try
             {
                 if (!this._inGame)
-                {
-                    Memory.Chams?.ChamsDisable();
                     throw new RaidEnded("Raid has ended!");
-                }
 
                 this._rgtPlayers.UpdateList();
                 this._rgtPlayers.UpdateAllPlayers();
@@ -176,15 +173,8 @@ namespace eft_dma_radar
         /// <summary>
         /// Method to get map name using local game world
         /// </summary>
-        /// <returns></returns>
         private void GetMapName()
         {
-            if (this._inHideout)
-            {
-                this._mapName = string.Empty;
-                return;
-            }
-
             try
             {
                 var mapNamePtr = Memory.ReadPtrChain(this._localGameWorld, new uint[] { Offsets.LocalGameWorld.MainPlayer, Offsets.Player.Location });
@@ -199,9 +189,15 @@ namespace eft_dma_radar
                 }
                 catch
                 {
-                    Program.Log("Couldn't find map name!!!");
-                    this._mapName = "bigmap";
+                    Program.Log("Couldn't find map name!");
                 }
+            }
+            finally
+            {
+                this._inHideout = this._mapName == "hideout";
+
+                if (this._inHideout)
+                    this._mapName = string.Empty;
             }
         }
 
@@ -210,7 +206,8 @@ namespace eft_dma_radar
         /// </summary>
         private void HandleDMAShutdown()
         {
-            this._inGame = false;
+            //this._inGame = false;
+            Memory.Restart();
         }
 
         /// <summary>
@@ -220,9 +217,7 @@ namespace eft_dma_radar
         private void HandleRaidEnded(RaidEnded e)
         {
             Program.Log("Raid has ended!");
-
             //this._inGame = false;
-            //Memory.GameStatus = Game.GameStatus.Menu;
             Memory.Restart();
         }
 
@@ -233,7 +228,8 @@ namespace eft_dma_radar
         private void HandleUnexpectedException(Exception ex)
         {
             Program.Log($"CRITICAL ERROR - Raid ended due to unhandled exception: {ex}");
-            this._inGame = false;
+            //this._inGame = false;
+            Memory.Restart();
         }
 
         /// <summary>
@@ -544,9 +540,7 @@ namespace eft_dma_radar
         public void RefreshLoot()
         {
             if (this._inGame)
-            {
                 this._refreshLoot = true;
-            }
         }
         #endregion
     }
