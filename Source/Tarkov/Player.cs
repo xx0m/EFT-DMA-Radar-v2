@@ -728,9 +728,7 @@ namespace eft_dma_radar
         private void FinishAlloc()
         {
             if (this.IsHumanHostile)
-            {
                 this.RefreshWatchlistStatus();
-            }
         }
 
         public async void RefreshWatchlistStatus()

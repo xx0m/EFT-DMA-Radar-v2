@@ -134,41 +134,49 @@ namespace eft_dma_radar
                 if (!scatterReadMap2.Results[i][1].TryGetResult<ulong>(out var localPlayer))
                     continue;
 
-                var exfil = new Exfil(exfilAddr);
-                exfil.UpdateName();
-
-                if (this.IsScav)
+                try
                 {
-                    scatterReadMap2.Results[i][3].TryGetResult<ulong>(out var eligibleIds);
-                    scatterReadMap2.Results[i][6].TryGetResult<int>(out var eligibleIdsCount);
+                    var exfil = new Exfil(exfilAddr);
+                    exfil.UpdateName();
 
-                    if (eligibleIdsCount != 0)
+                    if (this.IsScav)
                     {
-                        list.Add(exfil);
-                        continue;
-                    }
-                }
-                else
-                {
-                    scatterReadMap2.Results[i][2].TryGetResult<ulong>(out var localPlayerProfile);
-                    scatterReadMap2.Results[i][5].TryGetResult<ulong>(out var localPlayerInfo);
-                    scatterReadMap2.Results[i][8].TryGetResult<ulong>(out var localPlayerEntryPoint);
-                    scatterReadMap2.Results[i][4].TryGetResult<ulong>(out var eligibleEntryPoints);
-                    scatterReadMap2.Results[i][7].TryGetResult<int>(out var eligibleEntryPointsCount);
+                        scatterReadMap2.Results[i][3].TryGetResult<ulong>(out var eligibleIds);
+                        scatterReadMap2.Results[i][6].TryGetResult<int>(out var eligibleIdsCount);
 
-                    var localPlayerEntryPointString = Memory.ReadUnityString(localPlayerEntryPoint);
-
-                    for (uint j = 0; j < eligibleEntryPointsCount; j++)
-                    {
-                        var entryPoint = Memory.ReadPtr(eligibleEntryPoints + 0x20 + (j * 0x8));
-                        var entryPointString = Memory.ReadUnityString(entryPoint);
-
-                        if (entryPointString.ToLower() == localPlayerEntryPointString.ToLower())
+                        if (eligibleIdsCount != 0)
                         {
                             list.Add(exfil);
-                            break;
+                            continue;
                         }
                     }
+                    else
+                    {
+                        scatterReadMap2.Results[i][2].TryGetResult<ulong>(out var localPlayerProfile);
+                        scatterReadMap2.Results[i][5].TryGetResult<ulong>(out var localPlayerInfo);
+                        scatterReadMap2.Results[i][8].TryGetResult<ulong>(out var localPlayerEntryPoint);
+                        scatterReadMap2.Results[i][4].TryGetResult<ulong>(out var eligibleEntryPoints);
+                        scatterReadMap2.Results[i][7].TryGetResult<int>(out var eligibleEntryPointsCount);
+
+                        var localPlayerEntryPointString = Memory.ReadUnityString(localPlayerEntryPoint);
+
+                        for (uint j = 0; j < eligibleEntryPointsCount; j++)
+                        {
+                            var entryPoint = Memory.ReadPtr(eligibleEntryPoints + 0x20 + (j * 0x8));
+                            var entryPointString = Memory.ReadUnityString(entryPoint);
+
+                            if (entryPointString.ToLower() == localPlayerEntryPointString.ToLower())
+                            {
+                                list.Add(exfil);
+                                break;
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Program.Log($"ExfilManager -> {ex.Message}\n{ex.StackTrace}");
+                    continue;
                 }
             }
 

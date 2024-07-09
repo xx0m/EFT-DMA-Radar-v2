@@ -2140,9 +2140,7 @@ namespace eft_dma_radar
                 }
             }
             else
-            {
                 ShowErrorDialog("Invalid value(s) provided in the map setup textboxes.");
-            }
         }
 
         private void skMapCanvas_MouseMovePlayer(object sender, MouseEventArgs e)
@@ -2182,6 +2180,26 @@ namespace eft_dma_radar
                 _closestTaskZoneToMouse = FindClosestObject(tasksZones, mouse, x => x.ZoomedPosition, 12);
                 if (_closestTaskZoneToMouse == null)
                     ClearTaskZoneRefs();
+
+                if (this._isDragging && this._isFreeMapToggled)
+                {
+                    if (!this._lastMousePosition.IsEmpty)
+                    {
+                        int dx = e.X - this._lastMousePosition.X;
+                        int dy = e.Y - this._lastMousePosition.Y;
+
+                        dx = (int)(dx * DRAG_SENSITIVITY);
+                        dy = (int)(dy * DRAG_SENSITIVITY);
+
+                        this.targetPanPosition.X -= dx;
+                        this.targetPanPosition.Y -= dy;
+
+                        if (!this.panTimer.Enabled)
+                            this.panTimer.Start();
+                    }
+
+                    this._lastMousePosition = e.Location;
+                }
             }
             else if (this.InGame && Memory.LocalPlayer is null)
             {
@@ -2189,26 +2207,6 @@ namespace eft_dma_radar
                 ClearItemRefs();
                 ClearTaskItemRefs();
                 ClearTaskZoneRefs();
-            }
-
-            if (this._isDragging && this._isFreeMapToggled)
-            {
-                if (!this._lastMousePosition.IsEmpty)
-                {
-                    int dx = e.X - this._lastMousePosition.X;
-                    int dy = e.Y - this._lastMousePosition.Y;
-
-                    dx = (int)(dx * DRAG_SENSITIVITY);
-                    dy = (int)(dy * DRAG_SENSITIVITY);
-
-                    this.targetPanPosition.X -= dx;
-                    this.targetPanPosition.Y -= dy;
-
-                    if (!this.panTimer.Enabled)
-                        this.panTimer.Start();
-                }
-
-                this._lastMousePosition = e.Location;
             }
         }
 
@@ -2270,9 +2268,7 @@ namespace eft_dma_radar
                     }
                 }
                 else
-                {
                     DrawStatusText(canvas);
-                }
 
                 canvas.Flush();
             }
