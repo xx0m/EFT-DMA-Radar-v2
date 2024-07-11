@@ -53,6 +53,11 @@ namespace eft_dma_radar
             get => Extensions.Vector4FromPaintColor("Chams");
         }
 
+        private bool safeToWriteChams
+        {
+            get => (this.InGame && Memory.LocalPlayer is not null && Memory.LocalPlayer.IsActive && Memory.Players.Count > 1);
+        }
+
         private static Dictionary<string, Player> PlayersWithChams = new Dictionary<string, Player>();
         private Dictionary<string, List<PointerBackup>> pointerBackups = new Dictionary<string, List<PointerBackup>>();
 
@@ -63,9 +68,9 @@ namespace eft_dma_radar
 
         public void ChamsEnable()
         {
-            if (!this.InGame || Memory.LocalPlayer is null)
+            if (!safeToWriteChams)
             {
-                Program.Log("Chams -> not in game");
+                Program.Log("Chams -> not safe to write");
                 return;
             }
 
@@ -98,17 +103,20 @@ namespace eft_dma_radar
             }
 
             var players = this.AllPlayers
-                             ?.Where(x => !x.Value.IsLocalPlayer && x.Value.Type != PlayerType.LocalPlayer)
-                             .Where(x => (
+                             ?.Where(x =>
                                           !Chams.PlayersWithChams.ContainsKey(x.Value.Base.ToString()) &&
-                                          _config.Chams["Corpses"] ? true : x.Value.IsAlive) &&
-                                         ((_config.Chams["PMCs"] && x.Value.IsPMC && x.Value.Type != PlayerType.Teammate) ||
+                                          x.Value.IsActive &&
+                                          !x.Value.IsLocalPlayer &&
+                                          x.Value.Type != PlayerType.LocalPlayer)
+                             .Where(x =>
+                                          _config.Chams["Corpses"] ? true : x.Value.IsAlive &&
+                                          (_config.Chams["PMCs"] && x.Value.IsPMC && x.Value.Type != PlayerType.Teammate) ||
                                           (_config.Chams["Teammates"] && x.Value.IsPMC && x.Value.Type == PlayerType.Teammate) ||
                                           _config.Chams["PlayerScavs"] && x.Value.Type == PlayerType.PlayerScav ||
                                           _config.Chams["Bosses"] && x.Value.Type == PlayerType.Boss ||
                                           _config.Chams["Rogues"] && x.Value.IsRogueRaider ||
                                           _config.Chams["Cultists"] && x.Value.Type == PlayerType.Cultist ||
-                                          _config.Chams["Scavs"] && x.Value.Type == PlayerType.Scav))
+                                          _config.Chams["Scavs"] && x.Value.Type == PlayerType.Scav)
                              .Select(x => x.Value)
                              .ToList();
 
@@ -118,6 +126,12 @@ namespace eft_dma_radar
                 {
                     try
                     {
+                        if (!safeToWriteChams)
+                        {
+                            Program.Log("Chams -> not safe to write");
+                            break;
+                        }
+
                         var materialTouse = (player.IsHuman || player.Type == PlayerType.Boss) && player.IsAlive ? _nvgMaterial : _thermalMaterial;
 
                         if (this.SetPlayerBodyChams(player, materialTouse))
@@ -134,6 +148,7 @@ namespace eft_dma_radar
         public bool SetPlayerBodyChams(Player player, ulong material)
         {
             var setAnyMaterial = false;
+
             try
             {
                 var count = 1;
@@ -214,7 +229,7 @@ namespace eft_dma_radar
                         if (pLodEntry == 0)
                             continue;
 
-                        if (materialCount > 0 && materialCount < 4)
+                        if (materialCount > 0 && materialCount < 3)
                         {
                             var scatterReadMap4 = new ScatterReadMap(materialCount);
                             var map4Round1 = scatterReadMap4.AddRound();
@@ -235,10 +250,13 @@ namespace eft_dma_radar
                                     continue;
 
                                 if (pMaterial == material)
-                                    continue;
+                                {
+                                    setAnyMaterial = true;
+                                    break;
+                                }
 
-                                if (!this.InGame || Memory.LocalPlayer is null)
-                                    continue;
+                                if (!safeToWriteChams)
+                                    break;
 
                                 if (!_config.Chams["AlternateMethod"])
                                     SavePointer(materialDictionaryBase + (0x50 * (uint)k), pMaterial, player);
@@ -262,14 +280,10 @@ namespace eft_dma_radar
 
         public void ChamsDisable()
         {
-            try
-            {
-                if ((!this.InGame || PlayersWithChams.Count == 0) || Memory.LocalPlayer is null)
-                    this.RemovePointers();
-                else
-                    this.RestorePointers();
-            }
-            catch { }
+            if (!safeToWriteChams)
+                this.RemovePointers();
+            else
+                this.RestorePointers();
         }
 
         public void SoftChamsDisable()
@@ -308,7 +322,7 @@ namespace eft_dma_radar
                 {
                     try
                     {
-                        if (this.InGame && Memory.LocalPlayer is not null)
+                        if (safeToWriteChams)
                             Memory.WriteValue<ulong>(backup.Address, backup.OriginalValue);
                     }
                     catch { continue; }
@@ -326,8 +340,9 @@ namespace eft_dma_radar
                 {
                     try
                     {
-                        if (this.InGame && Memory.LocalPlayer is not null)
+                        if (safeToWriteChams)
                             Memory.WriteValue<ulong>(backup.Address, backup.OriginalValue);
+
                     }
                     catch { continue; }
                 }
@@ -349,11 +364,12 @@ namespace eft_dma_radar
                         if (!player.IsActive)
                         {
                             this.RemovePointersForPlayer(player);
-                            continue;
+                            break;
                         }
 
-                        if (this.InGame && Memory.LocalPlayer is not null)
+                        if (safeToWriteChams)
                             Memory.WriteValue<ulong>(backup.Address, backup.OriginalValue);
+
                     }
                     catch { continue; }
                 }
