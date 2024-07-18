@@ -145,6 +145,11 @@
             sldrLootPingMaxRadius = new MaterialSkin.Controls.MaterialSlider();
             sldrLootPingAnimationSpeed = new MaterialSkin.Controls.MaterialSlider();
             sldrLootPingRepetition = new MaterialSkin.Controls.MaterialSlider();
+            sldrTimeScaleFactor = new MaterialSkin.Controls.MaterialSlider();
+            swTimeScale = new MaterialSkin.Controls.MaterialSwitch();
+            sldrLootThroughWallsDistance = new MaterialSkin.Controls.MaterialSlider();
+            swLootThroughWalls = new MaterialSkin.Controls.MaterialSwitch();
+            swNoWeaponMalfunctions = new MaterialSkin.Controls.MaterialSwitch();
             sldrThermalColorCoefficient = new MaterialSkin.Controls.MaterialSlider();
             sldrMinTemperature = new MaterialSkin.Controls.MaterialSlider();
             sldrThermalRampShift = new MaterialSkin.Controls.MaterialSlider();
@@ -198,6 +203,7 @@
             mcSettingsMemoryWritingThermal = new MaterialSkin.Controls.MaterialCard();
             lblSettingsMemoryWritingThermal = new MaterialSkin.Controls.MaterialLabel();
             mcSettingsMemoryWritingGlobal = new MaterialSkin.Controls.MaterialCard();
+            lblSettingsMemoryWritingTimeScaleFactor = new MaterialSkin.Controls.MaterialLabel();
             lblSettingsMemoryWritingGlobal = new MaterialSkin.Controls.MaterialLabel();
             mcSettingsMemoryWritingGear = new MaterialSkin.Controls.MaterialCard();
             lblSettingsMemoryWritingGear = new MaterialSkin.Controls.MaterialLabel();
@@ -777,7 +783,7 @@
             // 
             swThermalVision.Depth = 0;
             swThermalVision.Font = new Font("Segoe UI", 9F);
-            swThermalVision.Location = new Point(14, 85);
+            swThermalVision.Location = new Point(15, 85);
             swThermalVision.Margin = new Padding(0);
             swThermalVision.MouseLocation = new Point(-1, -1);
             swThermalVision.MouseState = MaterialSkin.MouseState.HOVER;
@@ -2720,6 +2726,95 @@
             sldrLootPingRepetition.ValueMax = 5;
             sldrLootPingRepetition.onValueChanged += sldrLootPingRepetition_onValueChanged;
             // 
+            // sldrTimeScaleFactor
+            // 
+            sldrTimeScaleFactor.Depth = 0;
+            sldrTimeScaleFactor.ForeColor = Color.Black;
+            sldrTimeScaleFactor.Location = new Point(174, 120);
+            sldrTimeScaleFactor.MouseState = MaterialSkin.MouseState.HOVER;
+            sldrTimeScaleFactor.Name = "sldrTimeScaleFactor";
+            sldrTimeScaleFactor.RangeMax = 19;
+            sldrTimeScaleFactor.RangeMin = 1;
+            sldrTimeScaleFactor.ShowValue = false;
+            sldrTimeScaleFactor.Size = new Size(212, 40);
+            sldrTimeScaleFactor.TabIndex = 40;
+            sldrTimeScaleFactor.Text = "Factor";
+            toolTip.SetToolTip(sldrTimeScaleFactor, "The factor to adjust player time scale (1.0 minimum, 1.8 maximum)");
+            sldrTimeScaleFactor.UseAccentColor = true;
+            sldrTimeScaleFactor.Value = 10;
+            sldrTimeScaleFactor.ValueMax = 19;
+            sldrTimeScaleFactor.Visible = false;
+            sldrTimeScaleFactor.onValueChanged += sldrTimeScaleFactor_onValueChanged;
+            // 
+            // swTimeScale
+            // 
+            swTimeScale.Depth = 0;
+            swTimeScale.Font = new Font("Segoe UI", 9F);
+            swTimeScale.Location = new Point(15, 125);
+            swTimeScale.Margin = new Padding(0);
+            swTimeScale.MouseLocation = new Point(-1, -1);
+            swTimeScale.MouseState = MaterialSkin.MouseState.HOVER;
+            swTimeScale.Name = "swTimeScale";
+            swTimeScale.Ripple = true;
+            swTimeScale.Size = new Size(152, 28);
+            swTimeScale.TabIndex = 39;
+            swTimeScale.Text = "Time Scale";
+            toolTip.SetToolTip(swTimeScale, "Enables adjusting player time scale (speed hack)");
+            swTimeScale.UseVisualStyleBackColor = true;
+            swTimeScale.CheckedChanged += swTimeScale_CheckedChanged;
+            // 
+            // sldrLootThroughWallsDistance
+            // 
+            sldrLootThroughWallsDistance.Depth = 0;
+            sldrLootThroughWallsDistance.ForeColor = Color.Black;
+            sldrLootThroughWallsDistance.Location = new Point(221, 160);
+            sldrLootThroughWallsDistance.MouseState = MaterialSkin.MouseState.HOVER;
+            sldrLootThroughWallsDistance.Name = "sldrLootThroughWallsDistance";
+            sldrLootThroughWallsDistance.RangeMax = 4;
+            sldrLootThroughWallsDistance.Size = new Size(189, 40);
+            sldrLootThroughWallsDistance.TabIndex = 43;
+            sldrLootThroughWallsDistance.Text = "Distance";
+            toolTip.SetToolTip(sldrLootThroughWallsDistance, "The distance for looting through walls ");
+            sldrLootThroughWallsDistance.UseAccentColor = true;
+            sldrLootThroughWallsDistance.Value = 2;
+            sldrLootThroughWallsDistance.ValueMax = 3;
+            sldrLootThroughWallsDistance.Visible = false;
+            sldrLootThroughWallsDistance.onValueChanged += sldrLootThroughWallsDistance_onValueChanged;
+            // 
+            // swLootThroughWalls
+            // 
+            swLootThroughWalls.Depth = 0;
+            swLootThroughWalls.Font = new Font("Segoe UI", 9F);
+            swLootThroughWalls.Location = new Point(15, 165);
+            swLootThroughWalls.Margin = new Padding(0);
+            swLootThroughWalls.MouseLocation = new Point(-1, -1);
+            swLootThroughWalls.MouseState = MaterialSkin.MouseState.HOVER;
+            swLootThroughWalls.Name = "swLootThroughWalls";
+            swLootThroughWalls.Ripple = true;
+            swLootThroughWalls.Size = new Size(203, 28);
+            swLootThroughWalls.TabIndex = 42;
+            swLootThroughWalls.Text = "Loot Through Walls";
+            toolTip.SetToolTip(swLootThroughWalls, "Toggles looting through walls (when aiming down sights)");
+            swLootThroughWalls.UseVisualStyleBackColor = true;
+            swLootThroughWalls.CheckedChanged += swLootThroughWalls_CheckedChanged;
+            // 
+            // swNoWeaponMalfunctions
+            // 
+            swNoWeaponMalfunctions.Depth = 0;
+            swNoWeaponMalfunctions.Font = new Font("Segoe UI", 9F);
+            swNoWeaponMalfunctions.Location = new Point(15, 125);
+            swNoWeaponMalfunctions.Margin = new Padding(0);
+            swNoWeaponMalfunctions.MouseLocation = new Point(-1, -1);
+            swNoWeaponMalfunctions.MouseState = MaterialSkin.MouseState.HOVER;
+            swNoWeaponMalfunctions.Name = "swNoWeaponMalfunctions";
+            swNoWeaponMalfunctions.Ripple = true;
+            swNoWeaponMalfunctions.Size = new Size(244, 28);
+            swNoWeaponMalfunctions.TabIndex = 37;
+            swNoWeaponMalfunctions.Text = "No Weapon Malfunctions";
+            toolTip.SetToolTip(swNoWeaponMalfunctions, "Removes misfiring, failure to eject/feed, jammed bolts & overheating");
+            swNoWeaponMalfunctions.UseVisualStyleBackColor = true;
+            swNoWeaponMalfunctions.CheckedChanged += swNoWeaponMalfunctions_CheckedChanged;
+            // 
             // sldrThermalColorCoefficient
             // 
             sldrThermalColorCoefficient.Depth = 0;
@@ -3503,7 +3598,7 @@
             mcSettingsMemoryWritingThermal.Controls.Add(sldrThermalRampShift);
             mcSettingsMemoryWritingThermal.Depth = 0;
             mcSettingsMemoryWritingThermal.ForeColor = Color.FromArgb(222, 0, 0, 0);
-            mcSettingsMemoryWritingThermal.Location = new Point(15, 335);
+            mcSettingsMemoryWritingThermal.Location = new Point(15, 450);
             mcSettingsMemoryWritingThermal.Margin = new Padding(14);
             mcSettingsMemoryWritingThermal.MouseState = MaterialSkin.MouseState.HOVER;
             mcSettingsMemoryWritingThermal.Name = "mcSettingsMemoryWritingThermal";
@@ -3530,6 +3625,11 @@
             // mcSettingsMemoryWritingGlobal
             // 
             mcSettingsMemoryWritingGlobal.BackColor = Color.FromArgb(255, 255, 255);
+            mcSettingsMemoryWritingGlobal.Controls.Add(sldrLootThroughWallsDistance);
+            mcSettingsMemoryWritingGlobal.Controls.Add(swLootThroughWalls);
+            mcSettingsMemoryWritingGlobal.Controls.Add(lblSettingsMemoryWritingTimeScaleFactor);
+            mcSettingsMemoryWritingGlobal.Controls.Add(sldrTimeScaleFactor);
+            mcSettingsMemoryWritingGlobal.Controls.Add(swTimeScale);
             mcSettingsMemoryWritingGlobal.Controls.Add(swInfiniteStamina);
             mcSettingsMemoryWritingGlobal.Controls.Add(lblSettingsMemoryWritingGlobal);
             mcSettingsMemoryWritingGlobal.Controls.Add(sldrTimeOfDay);
@@ -3542,8 +3642,20 @@
             mcSettingsMemoryWritingGlobal.MouseState = MaterialSkin.MouseState.HOVER;
             mcSettingsMemoryWritingGlobal.Name = "mcSettingsMemoryWritingGlobal";
             mcSettingsMemoryWritingGlobal.Padding = new Padding(14);
-            mcSettingsMemoryWritingGlobal.Size = new Size(535, 125);
+            mcSettingsMemoryWritingGlobal.Size = new Size(535, 203);
             mcSettingsMemoryWritingGlobal.TabIndex = 38;
+            // 
+            // lblSettingsMemoryWritingTimeScaleFactor
+            // 
+            lblSettingsMemoryWritingTimeScaleFactor.AutoSize = true;
+            lblSettingsMemoryWritingTimeScaleFactor.Depth = 0;
+            lblSettingsMemoryWritingTimeScaleFactor.Font = new Font("Roboto", 14F, FontStyle.Regular, GraphicsUnit.Pixel);
+            lblSettingsMemoryWritingTimeScaleFactor.Location = new Point(392, 130);
+            lblSettingsMemoryWritingTimeScaleFactor.MouseState = MaterialSkin.MouseState.HOVER;
+            lblSettingsMemoryWritingTimeScaleFactor.Name = "lblSettingsMemoryWritingTimeScaleFactor";
+            lblSettingsMemoryWritingTimeScaleFactor.Size = new Size(18, 19);
+            lblSettingsMemoryWritingTimeScaleFactor.TabIndex = 41;
+            lblSettingsMemoryWritingTimeScaleFactor.Text = "x1";
             // 
             // lblSettingsMemoryWritingGlobal
             // 
@@ -3563,6 +3675,7 @@
             // mcSettingsMemoryWritingGear
             // 
             mcSettingsMemoryWritingGear.BackColor = Color.FromArgb(255, 255, 255);
+            mcSettingsMemoryWritingGear.Controls.Add(swNoWeaponMalfunctions);
             mcSettingsMemoryWritingGear.Controls.Add(swNightVision);
             mcSettingsMemoryWritingGear.Controls.Add(swOpticalThermal);
             mcSettingsMemoryWritingGear.Controls.Add(swThermalVision);
@@ -3572,12 +3685,12 @@
             mcSettingsMemoryWritingGear.Controls.Add(swNoRecoilSway);
             mcSettingsMemoryWritingGear.Depth = 0;
             mcSettingsMemoryWritingGear.ForeColor = Color.FromArgb(222, 0, 0, 0);
-            mcSettingsMemoryWritingGear.Location = new Point(15, 196);
+            mcSettingsMemoryWritingGear.Location = new Point(15, 273);
             mcSettingsMemoryWritingGear.Margin = new Padding(14);
             mcSettingsMemoryWritingGear.MouseState = MaterialSkin.MouseState.HOVER;
             mcSettingsMemoryWritingGear.Name = "mcSettingsMemoryWritingGear";
             mcSettingsMemoryWritingGear.Padding = new Padding(14);
-            mcSettingsMemoryWritingGear.Size = new Size(535, 123);
+            mcSettingsMemoryWritingGear.Size = new Size(535, 163);
             mcSettingsMemoryWritingGear.TabIndex = 39;
             // 
             // lblSettingsMemoryWritingGear
@@ -5836,6 +5949,13 @@
         private MaterialSkin.Controls.MaterialSlider sldrLootPingMaxRadius;
         private MaterialSkin.Controls.MaterialSlider sldrLootPingAnimationSpeed;
         private MaterialSkin.Controls.MaterialSlider sldrLootPingRepetition;
+        private MaterialSkin.Controls.MaterialButton materialButton1;
+        private MaterialSkin.Controls.MaterialSlider sldrTimeScaleFactor;
+        private MaterialSkin.Controls.MaterialSwitch swTimeScale;
+        private MaterialSkin.Controls.MaterialLabel lblSettingsMemoryWritingTimeScaleFactor;
+        private MaterialSkin.Controls.MaterialSlider sldrLootThroughWallsDistance;
+        private MaterialSkin.Controls.MaterialSwitch swLootThroughWalls;
+        private MaterialSkin.Controls.MaterialSwitch swNoWeaponMalfunctions;
     }
 }
 

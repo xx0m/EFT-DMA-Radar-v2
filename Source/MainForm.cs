@@ -485,6 +485,14 @@ namespace eft_dma_radar
             sldrTimeOfDay.Visible = _config.FreezeTimeOfDay;
             sldrTimeOfDay.Value = (int)_config.TimeOfDay;
             swInfiniteStamina.Checked = _config.InfiniteStamina;
+            swTimeScale.Checked = _config.TimeScale;
+            sldrTimeScaleFactor.Visible = _config.TimeScale;
+            sldrTimeScaleFactor.Value = (int)(_config.TimeScaleFactor * 10);
+            lblSettingsMemoryWritingTimeScaleFactor.Text = $"x{(_config.TimeScaleFactor)}";
+            lblSettingsMemoryWritingTimeScaleFactor.Visible = _config.TimeScale;
+            swLootThroughWalls.Checked = _config.LootThroughWalls;
+            sldrLootThroughWallsDistance.Visible = _config.LootThroughWalls;
+            sldrLootThroughWallsDistance.Value = (int)_config.LootThroughWallsDistance;
 
             // Gear Features
             mcSettingsMemoryWritingGear.Enabled = _config.MasterSwitch;
@@ -494,6 +502,7 @@ namespace eft_dma_radar
             swThermalVision.Checked = _config.ThermalVision;
             swOpticalThermal.Checked = _config.OpticThermalVision;
             swNightVision.Checked = _config.NightVision;
+            swNoWeaponMalfunctions.Checked = _config.NoWeaponMalfunctions;
 
             // Max Skill Buff Management
             mcSettingsMemoryWritingSkillBuffs.Enabled = _config.MasterSwitch;
@@ -2060,7 +2069,10 @@ namespace eft_dma_radar
             }
 
             if (mergedLootItems.Count < 1)
+            {
+                _isRefreshingLootItems = false;
                 return;
+            }
 
             var listViewItems = mergedLootItems.Select(item => new ListViewItem
             {
@@ -2472,6 +2484,44 @@ namespace eft_dma_radar
             _config.TimeOfDay = (float)sldrTimeOfDay.Value;
         }
 
+        private void swTimeScale_CheckedChanged(object sender, EventArgs e)
+        {
+            var enabled = swTimeScale.Checked;
+            _config.TimeScale = enabled;
+            sldrTimeScaleFactor.Visible = enabled;
+
+            lblSettingsMemoryWritingTimeScaleFactor.Visible = enabled;
+        }
+
+        private void sldrTimeScaleFactor_onValueChanged(object sender, int newValue)
+        {
+            if (newValue < 10)
+                newValue = 10;
+            else if (newValue > 18)
+                newValue = 18;
+
+            _config.TimeScaleFactor = (float)newValue / 10;
+            lblSettingsMemoryWritingTimeScaleFactor.Text = $"x{(_config.TimeScaleFactor)}";
+        }
+
+        private void swLootThroughWalls_CheckedChanged(object sender, EventArgs e)
+        {
+            var enabled = swLootThroughWalls.Checked;
+            _config.LootThroughWalls = enabled;
+
+            sldrLootThroughWallsDistance.Visible = enabled;
+        }
+
+        private void sldrLootThroughWallsDistance_onValueChanged(object sender, int newValue)
+        {
+            if (newValue < 1)
+                newValue = 1;
+            else if (newValue > 3)
+                newValue = 3;
+
+            _config.LootThroughWallsDistance = (float)newValue;
+        }
+
         private void swNoRecoilSway_CheckedChanged(object sender, EventArgs e)
         {
             _config.NoRecoilSway = swNoRecoilSway.Checked;
@@ -2506,6 +2556,11 @@ namespace eft_dma_radar
         private void swNightVision_CheckedChanged(object sender, EventArgs e)
         {
             _config.NightVision = swNightVision.Checked;
+        }
+
+        private void swNoWeaponMalfunctions_CheckedChanged(object sender, EventArgs e)
+        {
+            _config.NoWeaponMalfunctions = swNoWeaponMalfunctions.Checked;
         }
 
         private void sldrMagDrillsSpeed_onValueChanged(object sender, int newValue)

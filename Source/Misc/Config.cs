@@ -12,9 +12,6 @@ namespace eft_dma_radar
         [JsonPropertyName("aimviewFOV")]
         public float AimViewFOV { get; set; }
 
-        [JsonPropertyName("unknownQuestItems")]
-        public bool UnknownQuestItems { get; set; }
-
         [JsonPropertyName("autoLootRefresh")]
         public bool AutoLootRefresh { get; set; }
 
@@ -63,6 +60,12 @@ namespace eft_dma_radar
         [JsonPropertyName("lootPing")]
         public Dictionary<string, int> LootPing { get; set; }
 
+        [JsonPropertyName("lootThroughWallsDistance")]
+        public float LootThroughWallsDistance { get; set; }
+
+        [JsonPropertyName("lootThroughWalls")]
+        public bool LootThroughWalls { get; set; }
+
         [JsonPropertyName("magDrillSpeed")]
         public int MagDrillSpeed { get; set; }
 
@@ -89,6 +92,9 @@ namespace eft_dma_radar
 
         [JsonPropertyName("minSubItemValue")]
         public int MinSubItemValue { get; set; }
+
+        [JsonPropertyName("noWeaponMalfunctions")]
+        public bool NoWeaponMalfunctions { get; set; }
 
         [JsonPropertyName("nightVision")]
         public bool NightVision { get; set; }
@@ -153,8 +159,17 @@ namespace eft_dma_radar
         [JsonPropertyName("timeOfDay")]
         public float TimeOfDay { get; set; }
 
+        [JsonPropertyName("timeScale")]
+        public bool TimeScale { get; set; }
+
+        [JsonPropertyName("timeScaleFactor")]
+        public float TimeScaleFactor { get; set; }
+
         [JsonPropertyName("uiScale")]
         public int UIScale { get; set; }
+
+        [JsonPropertyName("unknownQuestItems")]
+        public bool UnknownQuestItems { get; set; }
 
         [JsonPropertyName("zoomSensitivity")]
         public int ZoomSensitivity { get; set; }
@@ -320,7 +335,6 @@ namespace eft_dma_radar
         {
             AimviewEnabled = false;
             AimViewFOV = 30;
-            UnknownQuestItems = false;
             AutoLootRefresh = false;
             AutoRefreshSettings = DefaultAutoRefreshSettings;
             Chams = DefaultChamsSettings;
@@ -337,6 +351,8 @@ namespace eft_dma_radar
             LoggingEnabled = false;
             LootItemViewer = false;
             LootPing = DefaultLootPingSettings;
+            LootThroughWalls = false;
+            LootThroughWallsDistance = 2f;
             MagDrillSpeed = 1;
             MainThermalSetting = new ThermalSettings(1f, 0.0011f, -0.1f, 0);
             MasterSwitch = false;
@@ -346,6 +362,7 @@ namespace eft_dma_radar
             MinImportantLootValue = 300000;
             MinLootValue = 90000;
             MinSubItemValue = 15000;
+            NoWeaponMalfunctions = false;
             NightVision = false;
             NoRecoilSway = false;
             NoVisor = false;
@@ -368,7 +385,10 @@ namespace eft_dma_radar
             ThermalVision = false;
             ThrowPowerStrength = 1;
             TimeOfDay = 12f;
+            TimeScale = false;
+            TimeScaleFactor = 1.8f;
             UIScale = 100;
+            UnknownQuestItems = false;
             ZoomSensitivity = 25;
             VSync = true;
         }

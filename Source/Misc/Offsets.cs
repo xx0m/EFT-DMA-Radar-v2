@@ -23,6 +23,11 @@
     {
         public const uint GameObjectManager = 0x17FFD28; // to GameObjectManager
         public const uint CameraObjectManager = 0x0179F500; // to Camera
+        public const uint TimeScale = 0x17FFAE0; // to TimeScale
+    }
+    public struct TimeScale
+    {
+        public const uint Value = 0xFC;
     }
     public struct GameObject
     {
@@ -66,6 +71,7 @@
         public const uint Location = 0x588; //[580] <Location>k__BackingField : String
         public const uint Physical = 0x5D0; //[5C8] Physical : -.GClass
         public const uint ProceduralWeaponAnimation = 0x1C0; //[1C0] EFT.Animations.ProceduralWeaponAnimation
+        public const uint HandsController = 0x620; //[620] _handsController : -.Player.AbstractHandsController
     }
     public struct Profile // EFT.Profile
     {
@@ -185,6 +191,16 @@
         public const uint Mask = 0x138; //[138] Mask : System.Int32
         public const uint AimingSpeed = 0x1DC; //[1DC] _aimingSpeed : Single
         public const uint AimSwayStrength = 0x2A4; //[2A4] _aimSwayStrength : Single
+        public const uint FirearmContoller = 0xA8; //[A8] _firearmController : -.Player.FirearmController
+        public const uint FovCompensatoryDistance = 0x1F0; //[1F0] _fovCompensatoryDistance : Single
+    }
+    public struct FirearmController
+    {
+        public const uint WeaponLn = 0x174; //[174] WeaponLn : Single
+    }
+    public struct HandsController
+    {
+        public const uint Item = 0x60; //[60] item_0x60 : EFT.InventoryLogic.Item
     }
     public struct BreathEffector
     {
@@ -263,7 +279,7 @@
         public const uint LootList = 0xD0; // to UnityList
         public const uint RegisteredPlayers = 0xF8; // to RegisteredPlayers
         public const uint Grenades = 0x1A8; // to Grenades
-        public const uint RaidStarted = 0x228; //[228] boolean_0x228 : Boolean
+        public const uint RaidStarted = 0x230; //[230] boolean_0x230 : Boolean
     }
     public struct EFTHardSettings
     {
@@ -287,6 +303,13 @@
     public struct Item
     {
         public const uint Template = 0x40; //[40] <Template>k__BackingField : EFT.InventoryLogic.ItemTemplate
+    }
+    public struct WeaponTemplate
+    {
+        public const uint AllowJam = 0x298; //[298] AllowJam : Boolean
+        public const uint AllowFeed = 0x299; //[299] AllowFeed : Boolean
+        public const uint AllowMisfire = 0x29A; //[29A] AllowMisfire : Boolean
+        public const uint AllowSlide = 0x29B; //[29B] AllowSlide : Boolean
     }
     public struct ItemOwner
     {

@@ -56,7 +56,7 @@ namespace eft_dma_radar
 
         private static bool ShouldFetchDataFromApi()
         {
-            return !File.Exists("api_tarkov_dev_items.json") || File.GetLastWriteTime("api_tarkov_dev_items.json").AddHours(1) < DateTime.Now;
+            return !File.Exists("api_tarkov_dev_items.json") || File.GetLastWriteTime("api_tarkov_dev_items.json").AddHours(6) < DateTime.Now;
         }
 
         private static TarkovDevResponse FetchDataFromApi()

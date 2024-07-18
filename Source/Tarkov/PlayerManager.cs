@@ -1,4 +1,5 @@
-﻿using OpenTK.Graphics.OpenGL;
+﻿using Offsets;
+using OpenTK.Graphics.OpenGL;
 using OpenTK.Input;
 using System.Net;
 using System.Numerics;
@@ -11,24 +12,32 @@ namespace eft_dma_radar
     /// </summary>
     public class PlayerManager
     {
-        private ulong baseMovementState { get; set; }
-        private ulong handsStamina { get; set; }
-        public bool isADS { get; set; }
-        private ulong movementContext { get; set; }
-        private ulong physical { get; set; }
-        private ulong playerBase { get; set; }
-        private ulong playerProfile { get; set; }
-        public ulong proceduralWeaponAnimation { get; set; }
-        private ulong skillsManager { get; set; }
-        private ulong stamina { get; set; }
+        public bool IsADS { get; set; }
+
+        private ulong _baseMovementState;
+        private ulong _handsStamina;
+        private ulong _movementContext;
+        private ulong _handsController;
+        private ulong _physical;
+        private ulong _playerBase;
+        private ulong _playerProfile;
+        private ulong _proceduralWeaponAnimation;
+        private ulong _firmarmController;
+        private ulong _skillsManager;
+        private ulong _stamina;
+        private ulong _currentItemTemplate;
+        private ulong _currentItemId;
+
+        private float _weaponLn;
+        private byte _animationState;
+        private float _aimingSpeed;
+        private int _mask;
+        private string _lastWeaponID;
 
         private Config _config { get => Program.Config; }
         public Dictionary<string, float> OriginalValues { get; }
         public Dictionary<string, Dictionary<string, Skill>> Skills;
 
-        /// <summary>
-        /// Creates new PlayerManager object
-        /// </summary>
         public PlayerManager(ulong localGameWorld)
         {
             this.OriginalValues = new Dictionary<string, float>()
@@ -38,6 +47,7 @@ namespace eft_dma_radar
                 ["AimingSpeedSway"] = 0.2f,
                 ["StaminaCapacity"] = -1,
                 ["HandStaminaCapacity"] = -1,
+                ["weaponLn"] = -1f
             };
 
             this.Skills = new Dictionary<string, Dictionary<string, Skill>>
@@ -209,14 +219,11 @@ namespace eft_dma_radar
             var movementContextPtr = round2.AddEntry<ulong>(0, 2, playerBasePtr, null, Offsets.Player.MovementContext);
             var physicalPtr = round2.AddEntry<ulong>(0, 3, playerBasePtr, null, Offsets.Player.Physical);
             var proceduralWeaponAnimationPtr = round2.AddEntry<ulong>(0, 4, playerBasePtr, null, Offsets.Player.ProceduralWeaponAnimation);
-
             var skillsManagerPtr = round3.AddEntry<ulong>(0, 5, playerProfilePtr, null, Offsets.Profile.SkillManager);
-            var baseMovementStatePtr = round3.AddEntry<ulong>(0, 6, movementContextPtr, null, Offsets.MovementContext.BaseMovementState);
-            var isADSPtr = round3.AddEntry<ulong>(0, 7, proceduralWeaponAnimationPtr, null, Offsets.ProceduralWeaponAnimation.IsAiming);
-            var staminaPtr = round3.AddEntry<ulong>(0, 8, physicalPtr, null, Offsets.Physical.Stamina);
-            var handsStaminaPtr = round3.AddEntry<ulong>(0, 9, physicalPtr, null, Offsets.Physical.HandsStamina);
+            var staminaPtr = round3.AddEntry<ulong>(0, 6, physicalPtr, null, Offsets.Physical.Stamina);
+            var handsStaminaPtr = round3.AddEntry<ulong>(0, 7, physicalPtr, null, Offsets.Physical.HandsStamina);
 
-            var startingIndex = 10; // last scattermap index + 1
+            var startingIndex = 8; // last scattermap index + 1
 
             SetupOriginalSkillValues(startingIndex, skillsManagerPtr, ref round4, ref round5);
 
@@ -234,45 +241,36 @@ namespace eft_dma_radar
                 return;
             if (!scatterMap.Results[0][5].TryGetResult<ulong>(out var skillsManager))
                 return;
-            if (!scatterMap.Results[0][6].TryGetResult<ulong>(out var baseMovementState))
+            if (!scatterMap.Results[0][6].TryGetResult<ulong>(out var stamina))
                 return;
-            if (!scatterMap.Results[0][8].TryGetResult<ulong>(out var stamina))
-                return;
-            if (!scatterMap.Results[0][9].TryGetResult<ulong>(out var handsStamina))
+            if (!scatterMap.Results[0][7].TryGetResult<ulong>(out var handsStamina))
                 return;
 
-            scatterMap.Results[0][7].TryGetResult<bool>(out var isADS);
+            this._playerBase = playerBase;
+            this._playerProfile = playerProfile;
+            this._movementContext = movementContext;
+            this._physical = physical;
+            this._stamina = stamina;
+            this._handsStamina = handsStamina;
+            this._skillsManager = skillsManager;
+            this._proceduralWeaponAnimation = proceduralWeaponAnimation;
 
-            this.playerBase = playerBase;
-            this.playerProfile = playerProfile;
-            this.movementContext = movementContext;
-            this.baseMovementState = baseMovementState;
-            this.physical = physical;
-            this.stamina = stamina;
-            this.handsStamina = handsStamina;
-            this.skillsManager = skillsManager;
-            this.proceduralWeaponAnimation = proceduralWeaponAnimation;
-            this.isADS = isADS;
+            this.UpdateVariables();
 
             ProcessOriginalSkillValues(startingIndex, ref scatterMap);
         }
 
-        /// <summary>
-        /// Enables / disables weapon recoil
-        /// </summary>
         public void SetNoRecoilSway(bool on, ref List<IScatterWriteEntry> entries)
         {
             try
             {
-                var mask = Memory.ReadValue<int>(this.proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.Mask);
-
-                if (on && mask != 0)
+                if (on && this._mask != 0)
                 {
-                    entries.Add(new ScatterWriteDataEntry<int>(this.proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.Mask, 0));
+                    entries.Add(new ScatterWriteDataEntry<int>(this._proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.Mask, 0));
                 }
-                else if (!on && mask == 0)
+                else if (!on && this._mask == 0)
                 {
-                    entries.Add(new ScatterWriteDataEntry<int>(this.proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.Mask, (int)this.OriginalValues["Mask"]));
+                    entries.Add(new ScatterWriteDataEntry<int>(this._proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.Mask, (int)this.OriginalValues["Mask"]));
                 }
             }
             catch (Exception ex)
@@ -281,24 +279,40 @@ namespace eft_dma_radar
             }
         }
 
-        /// <summary>
-        /// Enables / disables instant ads, changes per weapon
-        /// </summary>
+        public void SetLootThroughWalls(bool on, ref List<IScatterWriteEntry> entries)
+        {
+            try
+            {
+                if (on && this._weaponLn != 0.001f)
+                {
+                    entries.Add(new ScatterWriteDataEntry<float>(this._firmarmController + Offsets.FirearmController.WeaponLn, 0.001f));
+                    entries.Add(new ScatterWriteDataEntry<float>(this._proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.FovCompensatoryDistance, _config.LootThroughWallsDistance));
+                }
+                else if (!on && (this._weaponLn < 0.001f || this._weaponLn == 0f))
+                {
+                    entries.Add(new ScatterWriteDataEntry<float>(this._firmarmController + Offsets.FirearmController.WeaponLn, this.OriginalValues["weaponLn"]));
+                    entries.Add(new ScatterWriteDataEntry<float>(this._proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.FovCompensatoryDistance, 0f));
+                }
+            }
+            catch (Exception ex)
+            {
+                Program.Log($"[PlayerManager] - SetLootThroughWalls ({ex.Message})\n{ex.StackTrace}");
+            }
+        }
+
         public void SetInstantADS(bool on, ref List<IScatterWriteEntry> entries)
         {
             try
             {
-                var aimingSpeed = Memory.ReadValue<float>(this.proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.AimingSpeed);
-
-                if (on && aimingSpeed != 7)
+                if (on && this._aimingSpeed != 7)
                 {
-                    entries.Add(new ScatterWriteDataEntry<float>(this.proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.AimingSpeed, 7f));
-                    entries.Add(new ScatterWriteDataEntry<float>(this.proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.AimSwayStrength, 0f));
+                    entries.Add(new ScatterWriteDataEntry<float>(this._proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.AimingSpeed, 7f));
+                    entries.Add(new ScatterWriteDataEntry<float>(this._proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.AimSwayStrength, 0f));
                 }
-                else if (!on && aimingSpeed != 1)
+                else if (!on && this._aimingSpeed != 1)
                 {
-                    entries.Add(new ScatterWriteDataEntry<float>(this.proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.AimingSpeed, this.OriginalValues["AimingSpeed"]));
-                    entries.Add(new ScatterWriteDataEntry<float>(this.proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.AimSwayStrength, this.OriginalValues["AimingSpeedSway"]));
+                    entries.Add(new ScatterWriteDataEntry<float>(this._proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.AimingSpeed, this.OriginalValues["AimingSpeed"]));
+                    entries.Add(new ScatterWriteDataEntry<float>(this._proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.AimSwayStrength, this.OriginalValues["AimingSpeedSway"]));
                 }
             }
             catch (Exception ex)
@@ -317,7 +331,7 @@ namespace eft_dma_radar
                     {
                         scatterMap.Results[0][index].TryGetResult<ulong>(out var pointer);
                         skill.Pointer = pointer;
-                        
+
                         index++;
 
                         if (skill.IsEliteSkill)
@@ -409,23 +423,76 @@ namespace eft_dma_radar
             }
         }
 
-        /// <summary>
-        /// Changes movement state
-        /// </summary>
+        public void UpdateVariables()
+        {
+            var scatterMap = new ScatterReadMap(1);
+            var round1 = scatterMap.AddRound();
+            var round2 = scatterMap.AddRound();
+            var round3 = scatterMap.AddRound();
+            var round4 = scatterMap.AddRound();
+
+            var baseMovementStatePtr = round1.AddEntry<ulong>(0, 0, this._movementContext, null, Offsets.MovementContext.BaseMovementState);
+            var isADSPtr = round1.AddEntry<bool>(0, 1, this._proceduralWeaponAnimation, null, Offsets.ProceduralWeaponAnimation.IsAiming);
+            var aimingSpeedPtr = round1.AddEntry<float>(0, 2, this._proceduralWeaponAnimation, null, Offsets.ProceduralWeaponAnimation.AimingSpeed);
+            var maskPtr = round1.AddEntry<int>(0, 3, this._proceduralWeaponAnimation, null, Offsets.ProceduralWeaponAnimation.Mask);
+            var firearmControllerPtr = round1.AddEntry<ulong>(0, 4, this._proceduralWeaponAnimation, null, Offsets.ProceduralWeaponAnimation.FirearmContoller);
+            var handsControllerPtr = round1.AddEntry<ulong>(0, 5, this._playerBase, null, Offsets.Player.HandsController);
+            var currentItemPtr = round2.AddEntry<ulong>(0, 6, handsControllerPtr, null, Offsets.HandsController.Item);
+            var weaponLnPtr = round2.AddEntry<float>(0, 7, firearmControllerPtr, null, Offsets.FirearmController.WeaponLn);
+            var animationStatePtr = round2.AddEntry<byte>(0, 8, baseMovementStatePtr, null, Offsets.BaseMovementState.Name);
+            var currentItemTemplatePtr = round3.AddEntry<ulong>(0, 9, currentItemPtr, null, Offsets.Item.Template);
+            var currentItemIDPtr = round4.AddEntry<ulong>(0, 10, currentItemTemplatePtr, null, Offsets.ItemTemplate.BsgId);
+
+            scatterMap.Execute();
+
+            if (!scatterMap.Results[0][0].TryGetResult<ulong>(out var baseMovementState))
+                return;
+            if (!scatterMap.Results[0][1].TryGetResult<bool>(out var isADS))
+                return;
+            if (!scatterMap.Results[0][2].TryGetResult<float>(out var aimingSpeed))
+                return;
+            if (!scatterMap.Results[0][3].TryGetResult<int>(out var mask))
+                return;
+            if (!scatterMap.Results[0][4].TryGetResult<ulong>(out var firearmController))
+                return;
+            if (!scatterMap.Results[0][5].TryGetResult<ulong>(out var handsController))
+                return;
+            if (!scatterMap.Results[0][6].TryGetResult<ulong>(out var currentItem))
+                return;
+            if (!scatterMap.Results[0][7].TryGetResult<float>(out var weaponLn))
+                return;
+            if (!scatterMap.Results[0][8].TryGetResult<byte>(out var animationState))
+                return;
+            if (!scatterMap.Results[0][9].TryGetResult<ulong>(out var currentItemTemplate))
+                return;
+            if (!scatterMap.Results[0][10].TryGetResult<ulong>(out var currentItemId))
+                return;
+
+            this._baseMovementState = baseMovementState;
+            this.IsADS = isADS;
+            this._aimingSpeed = aimingSpeed;
+            this._mask = mask;
+            this._handsController = handsController;
+            this._firmarmController = firearmController;
+            this._animationState = animationState;
+            this._currentItemTemplate = currentItemTemplate;
+            this._currentItemId = currentItemId;
+
+            if (this.OriginalValues["weaponLn"] == -1f && this._weaponLn != 0.001)
+                this.OriginalValues["weaponLn"] = weaponLn;
+        }
+
         public void SetMovementState(bool on, ref List<IScatterWriteEntry> entries)
         {
             try
             {
-                this.baseMovementState = Memory.ReadPtr(this.movementContext + Offsets.MovementContext.BaseMovementState);
-                var animationState = Memory.ReadValue<byte>(this.baseMovementState + Offsets.BaseMovementState.Name);
-
-                if (on && animationState == 5)
+                if (on && this._animationState == 5)
                 {
-                    entries.Add(new ScatterWriteDataEntry<byte>(this.baseMovementState + Offsets.BaseMovementState.Name, 6));
+                    entries.Add(new ScatterWriteDataEntry<byte>(this._baseMovementState + Offsets.BaseMovementState.Name, 6));
                 }
-                else if (!on && animationState == 6)
+                else if (!on && this._animationState == 6)
                 {
-                    entries.Add(new ScatterWriteDataEntry<byte>(this.baseMovementState + Offsets.BaseMovementState.Name, 5));
+                    entries.Add(new ScatterWriteDataEntry<byte>(this._baseMovementState + Offsets.BaseMovementState.Name, 5));
                 }
             }
             catch (Exception ex)
@@ -434,25 +501,47 @@ namespace eft_dma_radar
             }
         }
 
-        /// <summary>
-        /// Sets maximum stamina / hand stamina
-        /// </summary>
         public void SetMaxStamina(ref List<IScatterWriteEntry> entries)
         {
             try
             {
                 if (this.OriginalValues["StaminaCapacity"] == -1)
                 {
-                    this.OriginalValues["StaminaCapacity"] = Memory.ReadValue<float>(this.physical + 0xC0);
-                    this.OriginalValues["HandStaminaCapacity"] = Memory.ReadValue<float>(this.physical + 0xC8);
+                    this.OriginalValues["StaminaCapacity"] = Memory.ReadValue<float>(this._physical + 0xC0);
+                    this.OriginalValues["HandStaminaCapacity"] = Memory.ReadValue<float>(this._physical + 0xC8);
                 }
 
-                entries.Add(new ScatterWriteDataEntry<float>(this.stamina + 0x48, this.OriginalValues["StaminaCapacity"]));
-                entries.Add(new ScatterWriteDataEntry<float>(this.handsStamina + 0x48, this.OriginalValues["HandStaminaCapacity"]));
+                entries.Add(new ScatterWriteDataEntry<float>(this._stamina + 0x48, this.OriginalValues["StaminaCapacity"]));
+                entries.Add(new ScatterWriteDataEntry<float>(this._handsStamina + 0x48, this.OriginalValues["HandStaminaCapacity"]));
             }
             catch (Exception ex)
             {
                 Program.Log($"[PlayerManager] - SetMaxStamina ({ex.Message})\n{ex.StackTrace}");
+            }
+        }
+
+        public void SetNoWeaponMalfunctions(ref List<IScatterWriteEntry> entries)
+        {
+            try
+            {
+                if (this._currentItemId == 0)
+                    return;
+
+                var id = Memory.ReadUnityString(this._currentItemId);
+
+                if (this._lastWeaponID == id)
+                    return;
+
+                this._lastWeaponID = id;
+
+                entries.Add(new ScatterWriteDataEntry<bool>(this._currentItemTemplate + Offsets.WeaponTemplate.AllowJam, false));
+                entries.Add(new ScatterWriteDataEntry<bool>(this._currentItemTemplate + Offsets.WeaponTemplate.AllowFeed, false));
+                entries.Add(new ScatterWriteDataEntry<bool>(this._currentItemTemplate + Offsets.WeaponTemplate.AllowMisfire, false));
+                entries.Add(new ScatterWriteDataEntry<bool>(this._currentItemTemplate + Offsets.WeaponTemplate.AllowSlide, false));
+            }
+            catch (Exception ex)
+            {
+                Program.Log($"[PlayerManager] - SetNoWeaponMalfunctions ({ex.Message})\n{ex.StackTrace}");
             }
         }
 

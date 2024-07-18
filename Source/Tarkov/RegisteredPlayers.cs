@@ -210,6 +210,9 @@ namespace eft_dma_radar
 
                 foreach (var player in this._players)
                 {
+                    if (registered.Count == 0)
+                        break;
+
                     if (!registered.Contains(player.Key))
                     {
                         if (player.Value.IsActive)
@@ -335,9 +338,6 @@ namespace eft_dma_radar
 
                     if (player.LastUpdate) // player may be dead/exfil'd
                     {
-                        if (player.Type  == PlayerType.LocalPlayer)
-                                throw new RaidEnded("Raid has ended!");
-
                         if (player.Position == DEFAULT_POSITION)
                         {
                             player.IsActive = false;

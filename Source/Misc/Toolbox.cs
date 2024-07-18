@@ -7,13 +7,16 @@ namespace eft_dma_radar
         private Thread autoRefreshThread;
         private CancellationTokenSource autoRefreshCancellationTokenSource;
 
-        private bool extendedReachToggled = false;
+        private bool extendedReach = false;
         private bool freezeTime = false;
-        private float timeOfDay = -1;
-        private bool infiniteStaminaToggled = false;
+        private float timeOfDay = -1f;
+        private bool infiniteStamina = false;
         
-        private bool thermalVisionToggled = false;
-        private bool nightVisionToggled = false;
+        private bool thermalVision = false;
+        private bool nightVision = false;
+
+        private bool timeScale = false;
+        private float timeScaleFactor = -1f;
 
         private Dictionary<string, bool> Skills = new Dictionary<string, bool>
         {
@@ -52,11 +55,12 @@ namespace eft_dma_radar
         private ulong WeatherControllerDebug;
         private ulong GameWorld;
         private ulong HardSettings;
+        private ulong TimeScale;
 
         private bool ToolboxMonoInitialized = false;
         private bool ShouldInitializeToolboxMono => !this.ToolboxMonoInitialized && Memory.InGame && Memory.LocalPlayer is not null;
 
-        public Toolbox()
+        public Toolbox(ulong unityBase)
         {
             if (this._config.MasterSwitch)
             {
@@ -69,6 +73,7 @@ namespace eft_dma_radar
                     }
                 });
 
+                this.InitiateTimeScale(unityBase);
                 this.StartToolbox();
             }
         }
@@ -179,13 +184,19 @@ namespace eft_dma_radar
 
                 if (this._playerManager is not null)
                 {
-                    this._playerManager.isADS = Memory.ReadValue<bool>(this._playerManager.proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.IsAiming);
+                    this._playerManager.UpdateVariables();
 
                     // No Recoil / Sway
                     this._playerManager.SetNoRecoilSway(this._config.NoRecoilSway, ref entries);
 
                     // Instant ADS
                     this._playerManager.SetInstantADS(this._config.InstantADS, ref entries);
+
+                    // Loot Through Walls
+                    this._playerManager.SetLootThroughWalls(this._config.LootThroughWalls, ref entries);
+
+                    if (this._config.NoWeaponMalfunctions)
+                        this._playerManager.SetNoWeaponMalfunctions(ref entries);
 
                     #region Skill Buffs
                     if (this._config.MaxSkills["Endurance"] != this.Skills["Endurance"])
@@ -308,25 +319,30 @@ namespace eft_dma_radar
                 if (this.ToolboxMonoInitialized)
                 {
                     // Extended Reach
-                    if (this._config.ExtendedReach != this.extendedReachToggled)
+                    if (this._config.ExtendedReach != this.extendedReach)
                     {
-                        this.extendedReachToggled = this._config.ExtendedReach;
-                        this.SetInteractDistance(this.extendedReachToggled, ref entries);
+                        this.extendedReach = this._config.ExtendedReach;
+                        this.SetInteractDistance(this.extendedReach, ref entries);
                     }
 
                     // Lock time of day + set time of day
-                    if (this._config.FreezeTimeOfDay != this.freezeTime)
+                    var freezeStateChanged = this._config.FreezeTimeOfDay != this.freezeTime;
+                    var timeOfDayChanged = this._config.TimeOfDay != this.timeOfDay;
+
+                    if (freezeStateChanged || (this._config.FreezeTimeOfDay && timeOfDayChanged))
                     {
                         this.freezeTime = this._config.FreezeTimeOfDay;
                         this.FreezeTime(this.freezeTime, ref entries);
 
-                        if (!this.freezeTime && this.timeOfDay != -1)
+                        if (this.freezeTime)
+                        {
+                            if (timeOfDayChanged)
+                                this.SetTimeOfDay(this._config.TimeOfDay, ref entries);
+                        }
+                        else
+                        {
                             this.timeOfDay = -1;
-                    }
-
-                    if (this._config.FreezeTimeOfDay && this.freezeTime && this._config.TimeOfDay != this.timeOfDay)
-                    {
-                        this.SetTimeOfDay(this._config.TimeOfDay, ref entries);
+                        }
                     }
                 }
 
@@ -343,21 +359,21 @@ namespace eft_dma_radar
                         this._cameraManager.VisorEffect(this._config.NoVisor, ref entries);
 
                         // Smart Thermal Vision
-                        if (this._playerManager is null || !this._playerManager.isADS)
+                        if (this._playerManager is null || !this._playerManager.IsADS)
                         {
-                            if (this._config.ThermalVision != thermalVisionToggled)
+                            if (this._config.ThermalVision != thermalVision)
                             {
-                                this.thermalVisionToggled = this._config.ThermalVision;
-                                this._cameraManager.ThermalVision(this.thermalVisionToggled, ref entries);
+                                this.thermalVision = this._config.ThermalVision;
+                                this._cameraManager.ThermalVision(this.thermalVision, ref entries);
                             }
                         }
                         else
                         {
                             if (this._config.OpticThermalVision)
                             {
-                                if (this.thermalVisionToggled)
+                                if (this.thermalVision)
                                 {
-                                    this.thermalVisionToggled = false;
+                                    this.thermalVision = false;
                                     this._cameraManager.ThermalVision(false, ref entries);
                                 }
 
@@ -370,10 +386,10 @@ namespace eft_dma_radar
                         }
 
                         // Night Vision
-                        if (this._config.NightVision != this.nightVisionToggled)
+                        if (this._config.NightVision != this.nightVision)
                         {
-                            this.nightVisionToggled = this._config.NightVision;
-                            this._cameraManager.NightVision(this.nightVisionToggled, ref entries);
+                            this.nightVision = this._config.NightVision;
+                            this._cameraManager.NightVision(this.nightVision, ref entries);
                         }
 
                         // Chams
@@ -386,6 +402,20 @@ namespace eft_dma_radar
                             this._chams?.ChamsDisable();
                         }
                     }
+                }
+
+                // Time Scale
+                var timeScaleChanged = this._config.TimeScale != this.timeScale;
+                var factorChanged = this._config.TimeScaleFactor != this.timeScaleFactor;
+
+                if (timeScaleChanged || (this._config.TimeScale && factorChanged))
+                {
+                    this.timeScale = this._config.TimeScale;
+
+                    var factor = this.timeScale ? this._config.TimeScaleFactor : 1f;
+
+                    if (factor != this.timeScaleFactor)
+                        this.SetTimeScaleFactor(factor, ref entries);
                 }
 
                 if (entries.Any())
@@ -438,6 +468,16 @@ namespace eft_dma_radar
         {
             this.timeOfDay = time;
             entries.Add(new ScatterWriteDataEntry<float>(this.Cycle + 0x10, this.timeOfDay));
+        }
+
+        private void InitiateTimeScale(ulong unityBase)
+        {
+            this.TimeScale = Memory.ReadValue<ulong>(unityBase + Offsets.ModuleBase.TimeScale + 7 * 8);
+        }
+
+        private void SetTimeScaleFactor(float factor, ref List<IScatterWriteEntry> entries)
+        {
+            entries.Add(new ScatterWriteDataEntry<float>(this.TimeScale + Offsets.TimeScale.Value, factor));
         }
     }
 }

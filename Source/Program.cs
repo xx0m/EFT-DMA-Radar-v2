@@ -115,7 +115,7 @@ namespace eft_dma_radar
         /// </summary>
         public static void HideConsole()
         {
-            ShowWindow(GetConsoleWindow(), 1); // 0 : SW_HIDE
+            ShowWindow(GetConsoleWindow(), ((_config?.LoggingEnabled ?? false) ? 1 : 0)); // 0 : SW_HIDE
         }
         #endregion
 
