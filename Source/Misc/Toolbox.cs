@@ -73,8 +73,11 @@ namespace eft_dma_radar
                 Task.Run(() =>
                 {
                     var attempts = 0;
-                    while (this.ShouldInitializeToolboxMono || attempts < MAX_ATTEMPTS)
+                    while (attempts < MAX_ATTEMPTS)
                     {
+                        if (!this.ShouldInitializeToolboxMono)
+                            break;
+
                         this.InitiateMonoAddresses();
                         Thread.Sleep(5000);
                         attempts++;
