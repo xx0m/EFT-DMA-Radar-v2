@@ -34,6 +34,8 @@ namespace eft_dma_radar
         private int _mask;
         private string _lastWeaponID;
 
+        public bool UpdateLootThroughWallsDistance { get; set; } = false;
+
         private Config _config { get => Program.Config; }
         public Dictionary<string, float> OriginalValues { get; }
         public Dictionary<string, Dictionary<string, Skill>> Skills;
@@ -283,12 +285,16 @@ namespace eft_dma_radar
         {
             try
             {
-                if (on && this._weaponLn != 0.001f)
+                if (on && this._weaponLn != 0.001f || this.UpdateLootThroughWallsDistance)
                 {
+                    if (this.UpdateLootThroughWallsDistance)
+                        this.UpdateLootThroughWallsDistance = !this.UpdateLootThroughWallsDistance;
+
+                    var distance = (Memory.IsOfflinePvE ? _config.LootThroughWallsDistancePvE : _config.LootThroughWallsDistance);
                     entries.Add(new ScatterWriteDataEntry<float>(this._firmarmController + Offsets.FirearmController.WeaponLn, 0.001f));
-                    entries.Add(new ScatterWriteDataEntry<float>(this._proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.FovCompensatoryDistance, _config.LootThroughWallsDistance));
+                    entries.Add(new ScatterWriteDataEntry<float>(this._proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.FovCompensatoryDistance, distance));
                 }
-                else if (!on && (this._weaponLn < 0.001f || this._weaponLn == 0f))
+                else if (!on && this._weaponLn == 0.001f)
                 {
                     entries.Add(new ScatterWriteDataEntry<float>(this._firmarmController + Offsets.FirearmController.WeaponLn, this.OriginalValues["weaponLn"]));
                     entries.Add(new ScatterWriteDataEntry<float>(this._proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.FovCompensatoryDistance, 0f));
@@ -478,8 +484,10 @@ namespace eft_dma_radar
             this._currentItemTemplate = currentItemTemplate;
             this._currentItemId = currentItemId;
 
-            if (this.OriginalValues["weaponLn"] == -1f && this._weaponLn != 0.001)
-                this.OriginalValues["weaponLn"] = weaponLn;
+            this._weaponLn = weaponLn;
+
+            if (this.OriginalValues["weaponLn"] == -1f)
+                this.OriginalValues["weaponLn"] = this._weaponLn;
         }
 
         public void SetMovementState(bool on, ref List<IScatterWriteEntry> entries)

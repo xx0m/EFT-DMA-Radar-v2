@@ -349,7 +349,7 @@ namespace eft_dma_radar
                             player.IsAlive = false;
                             Program.Log($"{player.Name} died");
 
-                            if (Program.Config.Chams["Enabled"])
+                            if (Program.Config.Chams["Enabled"] && player.Type != PlayerType.LocalPlayer)
                             {
                                 if (Program.Config.Chams["Corpses"])
                                     Memory.Chams.SetPlayerBodyChams(player, Memory.Chams.ThermalMaterial);

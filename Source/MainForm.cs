@@ -14,6 +14,8 @@ using System.Text.RegularExpressions;
 using static Vmmsharp.LeechCore;
 using System.ComponentModel;
 using System.Linq;
+using System.Net;
+using System.Net.NetworkInformation;
 
 namespace eft_dma_radar
 {
@@ -456,6 +458,7 @@ namespace eft_dma_radar
             swRadarEnemyCount.Checked = _config.EnemyCount;
             mcRadarEnemyStats.Visible = _config.EnemyCount;
             mcRadarLootItemViewer.Visible = _config.LootItemViewer;
+            swPvEMode.Checked = _config.PvEMode;
 
             // User Interface
             swShowLoot.Checked = _config.ShowLoot;
@@ -480,7 +483,6 @@ namespace eft_dma_radar
 
             // Global Features
             mcSettingsMemoryWritingGlobal.Enabled = _config.MasterSwitch;
-            swExtendedReach.Checked = _config.ExtendedReach;
             swFreezeTime.Checked = _config.FreezeTimeOfDay;
             sldrTimeOfDay.Visible = _config.FreezeTimeOfDay;
             sldrTimeOfDay.Value = (int)_config.TimeOfDay;
@@ -490,9 +492,12 @@ namespace eft_dma_radar
             sldrTimeScaleFactor.Value = (int)(_config.TimeScaleFactor * 10);
             lblSettingsMemoryWritingTimeScaleFactor.Text = $"x{(_config.TimeScaleFactor)}";
             lblSettingsMemoryWritingTimeScaleFactor.Visible = _config.TimeScale;
+
             swLootThroughWalls.Checked = _config.LootThroughWalls;
             sldrLootThroughWallsDistance.Visible = _config.LootThroughWalls;
-            sldrLootThroughWallsDistance.Value = (int)_config.LootThroughWallsDistance;
+
+            swExtendedReach.Checked = _config.ExtendedReach;
+            sldrExtendedReachDistance.Visible = _config.ExtendedReach;
 
             // Gear Features
             mcSettingsMemoryWritingGear.Enabled = _config.MasterSwitch;
@@ -590,7 +595,7 @@ namespace eft_dma_radar
             sldrLootPingRepetition.Value = _config.LootPing["Repetition"];
             #endregion
             #endregion
-
+            UpdatePvEControls();
             InitiateAutoMapRefreshItems();
             InitiateFactions();
             InitiateLootFilter();
@@ -2352,6 +2357,37 @@ namespace eft_dma_radar
 
         #region Settings
         #region General
+        #region Helper Functions
+        private void UpdatePvEControls()
+        {
+            var pveMode = Memory.IsPvEMode;
+            var maxLTWDistance = (pveMode ? 250 : 40);
+            var maxReachDistance = (pveMode ? 250 : 18);
+            var LTWDistance = (pveMode ? _config.LootThroughWallsDistancePvE : _config.LootThroughWallsDistance) * 10;
+            var reachDistance = (pveMode ? _config.ExtendedReachDistancePvE : _config.ExtendedReachDistance) * 10;
+
+            sldrLootThroughWallsDistance.RangeMax = maxLTWDistance;
+            sldrLootThroughWallsDistance.ValueMax = maxLTWDistance;
+
+            sldrExtendedReachDistance.RangeMax = maxReachDistance;
+            sldrExtendedReachDistance.ValueMax = maxReachDistance;
+
+            sldrLootThroughWallsDistance.Value = (int)LTWDistance;
+            sldrExtendedReachDistance.Value = (int)reachDistance;
+
+            lblSettingsMemoryWritingLootThroughWallsDistance.Visible = _config.LootThroughWalls;
+            lblSettingsMemoryWritingLootThroughWallsDistance.Text = $"x{(LTWDistance / 10)}";
+
+            lblSettingsMemoryWritingExtendedReachDistance.Visible = _config.ExtendedReach;
+            lblSettingsMemoryWritingExtendedReachDistance.Text = $"x{(reachDistance / 10)}";
+
+            if (Memory.LocalPlayer is not null)
+            {
+                Memory.Toolbox.UpdateExtendedReachDistance = true;
+                Memory.PlayerManager.UpdateLootThroughWallsDistance = true;
+            }
+        }
+        #endregion
         #region Event Handlers
         private void swMapHelper_CheckedChanged(object sender, EventArgs e)
         {
@@ -2425,6 +2461,13 @@ namespace eft_dma_radar
                 _mapCanvas.VSync = enabled;
         }
 
+        private void swPvEMode_CheckedChanged(object sender, EventArgs e)
+        {
+            _config.PvEMode = swPvEMode.Checked;
+
+            UpdatePvEControls();
+        }
+
         private void swRadarEnemyCount_CheckedChanged(object sender, EventArgs e)
         {
             var enabled = swRadarEnemyCount.Checked;
@@ -2466,11 +2509,6 @@ namespace eft_dma_radar
         }
         #endregion
         #region Event Handlers
-        private void swExtendedReach_CheckedChanged(object sender, EventArgs e)
-        {
-            _config.ExtendedReach = swExtendedReach.Checked;
-        }
-
         private void swFreezeTime_CheckedChanged(object sender, EventArgs e)
         {
             var enabled = swFreezeTime.Checked;
@@ -2510,16 +2548,58 @@ namespace eft_dma_radar
             _config.LootThroughWalls = enabled;
 
             sldrLootThroughWallsDistance.Visible = enabled;
+            lblSettingsMemoryWritingLootThroughWallsDistance.Visible = enabled;
         }
 
         private void sldrLootThroughWallsDistance_onValueChanged(object sender, int newValue)
         {
-            if (newValue < 1)
-                newValue = 1;
-            else if (newValue > 3)
-                newValue = 3;
+            var pveMode = _config.PvEMode;
+            var distance = (float)newValue / 10;
 
-            _config.LootThroughWallsDistance = (float)newValue;
+            if (pveMode)
+                _config.LootThroughWallsDistancePvE = distance;
+            else
+            {
+                if (distance > 3)
+                    distance = 3;
+
+                _config.LootThroughWallsDistance = distance;
+            }
+
+            lblSettingsMemoryWritingLootThroughWallsDistance.Text = $"x{distance}";
+
+            if (Memory.LocalPlayer is not null)
+                Memory.PlayerManager.UpdateLootThroughWallsDistance = true;
+        }
+
+        private void swExtendedReach_CheckedChanged(object sender, EventArgs e)
+        {
+            var enabled = swExtendedReach.Checked;
+            _config.ExtendedReach = enabled;
+
+            sldrExtendedReachDistance.Visible = enabled;
+            lblSettingsMemoryWritingExtendedReachDistance.Visible = enabled;
+        }
+
+        private void sldrExtendedReachDistance_onValueChanged(object sender, int newValue)
+        {
+            var pveMode = _config.PvEMode;
+            var distance = (float)newValue / 10;
+
+            if (pveMode)
+                _config.ExtendedReachDistancePvE = distance;
+            else
+            {
+                if (distance > 1.8)
+                    distance = 1.8f;
+
+                _config.ExtendedReachDistance = distance;
+            }
+
+            lblSettingsMemoryWritingExtendedReachDistance.Text = $"x{distance}";
+
+            if (Memory.LocalPlayer is not null)
+                Memory.Toolbox.UpdateExtendedReachDistance = true;
         }
 
         private void swNoRecoilSway_CheckedChanged(object sender, EventArgs e)

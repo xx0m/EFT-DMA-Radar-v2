@@ -8,6 +8,7 @@ using Offsets;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.CompilerServices;
+using System.Data;
 
 namespace eft_dma_radar
 {
@@ -478,7 +479,11 @@ namespace eft_dma_radar
                 }
                 else
                 {
-                    Program.AIFactionManager.IsInFaction(this.Name, out var playerType);
+                    var inFaction = Program.AIFactionManager.IsInFaction(this.Name, out var playerType);
+
+                    if (!inFaction && Memory.IsPvEMode)
+                        if (this.Gear.ContainsKey("Dogtag"))
+                            playerType = (this.Gear["Dogtag"].Short == "BEAR" ? PlayerType.BEAR : PlayerType.USEC);
 
                     return playerType;
                 }
@@ -661,19 +666,11 @@ namespace eft_dma_radar
             this.HealthController = healthController;
             this.AccountID = Memory.ReadUnityString(accountID);
 
-            if (!isAI)
-            {
-                this.IsPMC = (playerSide == 1 || playerSide == 2);
-
-                if (!this.IsPMC)
-                    this.Name = Helpers.TransliterateCyrillic(this.Name);
-            }
-            else
-            {
-                this.Name = Helpers.TransliterateCyrillic(this.Name);
-            }
-
             this.Type = this.GetOnlinePlayerType(isAI);
+            this.IsPMC = (this.Type == PlayerType.BEAR || this.Type == PlayerType.USEC);
+
+            if (isAI || !this.IsPMC)
+                this.Name = Helpers.TransliterateCyrillic(this.Name);
 
             this.FinishAlloc();
         }

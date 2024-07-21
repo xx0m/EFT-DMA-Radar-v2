@@ -46,6 +46,16 @@ namespace eft_dma_radar
             get => _game?.IsScav ?? false;
         }
 
+        public static bool IsPvEMode
+        {
+            get => Program.Config.PvEMode;
+        }
+
+        public static bool IsOfflinePvE
+        {
+            get => (Memory.IsPvEMode && !Memory.IsScav && Memory.MapName != "TarkovStreets");
+        }
+
         public static string MapName
         {
             get => _game?.MapName;

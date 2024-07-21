@@ -6,6 +6,7 @@ namespace eft_dma_radar
     public class GearManager
     {
         private static readonly ConcurrentBag<string> slotsToSkip = new ConcurrentBag<string> { "SecuredContainer", "Dogtag", "Compass", "Eyewear", "ArmBand" };
+        private static readonly ConcurrentBag<string> slotsToSkipPvE = new ConcurrentBag<string> { "SecuredContainer", "Compass", "Eyewear", "ArmBand" };
         private static readonly ConcurrentBag<string> thermalIDs = new ConcurrentBag<string> { "5a1eaa87fcdbcb001865f75e", "5d1b5e94d7ad1a2b865a96b0", "63fc44e2429a8a166c7f61e6", "6478641c19d732620e045e17", "63fc44e2429a8a166c7f61e6" };
 
         public static string GetGearSlotName(string key) => key switch
@@ -250,7 +251,9 @@ namespace eft_dma_radar
 
                             var name = Memory.ReadUnityString(namePtr);
 
-                            if (!GearManager.slotsToSkip.Contains(name, StringComparer.OrdinalIgnoreCase))
+                            var slotsToSkip = (Memory.IsPvEMode ? GearManager.slotsToSkipPvE : GearManager.slotsToSkip);
+
+                            if (!slotsToSkip.Contains(name, StringComparer.OrdinalIgnoreCase))
                                 slotDict[name] = slotPtr;
                         }
                         catch { return; }

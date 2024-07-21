@@ -30,6 +30,12 @@ namespace eft_dma_radar
         [JsonPropertyName("extendedReach")]
         public bool ExtendedReach { get; set; }
 
+        [JsonPropertyName("extendedReachDistance")]
+        public float ExtendedReachDistance { get; set; }
+
+        [JsonPropertyName("extendedReachDistancePvE")]
+        public float ExtendedReachDistancePvE { get; set; }
+
         [JsonPropertyName("font")]
         public int Font { get; set; }
 
@@ -62,6 +68,9 @@ namespace eft_dma_radar
 
         [JsonPropertyName("lootThroughWallsDistance")]
         public float LootThroughWallsDistance { get; set; }
+
+        [JsonPropertyName("lootThroughWallsDistancePvE")]
+        public float LootThroughWallsDistancePvE { get; set; }
 
         [JsonPropertyName("lootThroughWalls")]
         public bool LootThroughWalls { get; set; }
@@ -122,6 +131,9 @@ namespace eft_dma_radar
 
         [JsonPropertyName("processLoot")]
         public bool ProcessLoot { get; set; }
+
+        [JsonPropertyName("pveMode")]
+        public bool PvEMode { get; set; }
 
         [JsonPropertyName("questHelper")]
         public bool QuestHelper { get; set; }
@@ -341,6 +353,8 @@ namespace eft_dma_radar
             DefaultZoom = 100;
             EnemyCount = false;
             ExtendedReach = false;
+            ExtendedReachDistance = 2f;
+            ExtendedReachDistancePvE = 2f;
             Font = 0;
             FontSize = 13;
             FreezeTimeOfDay = false;
@@ -353,6 +367,7 @@ namespace eft_dma_radar
             LootPing = DefaultLootPingSettings;
             LootThroughWalls = false;
             LootThroughWallsDistance = 2f;
+            LootThroughWallsDistancePvE = 2f;
             MagDrillSpeed = 1;
             MainThermalSetting = new ThermalSettings(1f, 0.0011f, -0.1f, 0);
             MasterSwitch = false;
@@ -373,6 +388,7 @@ namespace eft_dma_radar
             PlayerAimLineLength = 1000;
             PrimaryTeammateId = null;
             ProcessLoot = true;
+            PvEMode = false;
             QuestHelper = true;
             ShowCorpses = false;
             ShowExfilNames = false;
