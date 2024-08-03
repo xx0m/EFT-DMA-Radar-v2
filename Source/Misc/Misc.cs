@@ -71,26 +71,79 @@ namespace eft_dma_radar
             this.ColorScheme = colorScheme;
         }
     }
+
+    public class PlayerInformationSettings
+    {
+        public bool Name { get; set; }
+        public bool Height { get; set; }
+        public bool Distance { get; set; }
+        public bool Aimline { get; set; }
+        public int AimlineLength { get; set; }
+        public int AimlineOpacity { get; set; }
+        public int Font { get; set; }
+        public int FontSize { get; set; }
+        public bool Flags { get; set; }
+        public bool ActiveWeapon { get; set; }
+        public bool Thermal { get; set; }
+        public bool NightVision { get; set; }
+        public bool AmmoType { get; set; }
+        public bool Group { get; set; }
+        public bool Value { get; set; }
+        public bool Health { get; set; }
+        public bool Tag { get; set; }
+        public int FlagsFont { get; set; }
+        public int FlagsFontSize { get; set; }
+
+        public PlayerInformationSettings(
+            bool name, bool height, bool distance, bool aimline,
+            int aimlineLength, int aimlineOpacity, int font, int fontSize,
+            bool flags, bool activeWeapon, bool thermal, bool nightVision,
+            bool ammoType, bool group, bool value, bool health, 
+            bool tag, int flagsFont, int flagsFontSize)
+        {
+            this.Name = name;
+            this.Height = height;
+            this.Distance = distance;
+            this.Aimline = aimline;
+            this.AimlineLength = aimlineLength;
+            this.AimlineOpacity = aimlineOpacity;
+            this.Font = font;
+            this.FontSize = fontSize;
+            this.Flags = flags;
+            this.ActiveWeapon = activeWeapon;
+            this.Thermal = thermal;
+            this.NightVision = nightVision;
+            this.AmmoType = ammoType;
+            this.Group = group;
+            this.Value = value;
+            this.Health = health;
+            this.Tag = tag;
+            this.FlagsFont = flagsFont;
+            this.FlagsFontSize = flagsFontSize;
+        }
+    }
     /// <summary>
     /// Contains weapon info for Primary Weapons.
     /// </summary>
-    public struct PlayerWeaponInfo
+    public struct PlayerGearInfo
     {
-        public string ThermalScope;
+        public string Thermal;
+        public string NightVision;
         public string AmmoType;
+    }
 
-        public override string ToString()
-        {
-            var result = string.Empty;
-            if (AmmoType is not null) result += AmmoType;
-            if (ThermalScope is not null)
-            {
-                if (result != string.Empty) result += $", {ThermalScope}";
-                else result += ThermalScope;
-            }
-            if (result == string.Empty) return null;
-            return result;
-        }
+    public struct ActiveWeaponInfo
+    {
+        public string AmmoType;
+        public string Name;
+        public string ID;
+    }
+
+    public struct AimlineSettings
+    {
+        public bool Enabled;
+        public int Length;
+        public int Opacity;
     }
     #endregion
 

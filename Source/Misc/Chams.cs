@@ -278,6 +278,139 @@ namespace eft_dma_radar
             return setAnyMaterial;
         }
 
+        public bool TriggerUnityCrash(Player player, ulong material)
+        {
+            var setAnyMaterial = false;
+
+            try
+            {
+                var count = 1;
+                var scatterReadMap = new ScatterReadMap(count);
+                var map1Round1 = scatterReadMap.AddRound();
+                var map1Round2 = scatterReadMap.AddRound();
+
+                var bodySkinsPtr = map1Round1.AddEntry<ulong>(0, 0, player.PlayerBody, null, 0x40);
+                var skinEntriesPtr = map1Round2.AddEntry<ulong>(0, 1, bodySkinsPtr, null, 0x18);
+                var bodySkinsCountPtr = map1Round2.AddEntry<int>(0, 2, bodySkinsPtr, null, 0x40);
+
+                scatterReadMap.Execute();
+
+                if (!scatterReadMap.Results[0][0].TryGetResult<ulong>(out var bodySkins))
+                    return false;
+                if (!scatterReadMap.Results[0][1].TryGetResult<ulong>(out var skinEntries))
+                    return false;
+                if (!scatterReadMap.Results[0][2].TryGetResult<int>(out var bodySkinsCount))
+                    return false;
+
+                var scatterReadMap2 = new ScatterReadMap(bodySkinsCount);
+                var map2Round1 = scatterReadMap2.AddRound();
+                var map2Round2 = scatterReadMap2.AddRound();
+                var map2Round3 = scatterReadMap2.AddRound();
+
+                for (int i = 0; i < bodySkinsCount; i++)
+                {
+                    var pBodySkinsPtr = map2Round1.AddEntry<ulong>(i, 0, skinEntries, null, 0x30 + (0x18 * (uint)i));
+                    var pLodsArrayPtr = map2Round2.AddEntry<ulong>(i, 1, pBodySkinsPtr, null, 0x18);
+                    var lodsCountPtr = map2Round3.AddEntry<int>(i, 2, pLodsArrayPtr, null, 0x18);
+                }
+
+                scatterReadMap2.Execute();
+
+                for (int i = 0; i < bodySkinsCount; i++)
+                {
+                    if (!scatterReadMap2.Results[i][1].TryGetResult<ulong>(out var pLodsArray))
+                        continue;
+                    if (!scatterReadMap2.Results[i][2].TryGetResult<int>(out var lodsCount))
+                        continue;
+
+                    var scatterReadMap3 = new ScatterReadMap(lodsCount);
+                    var map3Round1 = scatterReadMap3.AddRound();
+                    var map3Round2 = scatterReadMap3.AddRound();
+                    var map3Round3 = scatterReadMap3.AddRound();
+                    var map3Round4 = scatterReadMap3.AddRound();
+
+                    if (lodsCount > 4)
+                        continue;
+
+                    for (int j = 0; j < lodsCount; j++)
+                    {
+                        var pLodEntryPtr = map3Round1.AddEntry<ulong>(j, 0, pLodsArray, null, 0x20 + (0x8 * (uint)j));
+
+                        var skinnedMeshRendererPtr = map3Round2.AddEntry<ulong>(j, 1, pLodEntryPtr, null, 0x20);
+                        var pMaterialDictionaryPtr = map3Round3.AddEntry<ulong>(j, 2, skinnedMeshRendererPtr, null, 0x10);
+
+                        var materialCountPtr = map3Round4.AddEntry<int>(j, 3, pMaterialDictionaryPtr, null, 0x158);
+                        var materialDictionaryBasePtr = map3Round4.AddEntry<ulong>(j, 4, pMaterialDictionaryPtr, null, 0x148);
+                    }
+
+                    scatterReadMap3.Execute();
+
+                    for (int j = 0; j < lodsCount; j++)
+                    {
+                        if (!scatterReadMap3.Results[j][0].TryGetResult<ulong>(out var pLodEntry))
+                            continue;
+                        if (!scatterReadMap3.Results[j][2].TryGetResult<ulong>(out var pMaterialDictionary))
+                            continue;
+                        if (!scatterReadMap3.Results[j][3].TryGetResult<int>(out var materialCount))
+                            continue;
+                        if (!scatterReadMap3.Results[j][4].TryGetResult<ulong>(out var materialDictionaryBase))
+                            continue;
+
+                        if (j == 1)
+                            pLodEntry = Memory.ReadPtr(pLodEntry + 0x20);
+
+                        if (pLodEntry == 0)
+                            continue;
+
+                        if (materialCount > 0 && materialCount < 3)
+                        {
+                            var scatterReadMap4 = new ScatterReadMap(materialCount);
+                            var map4Round1 = scatterReadMap4.AddRound();
+
+                            for (int k = 0; k < materialCount; k++)
+                            {
+                                var pMaterialPtr = map4Round1.AddEntry<ulong>(k, 0, materialDictionaryBase, null, (0x50 * (uint)k));
+                            }
+
+                            scatterReadMap4.Execute();
+
+                            for (int k = 0; k < materialCount; k++)
+                            {
+                                if (!scatterReadMap4.Results[k][0].TryGetResult<ulong>(out var pMaterial))
+                                    continue;
+
+                                if (pMaterial == 0 || material == 0)
+                                    continue;
+
+                                if (pMaterial == material)
+                                {
+                                    setAnyMaterial = true;
+                                    break;
+                                }
+
+                                if (!safeToWriteChams)
+                                    break;
+
+                                if (!_config.Chams["AlternateMethod"])
+                                    SavePointer(materialDictionaryBase + (0x50 * (uint)k), pMaterial, player);
+                                else
+                                    SavePointer(materialDictionaryBase + (sizeof(uint) * (uint)k), pMaterial, player);
+
+                                Memory.WriteValue(materialDictionaryBase + (sizeof(uint) * (uint)k), material);
+                                setAnyMaterial = true;
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Program.Log($"SetPlayerBodyChams -> {ex.Message}\n{ex.StackTrace}");
+            }
+
+            return setAnyMaterial;
+        }
+
         public void ChamsDisable()
         {
             if (!safeToWriteChams)

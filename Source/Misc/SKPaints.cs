@@ -162,7 +162,7 @@ namespace eft_dma_radar
             FilterQuality = SKFilterQuality.High,
         };
         #endregion
-}
+    }
 
     public class PaintColor {
         public Colors Color { get; set; }

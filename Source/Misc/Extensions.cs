@@ -50,6 +50,11 @@ namespace eft_dma_radar
         #endregion
 
         #region GUI Extensions
+        public static Dictionary<string, SKPaint> PlayerTypeTextPaints = new Dictionary<string, SKPaint>();
+        public static Dictionary<string, SKPaint> PlayerTypeFlagTextPaints = new Dictionary<string, SKPaint>();
+        public static Dictionary<string, SKColor> SKColors = new Dictionary<string, SKColor>();
+
+
         /// <summary>
         /// Convert game position to 'Bitmap' Map Position coordinates.
         /// </summary>
@@ -81,8 +86,12 @@ namespace eft_dma_radar
         /// Ghetto helper method to get the Color from a PaintColor object by Key & return a new SKColor object based on it
         /// </summary>
         public static SKColor SKColorFromPaintColor(string key, byte alpha=0) {
-            var col = Program.Config.PaintColors[key];
-            return new SKColor(col.R, col.G, col.B, alpha != 0 ? alpha : col.A);
+            var col = Extensions.SKColors[key];
+
+            if (alpha > 0)
+                col = col.WithAlpha(alpha);
+
+            return col;
         }
 
         /// <summary>
@@ -227,12 +236,11 @@ namespace eft_dma_radar
         }
 
         /// <summary>
-        /// Gets text paintbrush based on Player Type
+        /// Gets color of text based on Player Type
         /// </summary>
-        public static SKPaint GetTextPaint(this Player player)
+        public static SKColor GetTextColor(Player player)
         {
-            SKPaint baseText = SKPaints.TextBase.Clone();
-            baseText.Color = player.Type switch
+            return player.Type switch
             {
                 // AI
                 PlayerType.Boss => SKColorFromPaintColor("Boss"),
@@ -252,11 +260,9 @@ namespace eft_dma_radar
                 PlayerType.USEC => SKColorFromPaintColor("USEC"),
                 PlayerType.SpecialPlayer => SKColorFromPaintColor("Special"),
 
-                // default to yellow
+                // default to magenta
                 _ => new SKColor(255, 0, 255, 255),
             };
-
-            return baseText;
         }
 
         /// <summary>

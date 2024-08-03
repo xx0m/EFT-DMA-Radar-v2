@@ -117,16 +117,6 @@ namespace eft_dma_radar
             }
         }
         /// <summary>
-        /// Gets all gear + mods/attachments of a player
-        /// </summary>
-        public ConcurrentBag<LootItem> GearItemMods
-        {
-            get
-            {
-                return (this._gearManager is not null ? this._gearManager.GearItemMods : new ConcurrentBag<LootItem>());
-            }
-        }
-        /// <summary>
         /// If 'true', Player object is no longer in the RegisteredPlayers list.
         /// Will be checked if dead/exfil'd on next loop.
         /// </summary>
@@ -318,6 +308,20 @@ namespace eft_dma_radar
 
         public int MarkedDeadCount { get; set; } = 0;
         public string Tag { get; set; } = string.Empty;
+
+        public string HealthStatus => this.Health switch
+        {
+            100 => "Healthy",
+            >= 50 => "Moderate",
+            >= 10 => "Poor",
+            >= 0 => "Critical",
+            _ => "N/A"
+        };
+
+        public bool HasThermal => _gearManager.HasThermal;
+        public bool HasNVG => _gearManager.HasNVG;
+
+        public ActiveWeaponInfo WeaponInfo { get; set; }
         #endregion
 
         #region Constructor
@@ -454,6 +458,22 @@ namespace eft_dma_radar
                 return false;
             }
         }
+
+        public void SetWeaponInfo(string bsgID)
+        {
+            if (TarkovDevManager.AllItems.TryGetValue(bsgID, out var item))
+            {
+                var weaponName = item.Item.shortName;
+                var ammoType = this._gearManager.GetAmmoTypeFromWeapon(weaponName);
+
+                this.WeaponInfo = new ActiveWeaponInfo
+                {
+                    ID = bsgID,
+                    Name = weaponName,
+                    AmmoType = ammoType
+                };
+            }
+        }
         #endregion
 
         #region Methods
@@ -580,9 +600,6 @@ namespace eft_dma_radar
             {
                 var isAI = registrationDate == 0;
 
-                if (isAI)
-                    this.Name = Helpers.TransliterateCyrillic(this.Name);
-
                 this.IsLocalPlayer = !isAI;
                 this.isOfflinePlayer = true;
                 this.Type = this.GetOfflinePlayerType(isAI);
@@ -669,9 +686,6 @@ namespace eft_dma_radar
             this.Type = this.GetOnlinePlayerType(isAI);
             this.IsPMC = (this.Type == PlayerType.BEAR || this.Type == PlayerType.USEC);
 
-            if (isAI || !this.IsPMC)
-                this.Name = Helpers.TransliterateCyrillic(this.Name);
-
             this.FinishAlloc();
         }
 
@@ -685,6 +699,7 @@ namespace eft_dma_radar
             this._transform = new Transform(this.TransformInternal, true);
             this.PlayerBody = playerBody;
             this.Name = Memory.ReadUnityString(name);
+            this.Name = Helpers.TransliterateCyrillic(this.Name);
             this.PlayerSide = playerSide;
 
             if (groupID != 0)
@@ -761,6 +776,11 @@ namespace eft_dma_radar
                 this.Tag = "";
                 this.Type = this.isOfflinePlayer ? this.GetOfflinePlayerType(false) : this.GetOnlinePlayerType(false);
             }
+        }
+
+        public void RefreshGear()
+        {
+            this._gearManager.RefreshGear();
         }
 
         /// <summary>

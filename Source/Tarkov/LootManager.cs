@@ -1074,7 +1074,6 @@ namespace eft_dma_radar
                                 Long = longName,
                                 Short = shortName,
                                 Value = value,
-                                HasThermal = false,
                                 Loot = new List<LootItem>(),
                                 Item = lootItem is not null ? new LootItem(lootItem) : null,
                                 Position = position
@@ -1424,8 +1423,8 @@ namespace eft_dma_radar
         public int LootValue { get => this.Loot.Sum(x => x.Value); }
         public int TotalValue { get => base.Value + this.LootValue; }
         public List<LootItem> Loot { get; set; }
-        public bool HasThermal { get; set; }
         public LootItem Item { get; set; }
+        public PlayerGearInfo GearInfo { get; set; }
 
         public GearItem() { }
 
@@ -1441,7 +1440,6 @@ namespace eft_dma_radar
             this.Long = other.Long;
             this.Short = other.Short;
             this.Loot = other.Loot.Select(item => new LootItem(item)).ToList();
-            this.HasThermal = other.HasThermal;
             this.Item = other.Item is not null ? new LootItem(other.Item) : null;
         }
 

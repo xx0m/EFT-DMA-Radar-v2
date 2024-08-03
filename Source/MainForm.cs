@@ -16,6 +16,8 @@ using System.ComponentModel;
 using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
+using System;
+using Offsets;
 
 namespace eft_dma_radar
 {
@@ -31,6 +33,22 @@ namespace eft_dma_radar
         private readonly object _loadMapBitmapsLock = new();
         private readonly System.Timers.Timer _mapChangeTimer = new(900);
         private readonly List<Map> _maps = new(); // Contains all maps from \\Maps folder
+        private readonly List<string> FONTS_TO_USE = new List<string>()
+        {
+            "Arial",
+            "Calibri",
+            "Candara",
+            "Consolas",
+            "Constantia",
+            "Corbel",
+            "Helvetica",
+            "Lato",
+            "Roboto",
+            "Segoe UI",
+            "Tahoma",
+            "Trebuchet MS",
+            "Verdana",
+        };
 
         private bool _isFreeMapToggled = false;
         private float _uiScale = 1.0f;
@@ -223,7 +241,6 @@ namespace eft_dma_radar
             Keys.F3 => swShowLoot.Checked = !swShowLoot.Checked,
             Keys.F4 => swAimview.Checked = !swAimview.Checked,
             Keys.F5 => ToggleMap(),
-            Keys.F6 => swNames.Checked = !swNames.Checked,
             Keys.Control | Keys.N => swNightVision.Checked = !swNightVision.Checked,
             Keys.Control | Keys.T => swThermalVision.Checked = !swThermalVision.Checked,
             _ => base.ProcessCmdKey(ref msg, keyData),
@@ -365,12 +382,12 @@ namespace eft_dma_radar
 
             _aimviewWindowSize = 200 * _uiScale;
 
-            InitiateFontSize();
+            InitiateFontSizes();
         }
 
-        private void InitiateFont()
+        private void InitiateFonts()
         {
-            var fontToUse = SKTypeface.FromFamilyName(cboFont.Text);
+            var fontToUse = SKTypeface.FromFamilyName(cboGlobalFont.Text);
             SKPaints.TextMouseoverGroup.Typeface = fontToUse;
             SKPaints.TextBase.Typeface = fontToUse;
             SKPaints.LootText.Typeface = fontToUse;
@@ -378,12 +395,32 @@ namespace eft_dma_radar
             SKPaints.TextRadarStatus.Typeface = fontToUse;
         }
 
-        private void InitiateFontSize()
+        private void InitiateSKColors()
         {
-            SKPaints.TextMouseoverGroup.TextSize = _config.FontSize * _uiScale;
-            SKPaints.TextBase.TextSize = _config.FontSize * _uiScale;
-            SKPaints.LootText.TextSize = _config.FontSize * _uiScale;
-            SKPaints.TextBaseOutline.TextSize = _config.FontSize * _uiScale;
+            foreach (var paintColor in _config.PaintColors)
+            {
+                var value = paintColor.Value;
+                var color = new SKColor(value.R, value.G, value.B, value.A);
+
+                Extensions.SKColors.Add(paintColor.Key, color);
+            }
+        }
+
+        private void InitiateFontSizes()
+        {
+            SKPaints.TextMouseoverGroup.TextSize = _config.GlobalFontSize * _uiScale;
+            SKPaints.TextBase.TextSize = _config.GlobalFontSize * _uiScale;
+            SKPaints.LootText.TextSize = _config.GlobalFontSize * _uiScale;
+            SKPaints.TextBaseOutline.TextSize = _config.GlobalFontSize * _uiScale;
+
+            foreach (var setting in _config.PlayerInformationSettings)
+            {
+                var key = setting.Key;
+                var value = setting.Value;
+
+                Extensions.PlayerTypeTextPaints[key].TextSize = value.FontSize * _uiScale;
+                Extensions.PlayerTypeFlagTextPaints[key].TextSize = value.FlagsFontSize * _uiScale;
+            }
         }
 
         private DialogResult ShowErrorDialog(string message)
@@ -431,6 +468,7 @@ namespace eft_dma_radar
             UpdateDictionary(_config.Chams, _config.DefaultChamsSettings);
             UpdateDictionary(_config.LootPing, _config.DefaultLootPingSettings);
             UpdateDictionary(_config.MaxSkills, _config.DefaultMaxSkillsSettings);
+            UpdateDictionary(_config.PlayerInformationSettings, _config.DefaultPlayerInformationSettings);
         }
 
         private void UpdateDictionary<TKey, TValue>(Dictionary<TKey, TValue> dictionary, Dictionary<TKey, TValue> defaultDictionary)
@@ -447,7 +485,9 @@ namespace eft_dma_radar
 
         private void LoadConfig()
         {
+            this.InitiateSKColors();
             this.CheckConfigDictionaries();
+            this.SetupFonts();
 
             #region Settings
             #region General
@@ -460,6 +500,8 @@ namespace eft_dma_radar
             mcRadarLootItemViewer.Visible = _config.LootItemViewer;
             swPvEMode.Checked = _config.PvEMode;
 
+            btnTriggerUnityCrash.Visible = _config.PvEMode;
+
             // User Interface
             swShowLoot.Checked = _config.ShowLoot;
             swQuestHelper.Checked = _config.QuestHelper;
@@ -467,15 +509,13 @@ namespace eft_dma_radar
             swUnknownQuestItems.Checked = _config.UnknownQuestItems;
             swAimview.Checked = _config.AimviewEnabled;
             swExfilNames.Checked = _config.ShowExfilNames;
-            swNames.Checked = _config.ShowNames;
             swHoverArmor.Checked = _config.ShowHoverArmor;
             txtTeammateID.Text = _config.PrimaryTeammateId;
-            sldrAimlineLength.Value = _config.PlayerAimLineLength;
             sldrZoomSensitivity.Value = _config.ZoomSensitivity;
 
             sldrUIScale.Value = _config.UIScale;
-            cboFont.SelectedIndex = _config.Font;
-            sldrFontSize.Value = _config.FontSize;
+            cboGlobalFont.SelectedIndex = _config.GlobalFont;
+            sldrFontSize.Value = _config.GlobalFontSize;
             #endregion
 
             #region Memory Writing
@@ -595,14 +635,16 @@ namespace eft_dma_radar
             sldrLootPingRepetition.Value = _config.LootPing["Repetition"];
             #endregion
             #endregion
-            UpdatePvEControls();
-            InitiateAutoMapRefreshItems();
-            InitiateFactions();
-            InitiateLootFilter();
-            InitiateWatchlist();
-            InitiateColors();
-            InitiateFont();
-            InitiateUIScaling();
+
+            this.UpdatePlayerInformationSettings();
+            this.UpdatePvEControls();
+            this.InitiateAutoMapRefreshItems();
+            this.InitiateFactions();
+            this.InitiateLootFilter();
+            this.InitiateWatchlist();
+            this.InitiateColors();
+            this.InitiateFonts();
+            this.InitiateUIScaling();
         }
         #endregion
 
@@ -685,8 +727,8 @@ namespace eft_dma_radar
             if (tabControlMain.SelectedIndex == 2)
             {
                 GenerateCards(flpPlayerLoadoutsPlayers, x => x.IsHumanHostileActive, x => x.IsPMC, x => x.Value);
-                GenerateCards(flpPlayerLoadoutsAI, x => x.IsHostileActive && !x.IsHuman, x => x.Type == PlayerType.Boss, x => x.IsBossRaider, x => x.Value);
-
+                GenerateCards(flpPlayerLoadoutsBosses, x => x.IsHostileActive && !x.IsHuman && x.IsBossRaider, x => x.Type == PlayerType.Boss, x => x.IsBossRaider, x => x.Value);
+                GenerateCards(flpPlayerLoadoutsAI, x => x.IsHostileActive && !x.IsHuman && !x.IsBossRaider, x => x.Value);
             }
         }
 
@@ -738,8 +780,20 @@ namespace eft_dma_radar
                 {
                     foreach (var slot in player.Gear)
                     {
+                        var gearItem = slot.Value;
+                        var gearName = gearItem.Long;
+
+                        if (!string.IsNullOrEmpty(gearItem.GearInfo.AmmoType))
+                            gearName += $" ({gearItem.GearInfo.AmmoType})";
+
+                        if (!string.IsNullOrEmpty(gearItem.GearInfo.Thermal))
+                            gearName += $" ({gearItem.GearInfo.Thermal})";
+
+                        if (!string.IsNullOrEmpty(gearItem.GearInfo.NightVision))
+                            gearName += $" ({gearItem.GearInfo.NightVision})";
+
                         var gearLabel = new MaterialLabel();
-                        gearLabel.Text = $"{GearManager.GetGearSlotName(slot.Key)}: {slot.Value.Long}";
+                        gearLabel.Text = $"{GearManager.GetGearSlotName(slot.Key)}: {gearName.Trim()}";
                         gearLabel.Margin = new Padding(0, 5, 0, 0);
                         gearLabel.AutoSize = true;
                         gearLabel.FontType = MaterialSkinManager.fontType.Body2;
@@ -1114,22 +1168,8 @@ namespace eft_dma_radar
                     var mouseOverGroup = _mouseOverGroup;
                     var mapParams = GetMapLocation();
 
-                    // Draw LocalPlayer
-
-                    var localPlayerZoomedPos = localPlayerMapPos.ToZoomedPos(mapParams);
-                    localPlayerZoomedPos.DrawPlayerMarker(
-                        canvas,
-                        localPlayer,
-                        sldrAimlineLength.Value,
-                        null
-                    );
-
-
                     foreach (var player in allPlayers) // Draw PMCs
                     {
-                        if (player.Type == PlayerType.LocalPlayer || !player.IsAlive)
-                            continue; // Already drawn current player, move on
-
                         var playerPos = player.Position;
                         var playerMapPos = playerPos.ToMapPos(_selectedMap);
                         var playerZoomedPos = playerMapPos.ToZoomedPos(mapParams);
@@ -1142,7 +1182,7 @@ namespace eft_dma_radar
 
                         int aimlineLength = 15;
 
-                        if (player.Type is not PlayerType.Teammate)
+                        if (player.Type is not PlayerType.Teammate && !player.IsLocalPlayer)
                         {
                             if (friendlies is not null)
                                 foreach (var friendly in friendlies)
@@ -1162,10 +1202,6 @@ namespace eft_dma_radar
                                     }
                                 }
                         }
-                        else if (player.Type is PlayerType.Teammate)
-                        {
-                            aimlineLength = sldrAimlineLength.Value; // Allies use player's aim length
-                        }
 
                         // Draw Player
                         DrawPlayer(canvas, player, playerZoomedPos, aimlineLength, mouseOverGroup, localPlayerMapPos);
@@ -1178,50 +1214,95 @@ namespace eft_dma_radar
         {
             if (this.InGame && this.LocalPlayer is not null)
             {
-                string[] lines = null;
+                var type = player.Type.ToString();
+
+                if (player.IsPMC && player.Type is not PlayerType.Teammate && !player.IsLocalPlayer)
+                    type = "PMC";
+
+                var playerSettings = _config.PlayerInformationSettings[type];
                 var height = playerZoomedPos.Height - localPlayerMapPos.Height;
-
                 var dist = Vector3.Distance(this.LocalPlayer.Position, player.Position);
-
-                if (_config.ShowNames) // show full names & info
+                var aimlineSettings = new AimlineSettings
                 {
-                    lines = new string[2]
-                    {
-                        string.Empty,
-                        $"{(int)Math.Round(height)},{(int)Math.Round(dist)}"
-                    };
+                    Enabled = playerSettings.Aimline,
+                    Length = aimlineLength,
+                    Opacity = playerSettings.AimlineOpacity
+                };
 
-                    string name = player.Name;
+                List<string> aboveLines = new List<string>();
+                List<string> belowLines = new List<string>();
+                List<string> rightLines = new List<string>();
+                List<string> leftLines = new List<string>();
 
-                    if (player.ErrorCount > 10)
-                        name = "ERROR"; // In case POS stops updating, let us know!
-
-                    if ((player.IsHuman || player.IsBossRaider) && player.Health != -1)
-                        lines[0] += $"{name} ({player.Health})";
-                    else
-                        lines[0] += $"{name}";
+                if (playerSettings.Name)
+                {
+                    string name = player.ErrorCount > 10 ? "ERROR" : player.Name;
+                    aboveLines.Add(name);
                 }
-                else // just height & hp (for humans)
-                {
-                    lines = new string[1] { $"{(int)Math.Round(height)},{(int)Math.Round(dist)}" };
 
-                    if ((player.IsHuman || player.IsBossRaider) && player.Health != -1)
-                        lines[0] += $" ({player.Health})";
-                    if (player.ErrorCount > 10)
-                        lines[0] = "ERROR"; // In case POS stops updating, let us know!
+                if (playerSettings.Height)
+                    leftLines.Add($"{Math.Round(height)}");
+
+                if (playerSettings.Distance)
+                    belowLines.Add($"{Math.Round(dist)}");
+
+                if (playerSettings.Flags)
+                {
+                    if (playerSettings.Health && player.Health != -1)
+                        rightLines.Add(player.HealthStatus);
+
+                    if (playerSettings.ActiveWeapon)
+                        if (!string.IsNullOrEmpty(player.WeaponInfo.Name))
+                            rightLines.Add(player.WeaponInfo.Name ?? "N/A");
+
+                    if (playerSettings.AmmoType)
+                        if (!string.IsNullOrEmpty(player.WeaponInfo.AmmoType))
+                            rightLines.Add(player.WeaponInfo.AmmoType ?? "N/A");
+
+                    if (playerSettings.Thermal)
+                        if (player.HasThermal)
+                            rightLines.Add("T");
+
+                    if (playerSettings.NightVision)
+                        if (player.HasNVG)
+                            rightLines.Add("NVG");
+
+                    if (playerSettings.Value)
+                        rightLines.Add($"${TarkovDevManager.FormatNumber(player.Value)}");
+
+                    if (playerSettings.Group && player.GroupID != -1)
+                        rightLines.Add(player.GroupID.ToString());
+
+                    if (playerSettings.Tag && !string.IsNullOrEmpty(player.Tag))
+                        rightLines.Add("Example Tag");
+                }
+
+                if (aimlineSettings.Length != 1000)
+                    aimlineSettings.Length = playerSettings.AimlineLength;
+
+                if (player.ErrorCount > 10)
+                {
+                    aboveLines.Clear();
+                    belowLines.Clear();
+                    rightLines.Clear();
+                    leftLines.Clear();
+                    belowLines.Add("ERROR");
                 }
 
                 playerZoomedPos.DrawPlayerText(
                     canvas,
                     player,
-                    lines,
+                    aboveLines.ToArray(),
+                    belowLines.ToArray(),
+                    rightLines.ToArray(),
+                    leftLines.ToArray(),
                     mouseOverGrp
                 );
 
                 playerZoomedPos.DrawPlayerMarker(
                     canvas,
                     player,
-                    aimlineLength,
+                    aimlineSettings,
                     mouseOverGrp
                 );
             }
@@ -2366,6 +2447,8 @@ namespace eft_dma_radar
             var LTWDistance = (pveMode ? _config.LootThroughWallsDistancePvE : _config.LootThroughWallsDistance) * 10;
             var reachDistance = (pveMode ? _config.ExtendedReachDistancePvE : _config.ExtendedReachDistance) * 10;
 
+            btnTriggerUnityCrash.Visible = pveMode;
+
             sldrLootThroughWallsDistance.RangeMax = maxLTWDistance;
             sldrLootThroughWallsDistance.ValueMax = maxLTWDistance;
 
@@ -2386,6 +2469,147 @@ namespace eft_dma_radar
                 Memory.Toolbox.UpdateExtendedReachDistance = true;
                 Memory.PlayerManager.UpdateLootThroughWallsDistance = true;
             }
+        }
+
+        private string GetActivePlayerType()
+        {
+            return cboPlayerInfoType.SelectedItem?.ToString()?.Replace(" ", "");
+        }
+
+        private void UpdatePlayerTextFont(PlayerInformationSettings playerInfoSettings)
+        {
+            var playerType = this.GetActivePlayerType();
+            var playerText = Extensions.PlayerTypeTextPaints[playerType];
+            playerText.Typeface = SKTypeface.FromFamilyName(FONTS_TO_USE[playerInfoSettings.Font]);
+
+            Extensions.PlayerTypeTextPaints[playerType] = playerText;
+        }
+
+        private void UpdatePlayerTextSize(PlayerInformationSettings playerInfoSettings)
+        {
+            var playerType = this.GetActivePlayerType();
+            var playerText = Extensions.PlayerTypeTextPaints[playerType];
+            playerText.TextSize = playerInfoSettings.FontSize * _uiScale;
+
+            Extensions.PlayerTypeTextPaints[playerType] = playerText;
+        }
+
+        private void UpdatePlayerFlagTextFont(PlayerInformationSettings playerInfoSettings)
+        {
+            var playerType = this.GetActivePlayerType();
+            var playerText = Extensions.PlayerTypeFlagTextPaints[playerType];
+            playerText.Typeface = SKTypeface.FromFamilyName(FONTS_TO_USE[playerInfoSettings.FlagsFont]);
+
+            Extensions.PlayerTypeFlagTextPaints[playerType] = playerText;
+        }
+
+        private void UpdatePlayerFlagTextSize(PlayerInformationSettings playerInfoSettings)
+        {
+            var playerType = this.GetActivePlayerType();
+            var playerText = Extensions.PlayerTypeFlagTextPaints[playerType];
+            playerText.TextSize = playerInfoSettings.FlagsFontSize * _uiScale;
+
+            Extensions.PlayerTypeFlagTextPaints[playerType] = playerText;
+        }
+
+        private void SetupFonts()
+        {
+            cboGlobalFont.Items.Clear();
+            cboPlayerInfoFont.Items.Clear();
+            cboPlayerInfoFlagsFont.Items.Clear();
+
+            foreach (string font in FONTS_TO_USE)
+            {
+                cboGlobalFont.Items.Add(font);
+                cboPlayerInfoFont.Items.Add(font);
+                cboPlayerInfoFlagsFont.Items.Add(font);
+            }
+
+            foreach (var playerSetting in _config.PlayerInformationSettings)
+            {
+                var settings = playerSetting.Value;
+                var textPaint = SKPaints.TextBase.Clone();
+                textPaint.Typeface = SKTypeface.FromFamilyName(FONTS_TO_USE[settings.Font]);
+                textPaint.TextSize = settings.FontSize * _uiScale;
+
+                var flagsTextPaint = SKPaints.TextBase.Clone();
+                flagsTextPaint.Typeface = SKTypeface.FromFamilyName(FONTS_TO_USE[settings.FlagsFont]);
+                flagsTextPaint.TextSize = settings.FlagsFontSize * _uiScale;
+
+                Extensions.PlayerTypeTextPaints.Add(playerSetting.Key, textPaint);
+                Extensions.PlayerTypeFlagTextPaints.Add(playerSetting.Key, flagsTextPaint);
+            }
+        }
+
+        private PlayerInformationSettings GetPlayerInfoSettings()
+        {
+            var playerType = this.GetActivePlayerType();
+            return !string.IsNullOrEmpty(playerType) && _config.PlayerInformationSettings.TryGetValue(playerType, out var settings) ? settings : null;
+        }
+
+        private bool TryGetPlayerInfoSettings(out PlayerInformationSettings settings)
+        {
+            settings = this.GetPlayerInfoSettings();
+            return settings != null;
+        }
+
+        private void UpdatePlayerInformationSettings()
+        {
+            if (!this.TryGetPlayerInfoSettings(out var playerInfoSettings))
+                return;
+
+            var selectedType = cboPlayerInfoType.Text;
+
+            if (selectedType.Equals("LocalPlayer", StringComparison.OrdinalIgnoreCase) ||
+                selectedType.Equals("Teammate", StringComparison.OrdinalIgnoreCase))
+            {
+                sldrPlayerInfoAimlineLength.RangeMax = 500;
+                sldrPlayerInfoAimlineLength.ValueMax = 500;
+            }
+            else if (sldrPlayerInfoAimlineLength.RangeMax == 500)
+            {
+                sldrPlayerInfoAimlineLength.RangeMax = 60;
+                sldrPlayerInfoAimlineLength.ValueMax = 60;
+            }
+
+            swPlayerInfoName.Checked = playerInfoSettings.Name;
+            swPlayerInfoHeight.Checked = playerInfoSettings.Height;
+            swPlayerInfoDistance.Checked = playerInfoSettings.Distance;
+
+            swPlayerInfoAimline.Checked = playerInfoSettings.Aimline;
+            sldrPlayerInfoAimlineLength.Value = playerInfoSettings.AimlineLength;
+            sldrPlayerInfoAimlineOpacity.Value = playerInfoSettings.AimlineOpacity;
+            sldrPlayerInfoAimlineLength.Visible = playerInfoSettings.Aimline;
+            sldrPlayerInfoAimlineOpacity.Visible = playerInfoSettings.Aimline;
+
+            cboPlayerInfoFont.SelectedIndex = playerInfoSettings.Font;
+            sldrPlayerInfoFontSize.Value = playerInfoSettings.FontSize;
+
+            var flagsChecked = playerInfoSettings.Flags;
+            swPlayerInfoFlags.Checked = flagsChecked;
+            swPlayerInfoActiveWeapon.Checked = playerInfoSettings.ActiveWeapon;
+            swPlayerInfoThermal.Checked = playerInfoSettings.Thermal;
+            swPlayerInfoNightVision.Checked = playerInfoSettings.NightVision;
+            swPlayerInfoAmmoType.Checked = playerInfoSettings.AmmoType;
+            swPlayerInfoGroup.Checked = playerInfoSettings.Group;
+            swPlayerInfoValue.Checked = playerInfoSettings.Value;
+            swPlayerInfoHealth.Checked = playerInfoSettings.Health;
+            swPlayerInfoTag.Checked = playerInfoSettings.Tag;
+
+            swPlayerInfoActiveWeapon.Visible = flagsChecked;
+            swPlayerInfoThermal.Visible = flagsChecked;
+            swPlayerInfoNightVision.Visible = flagsChecked;
+            swPlayerInfoAmmoType.Visible = flagsChecked;
+            swPlayerInfoGroup.Visible = flagsChecked;
+            swPlayerInfoValue.Visible = flagsChecked;
+            swPlayerInfoHealth.Visible = flagsChecked;
+            swPlayerInfoTag.Visible = flagsChecked;
+
+            cboPlayerInfoFlagsFont.SelectedIndex = playerInfoSettings.FlagsFont;
+            sldrPlayerInfoFlagsFontSize.Value = playerInfoSettings.FlagsFontSize;
+
+            cboPlayerInfoFlagsFont.Visible = flagsChecked;
+            sldrPlayerInfoFlagsFontSize.Visible = flagsChecked;
         }
         #endregion
         #region Event Handlers
@@ -2427,11 +2651,6 @@ namespace eft_dma_radar
         private void swExfilNames_CheckedChanged(object sender, EventArgs e)
         {
             _config.ShowExfilNames = swExfilNames.Checked;
-        }
-
-        private void swNames_CheckedChanged(object sender, EventArgs e)
-        {
-            _config.ShowNames = swNames.Checked;
         }
 
         private void swHoverArmor_CheckedChanged(object sender, EventArgs e)
@@ -2478,19 +2697,219 @@ namespace eft_dma_radar
 
         private void cboFont_SelectedIndexChanged(object sender, EventArgs e)
         {
-            _config.Font = cboFont.SelectedIndex;
-            InitiateFont();
+            _config.GlobalFont = cboGlobalFont.SelectedIndex;
+
+            InitiateFonts();
         }
 
         private void sldrFontSize_onValueChanged(object sender, int newValue)
         {
-            _config.FontSize = newValue;
-            InitiateFontSize();
+            _config.GlobalFontSize = newValue;
+
+            InitiateFontSizes();
         }
 
         private void sldrZoomSensitivity_onValueChanged(object sender, int newValue)
         {
             _config.ZoomSensitivity = newValue;
+        }
+
+        private void cboPlayerInfoType_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (!this.TryGetPlayerInfoSettings(out var playerInfoSettings))
+                return;
+
+            this.UpdatePlayerInformationSettings();
+        }
+
+        private void swPlayerInfoName_CheckedChanged(object sender, EventArgs e)
+        {
+            if (!this.TryGetPlayerInfoSettings(out var playerInfoSettings))
+                return;
+
+            playerInfoSettings.Name = swPlayerInfoName.Checked;
+        }
+
+        private void swPlayerInfoHeight_CheckedChanged(object sender, EventArgs e)
+        {
+            if (!this.TryGetPlayerInfoSettings(out var playerInfoSettings))
+                return;
+
+            playerInfoSettings.Height = swPlayerInfoHeight.Checked;
+        }
+
+        private void swPlayerInfoDistance_CheckedChanged(object sender, EventArgs e)
+        {
+            if (!this.TryGetPlayerInfoSettings(out var playerInfoSettings))
+                return;
+
+            playerInfoSettings.Distance = swPlayerInfoDistance.Checked;
+        }
+
+        private void swPlayerInfoAimline_CheckedChanged(object sender, EventArgs e)
+        {
+            if (!this.TryGetPlayerInfoSettings(out var playerInfoSettings))
+                return;
+
+            var aimlineChecked = swPlayerInfoAimline.Checked;
+
+            playerInfoSettings.Aimline = aimlineChecked;
+
+            sldrPlayerInfoAimlineLength.Visible = aimlineChecked;
+            sldrPlayerInfoAimlineOpacity.Visible = aimlineChecked;
+        }
+
+        private void sldrPlayerInfoAimlineLength_onValueChanged(object sender, int newValue)
+        {
+            if (!this.TryGetPlayerInfoSettings(out var playerInfoSettings))
+                return;
+
+            if (newValue < sldrPlayerInfoAimlineLength.RangeMin)
+                newValue = sldrPlayerInfoAimlineLength.RangeMin;
+
+            playerInfoSettings.AimlineLength = newValue;
+        }
+
+        private void sldrPlayerInfoAimlineOpacity_onValueChanged(object sender, int newValue)
+        {
+            if (!this.TryGetPlayerInfoSettings(out var playerInfoSettings))
+                return;
+
+            if (newValue < sldrPlayerInfoAimlineOpacity.RangeMin)
+                newValue = sldrPlayerInfoAimlineOpacity.RangeMin;
+
+            playerInfoSettings.AimlineOpacity = newValue;
+        }
+
+        private void cboPlayerInfoFont_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (!this.TryGetPlayerInfoSettings(out var playerInfoSettings))
+                return;
+
+            playerInfoSettings.Font = cboPlayerInfoFont.SelectedIndex;
+
+            this.UpdatePlayerTextFont(playerInfoSettings);
+        }
+
+        private void sldrPlayerInfoFontSize_onValueChanged(object sender, int newValue)
+        {
+            if (!this.TryGetPlayerInfoSettings(out var playerInfoSettings))
+                return;
+
+            playerInfoSettings.FontSize = newValue;
+
+            this.UpdatePlayerTextSize(playerInfoSettings);
+        }
+
+        private void swPlayerInfoFlags_CheckedChanged(object sender, EventArgs e)
+        {
+            if (!this.TryGetPlayerInfoSettings(out var playerInfoSettings))
+                return;
+
+            var flagsChecked = swPlayerInfoFlags.Checked;
+
+            playerInfoSettings.Flags = flagsChecked;
+            swPlayerInfoActiveWeapon.Visible = flagsChecked;
+            swPlayerInfoThermal.Visible = flagsChecked;
+            swPlayerInfoNightVision.Visible = flagsChecked;
+            swPlayerInfoAmmoType.Visible = flagsChecked;
+            swPlayerInfoGroup.Visible = flagsChecked;
+            swPlayerInfoValue.Visible = flagsChecked;
+            swPlayerInfoHealth.Visible = flagsChecked;
+            swPlayerInfoTag.Visible = flagsChecked;
+
+            cboPlayerInfoFlagsFont.Visible = flagsChecked;
+            sldrPlayerInfoFlagsFontSize.Visible = flagsChecked;
+        }
+
+        private void swPlayerInfoActiveWeapon_CheckedChanged(object sender, EventArgs e)
+        {
+            if (!this.TryGetPlayerInfoSettings(out var playerInfoSettings))
+                return;
+
+            playerInfoSettings.ActiveWeapon = swPlayerInfoActiveWeapon.Checked;
+        }
+
+        private void swPlayerInfoThermal_CheckedChanged(object sender, EventArgs e)
+        {
+            if (!this.TryGetPlayerInfoSettings(out var playerInfoSettings))
+                return;
+
+            playerInfoSettings.Thermal = swPlayerInfoThermal.Checked;
+        }
+
+        private void swPlayerInfoNightVision_CheckedChanged(object sender, EventArgs e)
+        {
+            if (!this.TryGetPlayerInfoSettings(out var playerInfoSettings))
+                return;
+
+            playerInfoSettings.NightVision = swPlayerInfoNightVision.Checked;
+        }
+
+        private void swPlayerInfoAmmoType_CheckedChanged(object sender, EventArgs e)
+        {
+            if (!this.TryGetPlayerInfoSettings(out var playerInfoSettings))
+                return;
+
+            playerInfoSettings.AmmoType = swPlayerInfoAmmoType.Checked;
+        }
+
+        private void swPlayerInfoGroup_CheckedChanged(object sender, EventArgs e)
+        {
+            if (!this.TryGetPlayerInfoSettings(out var playerInfoSettings))
+                return;
+
+            playerInfoSettings.Group = swPlayerInfoGroup.Checked;
+        }
+
+        private void swPlayerInfoValue_CheckedChanged(object sender, EventArgs e)
+        {
+            if (!this.TryGetPlayerInfoSettings(out var playerInfoSettings))
+                return;
+
+            playerInfoSettings.Value = swPlayerInfoValue.Checked;
+        }
+
+        private void swPlayerInfoHealth_CheckedChanged(object sender, EventArgs e)
+        {
+            if (!this.TryGetPlayerInfoSettings(out var playerInfoSettings))
+                return;
+
+            playerInfoSettings.Health = swPlayerInfoHealth.Checked;
+        }
+
+        private void swPlayerInfoTag_CheckedChanged(object sender, EventArgs e)
+        {
+            if (!this.TryGetPlayerInfoSettings(out var playerInfoSettings))
+                return;
+
+            playerInfoSettings.Tag = swPlayerInfoTag.Checked;
+        }
+
+        private void cboPlayerInfoFlagsFont_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (!this.TryGetPlayerInfoSettings(out var playerInfoSettings))
+                return;
+
+            playerInfoSettings.FlagsFont = cboPlayerInfoFlagsFont.SelectedIndex;
+
+            this.UpdatePlayerFlagTextFont(playerInfoSettings);
+        }
+
+        private void sldrPlayerInfoFlagsFontSize_onValueChanged(object sender, int newValue)
+        {
+            if (!this.TryGetPlayerInfoSettings(out var playerInfoSettings))
+                return;
+
+            playerInfoSettings.FlagsFontSize = newValue;
+
+            this.UpdatePlayerFlagTextSize(playerInfoSettings);
+        }
+
+        private void btnTriggerUnityCrash_Click(object sender, EventArgs e)
+        {
+            if (Memory.IsOfflinePvE && Memory.InGame && Memory.LocalPlayer is not null)
+                Memory.Chams.TriggerUnityCrash(Memory.LocalPlayer, 100UL);
         }
         #endregion
         #endregion
@@ -3478,6 +3897,9 @@ namespace eft_dma_radar
                 if (_config.PaintColors.ContainsKey(name))
                 {
                     _config.PaintColors[name] = paintColorToUse;
+
+                    if (Extensions.SKColors.ContainsKey(name))
+                        Extensions.SKColors[name] = new SKColor(col.R, col.G, col.B, col.A);
                 }
                 else
                 {

@@ -61,7 +61,6 @@
     }
     public struct Player // EFT.Player : MonoBehaviour, 
     {
-        //public static readonly uint[] To_TransformInternal = new uint[] { 0xA8, 0x28, 0x28, 0x10, 0x20, 0x10 }; // to TransformInternal
         public static readonly uint[] To_TransformInternal = new uint[] { 0xA8, 0x28, 0x28, 0x10, 0x20 + (0 * 0x8), 0x10 }; // to TransformInternal
         public const uint MovementContext = 0x40; // to MovementContext
         public const uint Corpse = 0x3D0; // EFT.Interactive.Corpse
@@ -91,11 +90,21 @@
         public const uint AccountID = 0x50; // to UnityString
         public const uint PlayerBody = 0x60; //[60] playerBody_0x60 : EFT.PlayerBody
         public const uint ObservedPlayerController = 0x80; // to PlayerController
-        public const uint ObservedPlayerControllerProfile = 0xE8; // profile
         public static readonly uint[] To_MovementContext = new uint[] { ObservedPlayerController, 0xC8, 0x10 }; // to MovementContext
         public static readonly uint[] To_TransformInternal = new uint[] { PlayerBody, 0x28, 0x28, 0x10, 0x20, 0x10 }; // to TransformInternal
         public static readonly uint[] To_InventoryController = new uint[] { ObservedPlayerController, 0x118 }; // to InventoryController
         public static readonly uint[] To_HealthController = new uint[] { ObservedPlayerController, 0xF0 }; // to HealthController
+        public static readonly uint[] To_HandsController = new uint[] { ObservedPlayerController, 0xD8 }; // to HandsController
+    }
+
+    public struct HealthController
+    {
+        public const uint HealthStatus = 0xD8; //[D8] HealthStatus : System.Int32
+    }
+
+    public struct ObservedPlayerController
+    {
+        public const uint Profile = 0xE8;
     }
 
     public struct ObserverdPlayerMovementContext
@@ -178,8 +187,7 @@
         public const uint Vertices = 0x18; // List<Vector128<float>>
         public const uint Indices = 0x20; // List<int>
     }
-    //New Offsets (Added by Keeegi)
-    //[Class] EFT.Animations.ProceduralWeaponAnimation : MonoBehaviour
+    
     public struct ProceduralWeaponAnimation
     {
         public const uint IsAiming = 0x1BD; //[1BD] _isAiming : Boolean
@@ -201,6 +209,10 @@
     public struct HandsController
     {
         public const uint Item = 0x60; //[60] item_0x60 : EFT.InventoryLogic.Item
+    }
+    public struct ObservedHandsController
+    {
+        public const uint Item = 0x58; //[60] item_0x60 : EFT.InventoryLogic.Item
     }
     public struct BreathEffector
     {
@@ -306,6 +318,8 @@
     }
     public struct WeaponTemplate
     {
+
+        public const uint Chambers = 0x168; //[168] Chambers : EFT.InventoryLogic.Slot[]
         public const uint AllowJam = 0x298; //[298] AllowJam : Boolean
         public const uint AllowFeed = 0x299; //[299] AllowFeed : Boolean
         public const uint AllowMisfire = 0x29A; //[29A] AllowMisfire : Boolean

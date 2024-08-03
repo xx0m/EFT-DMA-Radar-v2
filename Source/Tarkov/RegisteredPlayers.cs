@@ -15,6 +15,7 @@ namespace eft_dma_radar
         private readonly Stopwatch _regSw = new();
         private readonly Stopwatch _healthSw = new();
         private readonly Stopwatch _posSw = new();
+        private readonly Stopwatch _weaponSw = new();
 
         private readonly ConcurrentDictionary<string, Player> _players = new(StringComparer.OrdinalIgnoreCase);
 
@@ -74,6 +75,7 @@ namespace eft_dma_radar
             this._regSw.Start();
             this._healthSw.Start();
             this._posSw.Start();
+            this._weaponSw.Start();
         }
 
         #region Update List/Player Functions
@@ -136,7 +138,7 @@ namespace eft_dma_radar
                     else
                     {
                         var p1 = round6.AddEntry<ulong>(i, 0, playerBase, null, Offsets.ObservedPlayerView.ObservedPlayerController);
-                        p2 = round7.AddEntry<ulong>(i, 1, p1, null, Offsets.ObservedPlayerView.ObservedPlayerControllerProfile);
+                        p2 = round7.AddEntry<ulong>(i, 1, p1, null, Offsets.ObservedPlayerController.Profile);
                     }
 
                     var playerID = round8.AddEntry<ulong>(i, 2, p2, null, Offsets.Profile.Id);
@@ -288,12 +290,16 @@ namespace eft_dma_radar
                         this._localPlayerGroup = localPlayer.GroupID;
                 }
 
-                bool checkHealth = this._healthSw.ElapsedMilliseconds > 500;
-                bool checkPos = this._posSw.ElapsedMilliseconds > 10000 && players.Any(x => x.IsHumanActive);
+                var checkHealth = this._healthSw.ElapsedMilliseconds > 500;
+                var checkWeaponInfo = this._weaponSw.ElapsedMilliseconds > 7500;
+                var checkPos = this._posSw.ElapsedMilliseconds > 10000 && players.Any(x => x.IsHumanActive);
 
                 var scatterMap = new ScatterReadMap(players.Length);
                 var round1 = scatterMap.AddRound();
                 var round2 = scatterMap.AddRound();
+                var round3 = scatterMap.AddRound();
+                var round4 = scatterMap.AddRound();
+                var round5 = scatterMap.AddRound();
 
                 for (int i = 0; i < players.Length; i++)
                 {
@@ -305,7 +311,7 @@ namespace eft_dma_radar
                     }
                     else
                     {
-                        var rotation = round1.AddEntry<Vector2>(i, 0, (player.isOfflinePlayer) ? player.MovementContext + Offsets.MovementContext.Rotation : player.MovementContext + Offsets.ObserverdPlayerMovementContext.Rotation);
+                        var rotation = round1.AddEntry<Vector2>(i, 0, (player.isOfflinePlayer ? player.MovementContext + Offsets.MovementContext.Rotation : player.MovementContext + Offsets.ObserverdPlayerMovementContext.Rotation));
                         var posAddr = player.TransformScatterReadParameters;
                         var indices = round1.AddEntry<List<int>>(i, 1, posAddr.Item1, posAddr.Item2 * 4);
                         var vertices = round1.AddEntry<List<Vector128<float>>>(i, 2, posAddr.Item3, posAddr.Item4 * 16);
@@ -317,9 +323,30 @@ namespace eft_dma_radar
                             var verticesAddr = round2.AddEntry<ulong>(i, 5, hierarchy, null, Offsets.TransformHierarchy.Vertices);
                         }
 
-                        if (checkHealth && player.IsHostileActive)
+                        //if (checkHealth && player.IsHostileActive)
+                        if (checkHealth && player.IsActive)
                         {
-                            var health = round1.AddEntry<int>(i, 7, player.HealthController, null, 0xD8);
+                            var health = round1.AddEntry<int>(i, 6, player.HealthController, null, Offsets.HealthController.HealthStatus);
+                        }
+
+                        if (checkWeaponInfo)
+                        {
+                            ScatterReadEntry<ulong> handsController, currentItem;
+
+                            if (player.isOfflinePlayer)
+                            {
+                                handsController = round1.AddEntry<ulong>(i, 8, player.Base, null, Offsets.Player.HandsController);
+                                currentItem = round3.AddEntry<ulong>(i, 9, handsController, null, Offsets.HandsController.Item);
+                            }
+                            else
+                            {
+                                handsController = round1.AddEntry<ulong>(i, 7, player.Base, null, Offsets.ObservedPlayerView.To_HandsController[0]);
+                                handsController = round2.AddEntry<ulong>(i, 8, handsController, null, Offsets.ObservedPlayerView.To_HandsController[1]);
+                                currentItem = round3.AddEntry<ulong>(i, 9, handsController, null, Offsets.ObservedHandsController.Item);
+                            }
+
+                            var currentItemTemplate = round4.AddEntry<ulong>(i, 10, currentItem, null, Offsets.Item.Template);
+                            var currentWeaponID = round5.AddEntry<ulong>(i, 11, currentItemTemplate, null, Offsets.ItemTemplate.BsgId);
                         }
                     }
                 }
@@ -402,11 +429,18 @@ namespace eft_dma_radar
                         if (posOK)
                             p3 = player.SetPosition(posBufs);
 
-                        if (checkHealth && !player.IsLocalPlayer && player.Type != PlayerType.Teammate)
-                        {
-                            if (scatterMap.Results[i][7].TryGetResult<int>(out var hp))
+                        if (checkHealth && !player.IsLocalPlayer)
+                            if (scatterMap.Results[i][6].TryGetResult<int>(out var hp))
                                 player.SetHealth(hp);
-                        }
+
+                        if (checkWeaponInfo)
+                            if (scatterMap.Results[i][11].TryGetResult<ulong>(out var bsgID) && bsgID != 0)
+                            {
+                                var itemID = Memory.ReadUnityString(bsgID);
+
+                                if (itemID != player.WeaponInfo.ID)
+                                    player.SetWeaponInfo(itemID);
+                            }
 
                         if (p2 && p3)
                             player.ErrorCount = 0;
@@ -420,6 +454,9 @@ namespace eft_dma_radar
 
                 if (checkPos)
                     this._posSw.Restart();
+
+                if (checkWeaponInfo)
+                    this._weaponSw.Restart();
             }
 
             catch (Exception ex)

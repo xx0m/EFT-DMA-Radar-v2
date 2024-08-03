@@ -17,14 +17,17 @@ namespace eft_dma_radar
         /// Contains the Skia Interface (UI) Scaling Value.
         /// </summary>
         public float UIScale = 0;
+
         /// <summary>
         /// X coordinate on Bitmap.
         /// </summary>
         public float X = 0;
+
         /// <summary>
         /// Y coordinate on Bitmap.
         /// </summary>
         public float Y = 0;
+
         /// <summary>
         /// Unit 'height' as determined by Vector3.Z
         /// </summary>
@@ -42,6 +45,7 @@ namespace eft_dma_radar
         {
             return new SKPoint(X + xOff, Y + yOff);
         }
+
         /// <summary>
         /// Gets the point where the Aimline 'Line' ends. Applies UI Scaling internally.
         /// </summary>
@@ -50,6 +54,7 @@ namespace eft_dma_radar
             aimlineLength *= UIScale;
             return new SKPoint((float)(this.X + Math.Cos(radians) * aimlineLength), (float)(this.Y + Math.Sin(radians) * aimlineLength));
         }
+
         /// <summary>
         /// Gets up arrow where loot is. IDisposable. Applies UI Scaling internally.
         /// </summary>
@@ -64,6 +69,7 @@ namespace eft_dma_radar
 
             return path;
         }
+
         /// <summary>
         /// Gets down arrow where loot is. IDisposable. Applies UI Scaling internally.
         /// </summary>
@@ -78,6 +84,21 @@ namespace eft_dma_radar
 
             return path;
         }
+
+
+        private PlayerInformationSettings GetPlayerInfoSettings(Player player)
+        {
+            string playerType = player.Type.ToString();
+            if (player.IsPMC && player.Type is not PlayerType.Teammate && !player.IsLocalPlayer)
+                playerType = "PMC";
+
+            if (_config.PlayerInformationSettings.TryGetValue(playerType, out var settings))
+                return settings;
+
+            return _config.PlayerInformationSettings["Scav"];
+        }
+
+
         /// <summary>
         /// Draws an Exfil on this location.
         /// </summary>
@@ -113,6 +134,7 @@ namespace eft_dma_radar
                 canvas.DrawText(exfil.Name, coords, text);
             }
         }
+
         /// <summary>
         /// Draws a 'Hot' Grenade on this location.
         /// </summary>
@@ -120,6 +142,7 @@ namespace eft_dma_radar
         {
             canvas.DrawCircle(this.GetPoint(), 5 * UIScale, SKPaints.PaintGrenades);
         }
+
         /// <summary>
         /// Draws a lootable object on this location.
         /// </summary>
@@ -138,6 +161,7 @@ namespace eft_dma_radar
                 this.DrawLootCorpse(canvas, corpse, heightDiff);
             }
         }
+
         /// <summary>
         /// Draws a loot item on this location.
         /// </summary>
@@ -167,6 +191,7 @@ namespace eft_dma_radar
             canvas.DrawText(label, coords, Extensions.GetTextOutlinePaint());
             canvas.DrawText(label, coords, text);
         }
+
         /// <summary>
         /// Draws a loot container on this location.
         /// </summary>
@@ -197,6 +222,7 @@ namespace eft_dma_radar
             canvas.DrawText(label, coords, paintTest);
             canvas.DrawText(label, coords, text);
         }
+
         /// <summary>
         /// Draws a loot corpse on this location.
         /// </summary>
@@ -265,6 +291,7 @@ namespace eft_dma_radar
             canvas.DrawText(label, coords, Extensions.GetTextOutlinePaint());
             canvas.DrawText(label, coords, text);
         }
+
         /// <summary>
         /// Draws a quest zone on this location.
         /// </summary>
@@ -294,33 +321,50 @@ namespace eft_dma_radar
             canvas.DrawText(label, coords, Extensions.GetTextOutlinePaint());
             canvas.DrawText(label, coords, text);
         }
+
         /// <summary>
         /// Draws a Player Marker on this location.
         /// </summary>
-        public void DrawPlayerMarker(SKCanvas canvas, Player player, int aimlineLength, int? mouseoverGrp)
+        public void DrawPlayerMarker(SKCanvas canvas, Player player, AimlineSettings aimlineSettings, int? mouseoverGrp)
         {
             var radians = player.Rotation.X.ToRadians();
-            SKPaint paint;
+            SKPaint markerPaint, aimlinePaint;
 
-            if (mouseoverGrp is not null && mouseoverGrp == player.GroupID)
+            if (mouseoverGrp == player.GroupID)
             {
-                paint = SKPaints.PaintMouseoverGroup;
-                paint.Color = Extensions.SKColorFromPaintColor("TeamHover");
+                markerPaint = SKPaints.PaintMouseoverGroup;
+                markerPaint.Color = Extensions.SKColorFromPaintColor("TeamHover");
             }
             else
             {
-                paint = player.GetEntityPaint();
+                markerPaint = player.GetEntityPaint();
             }
 
-            canvas.DrawCircle(this.GetPoint(), 6 * UIScale, paint);
-            canvas.DrawLine(this.GetPoint(), this.GetAimlineEndpoint(radians, aimlineLength), paint);
+            var playerPoint = this.GetPoint();
+            canvas.DrawCircle(playerPoint, 6 * UIScale, markerPaint);
+
+            if (aimlineSettings.Enabled)
+            {
+                aimlinePaint = markerPaint.Clone();
+                aimlinePaint.Color = markerPaint.Color.WithAlpha((byte)aimlineSettings.Opacity);
+
+                canvas.DrawLine(playerPoint, this.GetAimlineEndpoint(radians, aimlineSettings.Length), aimlinePaint);
+            }
         }
+
         /// <summary>
         /// Draws Player Text on this location.
         /// </summary>
-        public void DrawPlayerText(SKCanvas canvas, Player player, string[] lines, int? mouseoverGrp)
+        public void DrawPlayerText(SKCanvas canvas, Player player, string[] aboveLines, string[] belowLines, string[] rightLines, string[] leftLines, int? mouseoverGrp)
         {
-            SKPaint text;
+            var type = player.Type.ToString().Replace(" ", "");
+            if (player.IsPMC && player.Type is not PlayerType.Teammate && !player.IsLocalPlayer)
+                type = "PMC";
+
+            var text = Extensions.PlayerTypeTextPaints[type];
+            var flagsText = Extensions.PlayerTypeFlagTextPaints[type];
+            var textOutline = Extensions.GetTextOutlinePaint();
+
             if (mouseoverGrp is not null && mouseoverGrp == player.GroupID)
             {
                 text = SKPaints.TextMouseoverGroup;
@@ -328,19 +372,70 @@ namespace eft_dma_radar
             }
             else
             {
-                text = player.GetTextPaint();
+                text.Color = Extensions.GetTextColor(player);
+                
             }
 
-            float spacing = 3 * UIScale;
-            foreach (var line in lines)
-            {
-                var coords = this.GetPoint(9 * UIScale, spacing);
+            flagsText.Color = text.Color;
 
-                canvas.DrawText(line, coords, Extensions.GetTextOutlinePaint());
-                canvas.DrawText(line, coords, text);
-                spacing += 12 * UIScale;
+            textOutline.Typeface = text.Typeface;
+            textOutline.TextSize = text.TextSize;
+
+            var circleRadius = 6 * UIScale;
+            var lineHeight = 12 * UIScale;
+            var aboveOffset = circleRadius  - 5 * UIScale;
+            var belowOffset = circleRadius + 15 * UIScale;
+            var sideOffset = circleRadius + 8 * UIScale;
+
+            var aboveTextHeight = aboveLines.Length * lineHeight;
+
+            for (int i = 0; i < aboveLines.Length; i++)
+            {
+                var bounds = new SKRect();
+                text.MeasureText(aboveLines[i], ref bounds);
+                var xOffset = -bounds.Width / 2;
+                var yOffset = -aboveOffset - aboveTextHeight + (lineHeight * i);
+
+                var coords = this.GetPoint(xOffset, yOffset);
+                canvas.DrawText(aboveLines[i], coords, textOutline);
+                canvas.DrawText(aboveLines[i], coords, text);
+            }
+
+            for (int i = 0; i < belowLines.Length; i++)
+            {
+                var bounds = new SKRect();
+                text.MeasureText(belowLines[i], ref bounds);
+                var xOffset = -bounds.Width / 2;
+                var yOffset = belowOffset + (lineHeight * i);
+
+                var coords = this.GetPoint(xOffset, yOffset);
+                canvas.DrawText(belowLines[i], coords, textOutline);
+                canvas.DrawText(belowLines[i], coords, text);
+            }
+
+            for (int i = 0; i < leftLines.Length; i++)
+            {
+                var bounds = new SKRect();
+                text.MeasureText(leftLines[i], ref bounds);
+                var xOffset = -sideOffset - bounds.Width;
+                var yOffset = (lineHeight * i);
+                var coords = this.GetPoint(xOffset, yOffset);
+                canvas.DrawText(leftLines[i], coords, textOutline);
+                canvas.DrawText(leftLines[i], coords, text);
+            }
+
+            textOutline.Typeface = flagsText.Typeface;
+            textOutline.TextSize = flagsText.TextSize;
+
+            for (int i = 0; i < rightLines.Length; i++)
+            {
+                var yOffset = (lineHeight * i);
+                var coords = this.GetPoint(sideOffset, yOffset);
+                canvas.DrawText(rightLines[i], coords, textOutline);
+                canvas.DrawText(rightLines[i], coords, flagsText);
             }
         }
+
         /// <summary>
         /// Draws Loot information on this location
         /// </summary>
@@ -359,6 +454,7 @@ namespace eft_dma_radar
                 DrawToolTip(canvas, lootItem);
             }
         }
+
         /// <summary>
         /// Draws the tool tip for quest items
         /// </summary>
@@ -396,6 +492,7 @@ namespace eft_dma_radar
                 y -= textSpacing;
             }
         }
+
         /// <summary>
         /// Draws the tool tip for quest items
         /// </summary>
@@ -434,24 +531,18 @@ namespace eft_dma_radar
                 y -= textSpacing;
             }
         }
+
         /// <summary>
         /// Draws player tool tip based on if theyre alive or not
         /// </summary>
         public void DrawToolTip(SKCanvas canvas, Player player)
         {
-            if (!player.IsAlive)
-            {
-                //DrawCorpseTooltip(canvas, player);
+            if (!player.IsHostileActive || !player.IsAlive)
                 return;
-            }
-
-            if (!player.IsHostileActive)
-            {
-                return;
-            }
 
             DrawHostileTooltip(canvas, player);
         }
+
         /// <summary>
         /// Draws the tool tip for loot items
         /// </summary>
@@ -476,6 +567,7 @@ namespace eft_dma_radar
 
             canvas.DrawText(lootItem.GetFormattedValueName(), left + padding, y, Extensions.GetTextPaint(lootItem));
         }
+
         /// <summary>
         /// Draws the tool tip for loot containers
         /// </summary>
@@ -511,6 +603,7 @@ namespace eft_dma_radar
                 y -= textSpacing;
             }
         }
+
         /// <summary>
         /// Draws the tool tip for loot corpses
         /// </summary>
@@ -586,6 +679,7 @@ namespace eft_dma_radar
                 y -= textSpacing;
             }
         }
+
         /// <summary>
         /// Draws tool tip of hostile players 
         /// </summary>
@@ -600,52 +694,31 @@ namespace eft_dma_radar
 
             if (player.Gear is not null)
             {
-                GearItem gearItem;
-                var weaponSlots = new Dictionary<string, string>()
+                foreach (var slot in GearManager.GEAR_SLOT_NAMES)
                 {
-                    {"FirstPrimaryWeapon", "Primary"},
-                    {"SecondPrimaryWeapon", "Secondary"},
-                    {"Holster", "Holster"}
-                };
-
-                foreach (var slot in weaponSlots)
-                {
-                    if (player.Gear.TryGetValue(slot.Key, out gearItem))
+                    if (player.Gear.TryGetValue(slot.Key, out var gearItem))
                     {
-                        lines.Insert(0, $"{slot.Value}: {gearItem.Short}");
-                    }
-                }
+                        var itemName = gearItem.Short;
 
-                if (_config.ShowHoverArmor)
-                {
-                    var gearSlots = new Dictionary<string, string>()
-                    {
-                        {"Headwear","Head"},
-                        {"FaceCover","Face"},
-                        {"ArmorVest","Armor"},
-                        {"TacticalVest","Vest"},
-                        {"Backpack","Backpack"}
-                    };
+                        if (!string.IsNullOrEmpty(gearItem.GearInfo.AmmoType))
+                            itemName += $" ({gearItem.GearInfo.AmmoType})";
 
-                    foreach (var slot in gearSlots)
-                    {
-                        if (player.Gear.TryGetValue(slot.Key, out gearItem))
-                        {
-                            lines.Insert(0, $"{slot.Value}: {gearItem.Short}");
-                        }
+                        if (!string.IsNullOrEmpty(gearItem.GearInfo.Thermal))
+                            itemName += $" ({gearItem.GearInfo.Thermal})";
+
+                        if (!string.IsNullOrEmpty(gearItem.GearInfo.NightVision))
+                            itemName += $" ({gearItem.GearInfo.NightVision})";
+
+                        lines.Insert(0, $"{slot.Value}: {itemName.Trim()}");
                     }
                 }
             }
 
             lines.Insert(0, $"Value: {TarkovDevManager.FormatNumber(player.Value)}");
 
-            if (player.KDA != -1)
-            {
-                lines.Insert(0, $"KD: {player.KDA}");
-            }
-
             DrawToolTip(canvas, string.Join("\n", lines));
         }
+
         /// <summary>
         /// Draws tooltip for corpses
         /// </summary>
@@ -664,6 +737,7 @@ namespace eft_dma_radar
 
             DrawToolTip(canvas, string.Join("\n", lines));
         }
+
         /// <summary>
         /// Draws the tool tip for players/hostiles
         /// </summary>

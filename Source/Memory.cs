@@ -178,7 +178,7 @@ namespace eft_dma_radar
                 try
                 {
                     Program.Log("attempting to regenerate mmap...");
-                    
+
                     if (File.Exists("mmap.txt"))
                         File.Delete("mmap.txt");
 
