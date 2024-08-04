@@ -56,7 +56,7 @@ namespace eft_dma_radar
             if (AIFactionManager.TryLoadAIFactions(out _aiFactionManager) is not true)
                 _aiFactionManager = new AIFactionManager();
 
-            if (_config.LoggingEnabled)
+            if (_config.Logging)
             {
                 _log = File.AppendText("log.txt");
                 _log.AutoFlush = true;
@@ -102,7 +102,7 @@ namespace eft_dma_radar
         public static void Log(string msg)
         {
             Debug.WriteLine(msg);
-            if (_config?.LoggingEnabled ?? false)
+            if (_config?.Logging ?? false)
             {
                 lock (_logLock) // Sync access to File IO
                 {
@@ -115,7 +115,7 @@ namespace eft_dma_radar
         /// </summary>
         public static void HideConsole()
         {
-            ShowWindow(GetConsoleWindow(), ((_config?.LoggingEnabled ?? false) ? 1 : 0)); // 0 : SW_HIDE
+            ShowWindow(GetConsoleWindow(), ((_config?.Logging ?? false) ? 1 : 0)); // 0 : SW_HIDE
         }
         #endregion
 

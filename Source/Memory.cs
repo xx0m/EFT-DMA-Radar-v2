@@ -1,5 +1,6 @@
 ﻿using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
@@ -688,6 +689,7 @@ namespace eft_dma_radar
                         IScatterWriteDataEntry<ulong> ulongEntry => scatter.PrepareWriteStruct(ulongEntry.Address, ulongEntry.Data),
                         IScatterWriteDataEntry<bool> boolEntry => scatter.PrepareWriteStruct(boolEntry.Address, boolEntry.Data),
                         IScatterWriteDataEntry<byte> byteEntry => scatter.PrepareWriteStruct(byteEntry.Address, byteEntry.Data),
+                        IScatterWriteDataEntry<Vector3> vector3Entry => scatter.PrepareWriteStruct(vector3Entry.Address, vector3Entry.Data),
                         _ => throw new NotSupportedException($"Unsupported data type: {entry.GetType()}")
                     };
 

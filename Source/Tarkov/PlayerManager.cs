@@ -17,7 +17,7 @@ namespace eft_dma_radar
         private ulong _baseMovementState;
         private ulong _handsStamina;
         private ulong _movementContext;
-        private ulong _handsController;
+        private ulong _handsContainer;
         private ulong _physical;
         private ulong _playerBase;
         private ulong _playerProfile;
@@ -34,6 +34,9 @@ namespace eft_dma_radar
         private int _mask;
         private string _lastWeaponID;
 
+        private Vector3 THIRD_PERSON_ON = new Vector3(0.04f, 0.14f, -2.2f);
+        private Vector3 THIRD_PERSON_OFF = new Vector3(0.04f, 0.04f, 0.05f);
+
         public bool UpdateLootThroughWallsDistance { get; set; } = false;
 
         private Config _config { get => Program.Config; }
@@ -44,11 +47,11 @@ namespace eft_dma_radar
         {
             this.OriginalValues = new Dictionary<string, float>()
             {
-                ["Mask"] = 125,
-                ["AimingSpeed"] = 1,
+                ["Mask"] = 125f,
+                ["AimingSpeed"] = 1f,
                 ["AimingSpeedSway"] = 0.2f,
-                ["StaminaCapacity"] = -1,
-                ["HandStaminaCapacity"] = -1,
+                ["StaminaCapacity"] = -1f,
+                ["HandStaminaCapacity"] = -1f,
                 ["weaponLn"] = -1f
             };
 
@@ -224,8 +227,9 @@ namespace eft_dma_radar
             var skillsManagerPtr = round3.AddEntry<ulong>(0, 5, playerProfilePtr, null, Offsets.Profile.SkillManager);
             var staminaPtr = round3.AddEntry<ulong>(0, 6, physicalPtr, null, Offsets.Physical.Stamina);
             var handsStaminaPtr = round3.AddEntry<ulong>(0, 7, physicalPtr, null, Offsets.Physical.HandsStamina);
+            var handsContainerPtr = round3.AddEntry<ulong>(0, 8, proceduralWeaponAnimationPtr, null, Offsets.ProceduralWeaponAnimation.HandsContainer);
 
-            var startingIndex = 8; // last scattermap index + 1
+            var startingIndex = 9; // last scattermap index + 1
 
             SetupOriginalSkillValues(startingIndex, skillsManagerPtr, ref round4, ref round5);
 
@@ -247,6 +251,8 @@ namespace eft_dma_radar
                 return;
             if (!scatterMap.Results[0][7].TryGetResult<ulong>(out var handsStamina))
                 return;
+            if (!scatterMap.Results[0][8].TryGetResult<ulong>(out var handsContainer))
+                return;
 
             this._playerBase = playerBase;
             this._playerProfile = playerProfile;
@@ -256,6 +262,7 @@ namespace eft_dma_radar
             this._handsStamina = handsStamina;
             this._skillsManager = skillsManager;
             this._proceduralWeaponAnimation = proceduralWeaponAnimation;
+            this._handsContainer = handsContainer;
 
             this.UpdateVariables();
 
@@ -461,8 +468,8 @@ namespace eft_dma_radar
                 return;
             if (!scatterMap.Results[0][4].TryGetResult<ulong>(out var firearmController))
                 return;
-            if (!scatterMap.Results[0][5].TryGetResult<ulong>(out var handsController))
-                return;
+            //if (!scatterMap.Results[0][5].TryGetResult<ulong>(out var handsController))
+            //    return;
             if (!scatterMap.Results[0][6].TryGetResult<ulong>(out var currentItem))
                 return;
             if (!scatterMap.Results[0][7].TryGetResult<float>(out var weaponLn))
@@ -478,7 +485,7 @@ namespace eft_dma_radar
             this.IsADS = isADS;
             this._aimingSpeed = aimingSpeed;
             this._mask = mask;
-            this._handsController = handsController;
+            //this._handsController = handsController;
             this._firmarmController = firearmController;
             this._animationState = animationState;
             this._currentItemTemplate = currentItemTemplate;
@@ -550,6 +557,18 @@ namespace eft_dma_radar
             catch (Exception ex)
             {
                 Program.Log($"[PlayerManager] - SetNoWeaponMalfunctions ({ex.Message})\n{ex.StackTrace}");
+            }
+        }
+
+        public void SetThirdPerson(bool on, ref List<IScatterWriteEntry> entries)
+        {
+            try
+            {
+                entries.Add(new ScatterWriteDataEntry<Vector3>(this._handsContainer + Offsets.HandsContainer.CameraOffset, on ? THIRD_PERSON_ON : THIRD_PERSON_OFF));
+            }
+            catch (Exception ex)
+            {
+                Program.Log($"[PlayerManager] - SetMaxSkill ({ex.Message})\n{ex.StackTrace}");
             }
         }
 

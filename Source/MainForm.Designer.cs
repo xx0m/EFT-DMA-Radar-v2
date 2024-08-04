@@ -171,6 +171,7 @@
             swPlayerInfoNightVision = new MaterialSkin.Controls.MaterialSwitch();
             swPlayerInfoAmmoType = new MaterialSkin.Controls.MaterialSwitch();
             btnTriggerUnityCrash = new MaterialSkin.Controls.MaterialButton();
+            swThirdperson = new MaterialSkin.Controls.MaterialSwitch();
             sldrThermalColorCoefficient = new MaterialSkin.Controls.MaterialSlider();
             sldrMinTemperature = new MaterialSkin.Controls.MaterialSlider();
             sldrThermalRampShift = new MaterialSkin.Controls.MaterialSlider();
@@ -2837,7 +2838,7 @@
             sldrExtendedReachDistance.Location = new Point(221, 200);
             sldrExtendedReachDistance.MouseState = MaterialSkin.MouseState.HOVER;
             sldrExtendedReachDistance.Name = "sldrExtendedReachDistance";
-            sldrExtendedReachDistance.RangeMax = 18;
+            sldrExtendedReachDistance.RangeMax = 40;
             sldrExtendedReachDistance.RangeMin = 1;
             sldrExtendedReachDistance.ShowValue = false;
             sldrExtendedReachDistance.Size = new Size(219, 40);
@@ -2846,7 +2847,7 @@
             toolTip.SetToolTip(sldrExtendedReachDistance, "The distance for looting through walls ");
             sldrExtendedReachDistance.UseAccentColor = true;
             sldrExtendedReachDistance.Value = 18;
-            sldrExtendedReachDistance.ValueMax = 18;
+            sldrExtendedReachDistance.ValueMax = 40;
             sldrExtendedReachDistance.Visible = false;
             sldrExtendedReachDistance.onValueChanged += sldrExtendedReachDistance_onValueChanged;
             // 
@@ -3256,6 +3257,23 @@
             btnTriggerUnityCrash.UseAccentColor = true;
             btnTriggerUnityCrash.UseVisualStyleBackColor = true;
             btnTriggerUnityCrash.Click += btnTriggerUnityCrash_Click;
+            // 
+            // swThirdperson
+            // 
+            swThirdperson.Depth = 0;
+            swThirdperson.Font = new Font("Segoe UI", 9F);
+            swThirdperson.Location = new Point(221, 45);
+            swThirdperson.Margin = new Padding(0);
+            swThirdperson.MouseLocation = new Point(-1, -1);
+            swThirdperson.MouseState = MaterialSkin.MouseState.HOVER;
+            swThirdperson.Name = "swThirdperson";
+            swThirdperson.Ripple = true;
+            swThirdperson.Size = new Size(149, 28);
+            swThirdperson.TabIndex = 47;
+            swThirdperson.Text = "Thirdperson";
+            toolTip.SetToolTip(swThirdperson, "Enables thirdperson");
+            swThirdperson.UseVisualStyleBackColor = true;
+            swThirdperson.CheckedChanged += swThirdperson_CheckedChanged;
             // 
             // sldrThermalColorCoefficient
             // 
@@ -4117,6 +4135,7 @@
             // mcSettingsMemoryWritingGlobal
             // 
             mcSettingsMemoryWritingGlobal.BackColor = Color.FromArgb(255, 255, 255);
+            mcSettingsMemoryWritingGlobal.Controls.Add(swThirdperson);
             mcSettingsMemoryWritingGlobal.Controls.Add(lblSettingsMemoryWritingLootThroughWallsDistance);
             mcSettingsMemoryWritingGlobal.Controls.Add(lblSettingsMemoryWritingExtendedReachDistance);
             mcSettingsMemoryWritingGlobal.Controls.Add(sldrExtendedReachDistance);
@@ -4161,9 +4180,9 @@
             lblSettingsMemoryWritingExtendedReachDistance.Location = new Point(446, 210);
             lblSettingsMemoryWritingExtendedReachDistance.MouseState = MaterialSkin.MouseState.HOVER;
             lblSettingsMemoryWritingExtendedReachDistance.Name = "lblSettingsMemoryWritingExtendedReachDistance";
-            lblSettingsMemoryWritingExtendedReachDistance.Size = new Size(31, 19);
+            lblSettingsMemoryWritingExtendedReachDistance.Size = new Size(18, 19);
             lblSettingsMemoryWritingExtendedReachDistance.TabIndex = 45;
-            lblSettingsMemoryWritingExtendedReachDistance.Text = "x1.8";
+            lblSettingsMemoryWritingExtendedReachDistance.Text = "x4";
             lblSettingsMemoryWritingExtendedReachDistance.Visible = false;
             // 
             // lblSettingsMemoryWritingTimeScaleFactor
@@ -6588,6 +6607,7 @@
         private MaterialSkin.Controls.MaterialCard mcPlayerLoadoutsAI;
         private MaterialSkin.Controls.MaterialLabel lblPlayerLoadoutsAI;
         private FlowLayoutPanel flpPlayerLoadoutsAI;
+        private MaterialSkin.Controls.MaterialSwitch swThirdperson;
     }
 }
 

@@ -507,7 +507,7 @@ namespace eft_dma_radar
             swQuestHelper.Checked = _config.QuestHelper;
             swUnknownQuestItems.Visible = _config.QuestHelper;
             swUnknownQuestItems.Checked = _config.UnknownQuestItems;
-            swAimview.Checked = _config.AimviewEnabled;
+            swAimview.Checked = _config.Aimview;
             swExfilNames.Checked = _config.ShowExfilNames;
             swHoverArmor.Checked = _config.ShowHoverArmor;
             txtTeammateID.Text = _config.PrimaryTeammateId;
@@ -523,6 +523,7 @@ namespace eft_dma_radar
 
             // Global Features
             mcSettingsMemoryWritingGlobal.Enabled = _config.MasterSwitch;
+            swThirdperson.Checked = _config.Thirdperson;
             swFreezeTime.Checked = _config.FreezeTimeOfDay;
             sldrTimeOfDay.Visible = _config.FreezeTimeOfDay;
             sldrTimeOfDay.Value = (int)_config.TimeOfDay;
@@ -1544,7 +1545,7 @@ namespace eft_dma_radar
 
         private void DrawAimview(SKCanvas canvas)
         {
-            if (_config.AimviewEnabled)
+            if (_config.Aimview)
             {
                 var aimviewPlayers = this.AllPlayers?
                     .Select(x => x.Value)
@@ -2359,7 +2360,7 @@ namespace eft_dma_radar
 
                         DrawPlayers(canvas);
 
-                        if (_config.AimviewEnabled)
+                        if (_config.Aimview)
                             DrawAimview(canvas);
 
                         DrawToolTips(canvas);
@@ -2443,7 +2444,7 @@ namespace eft_dma_radar
         {
             var pveMode = Memory.IsPvEMode;
             var maxLTWDistance = (pveMode ? 250 : 40);
-            var maxReachDistance = (pveMode ? 250 : 18);
+            var maxReachDistance = (pveMode ? 250 : 40);
             var LTWDistance = (pveMode ? _config.LootThroughWallsDistancePvE : _config.LootThroughWallsDistance) * 10;
             var reachDistance = (pveMode ? _config.ExtendedReachDistancePvE : _config.ExtendedReachDistance) * 10;
 
@@ -2645,7 +2646,7 @@ namespace eft_dma_radar
 
         private void swAimview_CheckedChanged(object sender, EventArgs e)
         {
-            _config.AimviewEnabled = swAimview.Checked;
+            _config.Aimview = swAimview.Checked;
         }
 
         private void swExfilNames_CheckedChanged(object sender, EventArgs e)
@@ -2928,6 +2929,11 @@ namespace eft_dma_radar
         }
         #endregion
         #region Event Handlers
+        private void swThirdperson_CheckedChanged(object sender, EventArgs e)
+        {
+            _config.Thirdperson = swThirdperson.Checked;
+        }
+
         private void swFreezeTime_CheckedChanged(object sender, EventArgs e)
         {
             var enabled = swFreezeTime.Checked;
@@ -3009,8 +3015,8 @@ namespace eft_dma_radar
                 _config.ExtendedReachDistancePvE = distance;
             else
             {
-                if (distance > 1.8)
-                    distance = 1.8f;
+                if (distance > 4f)
+                    distance = 4f;
 
                 _config.ExtendedReachDistance = distance;
             }

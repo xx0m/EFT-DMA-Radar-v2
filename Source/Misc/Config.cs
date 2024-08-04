@@ -6,8 +6,8 @@ namespace eft_dma_radar
     public class Config
     {
         #region Json Properties
-        [JsonPropertyName("aimviewEnabled")]
-        public bool AimviewEnabled { get; set; }
+        [JsonPropertyName("aimview")]
+        public bool Aimview { get; set; }
 
         [JsonPropertyName("aimviewFOV")]
         public float AimViewFOV { get; set; }
@@ -57,8 +57,8 @@ namespace eft_dma_radar
         [JsonPropertyName("jumpPowerStrength")]
         public int JumpPowerStrength { get; set; }
 
-        [JsonPropertyName("loggingEnabled")]
-        public bool LoggingEnabled { get; set; }
+        [JsonPropertyName("logging")]
+        public bool Logging { get; set; }
 
         [JsonPropertyName("lootItemViewer")]
         public bool LootItemViewer { get; set; }
@@ -161,6 +161,9 @@ namespace eft_dma_radar
 
         [JsonPropertyName("thermalVision")]
         public bool ThermalVision { get; set; }
+
+        [JsonPropertyName("thirdperson")]
+        public bool Thirdperson { get; set; }
 
         [JsonPropertyName("throwPowerStrength")]
         public int ThrowPowerStrength { get; set; }
@@ -359,7 +362,7 @@ namespace eft_dma_radar
 
         public Config()
         {
-            AimviewEnabled = false;
+            Aimview = false;
             AimViewFOV = 30;
             AutoLootRefresh = false;
             AutoRefreshSettings = DefaultAutoRefreshSettings;
@@ -376,7 +379,7 @@ namespace eft_dma_radar
             InfiniteStamina = false;
             InstantADS = false;
             JumpPowerStrength = 0;
-            LoggingEnabled = false;
+            Logging = false;
             LootItemViewer = false;
             LootPing = DefaultLootPingSettings;
             LootThroughWalls = false;
@@ -412,6 +415,7 @@ namespace eft_dma_radar
             ShowRadarStats = false;
             ShowSubItems = false;
             ThermalVision = false;
+            Thirdperson = false;
             ThrowPowerStrength = 1;
             TimeOfDay = 12f;
             TimeScale = false;
