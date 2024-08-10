@@ -169,7 +169,7 @@ namespace eft_dma_radar
                 else
                 {
                     Program.Log("MemMap found, loading...");
-                    vmmInstance = new Vmm("-printf", "-v", "-device", "fpga://algo=0", "-memmap", "mmap.txt");
+                    vmmInstance = new Vmm("-printf", "-device", "fpga://algo=0", "-memmap", "mmap.txt");
                 }
 
                 InitiateMemoryWorker();
@@ -204,7 +204,7 @@ namespace eft_dma_radar
 
         private static void GenerateMMap()
         {
-            vmmInstance = new Vmm("-printf", "-v", "-device", "fpga://algo=0", "-waitinitialize");
+            vmmInstance = new Vmm("-printf", "-device", "fpga://algo=0", "-waitinitialize");
             GetMemMap();
         }
 
