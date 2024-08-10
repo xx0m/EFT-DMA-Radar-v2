@@ -485,8 +485,8 @@ namespace eft_dma_radar
 
         private void LoadConfig()
         {
-            this.InitiateSKColors();
             this.CheckConfigDictionaries();
+            this.InitiateSKColors();
             this.SetupFonts();
 
             #region Settings

@@ -400,7 +400,7 @@ namespace eft_dma_radar
                     throw new ArgumentException("Rotation data must be of type Vector2.", nameof(obj));
 
                 rotation.X = (rotation.X - 90 + 360) % 360;
-                rotation.Y = (rotation.Y + 360) % 360;
+                rotation.Y = (rotation.Y) % 360;
 
                 this.Rotation = rotation;
                 return true;

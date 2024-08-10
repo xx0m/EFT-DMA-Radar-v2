@@ -127,9 +127,7 @@ namespace eft_dma_radar
                 }
 
                 if (foundFPSCamera && foundOpticCamera)
-                {
                     break;
-                }
             }
 
             return foundFPSCamera && foundOpticCamera;
