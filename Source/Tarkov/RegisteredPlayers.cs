@@ -436,7 +436,7 @@ namespace eft_dma_radar
                                 player.SetHealth(hp);
 
                         if (checkWeaponInfo)
-                            if (scatterMap.Results[i][11].TryGetResult<ulong>(out var bsgID))
+                            if (scatterMap.Results[i][11].TryGetResult<ulong>(out var bsgID) && bsgID != 0)
                             {
                                 var itemID = Memory.ReadUnityString(bsgID);
 
