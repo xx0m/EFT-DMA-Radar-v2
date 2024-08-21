@@ -373,7 +373,7 @@ namespace eft_dma_radar
                 var objectClass = vRound5.AddEntry<ulong>(i, 13, gameObject, null, Offsets.GameObject.ObjectClass);
                 var entry10 = vRound5.AddEntry<ulong>(i, 14, entry9, null, 0x48);
                 var isQuestItem = vRound5.AddEntry<bool>(i, 15, itemTemplate, null, Offsets.ItemTemplate.IsQuestItem);
-                var BSGIdPtr = vRound5.AddEntry<ulong>(i, 16, itemTemplate, null, Offsets.ItemTemplate.BsgId);
+                var BSGIdPtr = vRound5.AddEntry<ulong>(i, 16, itemTemplate, null, Offsets.ItemTemplate.MongoID + Offsets.MongoID.ID);
                 var rootItem = vRound5.AddEntry<ulong>(i, 17, itemOwner, null, Offsets.ItemOwner.Item);
                 var containerGrids = vRound5.AddEntry<ulong>(i, 18, containerItemBase, null, Offsets.LootItemBase.Grids);
 
@@ -468,7 +468,7 @@ namespace eft_dma_radar
                                 Vector3 position = new Transform(posToTransform).GetPosition();
                                 var container = new ContainerInfo { InteractiveClass = interactiveClass, Position = position, Name = lootItem.Item.shortName ?? containerName };
 
-                                if (validScatterMap.Results[i][22].TryGetResult<ulong>(out var slots))
+                                if (validScatterMap.Results[i][23].TryGetResult<ulong>(out var slots))
                                     container.Slots = slots;
 
                                 if (validScatterMap.Results[i][17].TryGetResult<ulong>(out var rootItem))
@@ -938,13 +938,18 @@ namespace eft_dma_radar
                 var innerRound1 = innerScatterReadMap.AddRound();
                 var innerRound2 = innerScatterReadMap.AddRound();
                 var innerRound3 = innerScatterReadMap.AddRound();
+                var innerRound4 = innerScatterReadMap.AddRound();
 
                 for (int j = 0; j < itemListCount; j++)
                 {
                     var childItem = innerRound1.AddEntry<ulong>(j, 0, arrayBase, null, Offsets.UnityListBase.Start + ((uint)j * 0x08));
+
                     var childItemTemplate = innerRound2.AddEntry<ulong>(j, 1, childItem, null, Offsets.LootItemBase.ItemTemplate);
                     var childGridsArrayPtr = innerRound2.AddEntry<ulong>(j, 2, childItem, null, Offsets.LootItemBase.Grids);
-                    var childItemIdPtr = innerRound3.AddEntry<ulong>(j, 3, childItemTemplate, null, Offsets.ItemTemplate.BsgId);
+
+                    var childItemMongoIdPtr = innerRound3.AddEntry<ulong>(j, 3, childItemTemplate, null, Offsets.ItemTemplate.MongoID);
+
+                    var childItemIdPtr = innerRound4.AddEntry<ulong>(j, 4, childItemTemplate, null, Offsets.MongoID.ID);
                 }
 
                 innerScatterReadMap.Execute();
@@ -957,7 +962,7 @@ namespace eft_dma_radar
                             return;
                         if (!innerScatterReadMap.Results[j][1].TryGetResult<ulong>(out var childItemTemplate))
                             return;
-                        if (!innerScatterReadMap.Results[j][3].TryGetResult<ulong>(out var childItemIdPtr))
+                        if (!innerScatterReadMap.Results[j][4].TryGetResult<ulong>(out var childItemIdPtr))
                             return;
 
                         var childItemId = Memory.ReadUnityString(childItemIdPtr);
@@ -1007,6 +1012,7 @@ namespace eft_dma_radar
             var round1 = scatterReadMap.AddRound();
             var round2 = scatterReadMap.AddRound();
             var round3 = scatterReadMap.AddRound();
+            var round4 = scatterReadMap.AddRound();
 
             var slotNames = slotDict.Keys.ToList();
             var slotPtrs = slotDict.Values.ToList();
@@ -1019,7 +1025,9 @@ namespace eft_dma_radar
                 var slots = round2.AddEntry<ulong>(i, 2, containedItem, null, Offsets.Equipment.Slots);
                 var grids = round2.AddEntry<ulong>(i, 3, containedItem, null, Offsets.LootItemBase.Grids);
 
-                var idPtr = round3.AddEntry<ulong>(i, 4, inventorytemplate, null, Offsets.ItemTemplate.BsgId);
+                var mongoIdPtr = round3.AddEntry<ulong>(i, 4, inventorytemplate, null, Offsets.ItemTemplate.MongoID);
+
+                var idPtr = round4.AddEntry<ulong>(i, 5, inventorytemplate, null, Offsets.MongoID.ID);
             }
 
             scatterReadMap.Execute();
@@ -1032,7 +1040,7 @@ namespace eft_dma_radar
                         return;
                     if (!scatterReadMap.Results[i][1].TryGetResult<ulong>(out var inventorytemplate))
                         return;
-                    if (!scatterReadMap.Results[i][4].TryGetResult<ulong>(out var idPtr))
+                    if (!scatterReadMap.Results[i][5].TryGetResult<ulong>(out var idPtr))
                         return;
 
                     var id = Memory.ReadUnityString(idPtr);
@@ -1110,6 +1118,7 @@ namespace eft_dma_radar
             var round1 = scatterReadMap.AddRound();
             var round2 = scatterReadMap.AddRound();
             var round3 = scatterReadMap.AddRound();
+            var round4 = scatterReadMap.AddRound();
 
             var slotNames = slotDict.Keys.ToList();
             var slotPtrs = slotDict.Values.ToList();
@@ -1122,7 +1131,9 @@ namespace eft_dma_radar
                 var slots = round2.AddEntry<ulong>(i, 2, containedItem, null, Offsets.Equipment.Slots);
                 var grids = round2.AddEntry<ulong>(i, 3, containedItem, null, Offsets.LootItemBase.Grids);
 
-                var idPtr = round3.AddEntry<ulong>(i, 4, inventorytemplate, null, Offsets.ItemTemplate.BsgId);
+                var mongoIdPtr = round3.AddEntry<ulong>(i, 4, inventorytemplate, null, Offsets.ItemTemplate.MongoID);
+
+                var idPtr = round4.AddEntry<ulong>(i, 5, inventorytemplate, null, Offsets.MongoID.ID);
             }
 
             scatterReadMap.Execute();
@@ -1135,7 +1146,7 @@ namespace eft_dma_radar
                     return;
                     if (!scatterReadMap.Results[i][1].TryGetResult<ulong>(out var inventorytemplate))
                         return;
-                    if (!scatterReadMap.Results[i][4].TryGetResult<ulong>(out var idPtr))
+                    if (!scatterReadMap.Results[i][5].TryGetResult<ulong>(out var idPtr))
                         return;
 
                     var id = Memory.ReadUnityString(idPtr);

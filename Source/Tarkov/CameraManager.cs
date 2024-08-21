@@ -37,10 +37,7 @@ namespace eft_dma_radar
 
         public ulong FPSCamera
         {
-            get
-            {
-                return this._fpsCamera;
-            }
+            get => this._fpsCamera;
         }
 
         private Config _config
@@ -142,6 +139,7 @@ namespace eft_dma_radar
         {
             if (this._unityBase == 0)
                 return;
+
             this.GetCamera();
         }
 

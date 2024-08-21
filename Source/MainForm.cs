@@ -1093,7 +1093,12 @@ namespace eft_dma_radar
                     return GetMapParameters(_mapPanPosition);
                 }
                 else
+                {
+                    _lastMousePosition = Point.Empty;
+                    _mapPanPosition = localPlayerMapPos;
+                    targetPanPosition = localPlayerMapPos.GetPoint();
                     return GetMapParameters(localPlayerMapPos);
+                }
             }
             else
             {
@@ -1278,7 +1283,7 @@ namespace eft_dma_radar
                         rightLines.Add("Example Tag");
                 }
 
-                if (aimlineSettings.Length != 1000)
+                if (aimlineSettings.Length == 15)
                     aimlineSettings.Length = playerSettings.AimlineLength;
 
                 if (player.ErrorCount > 10)
@@ -2467,8 +2472,11 @@ namespace eft_dma_radar
 
             if (Memory.LocalPlayer is not null)
             {
-                Memory.Toolbox.UpdateExtendedReachDistance = true;
-                Memory.PlayerManager.UpdateLootThroughWallsDistance = true;
+                if (Memory.Toolbox is not null)
+                    Memory.Toolbox.UpdateExtendedReachDistance = true;
+
+                if (Memory.PlayerManager is not null)
+                    Memory.PlayerManager.UpdateLootThroughWallsDistance = true;
             }
         }
 

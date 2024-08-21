@@ -1,5 +1,7 @@
 ﻿using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Text;
+using static Vmmsharp.Vmm;
 
 namespace eft_dma_radar
 {
@@ -145,6 +147,13 @@ namespace eft_dma_radar
         public int Length;
         public int Opacity;
     }
+
+    unsafe struct MongoID
+    {
+        public fixed byte pad[0x10];
+        public string str { get; set; }
+    }
+
     #endregion
 
     #region EFT Enums

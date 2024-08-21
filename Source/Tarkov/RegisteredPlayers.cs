@@ -291,7 +291,7 @@ namespace eft_dma_radar
                 }
 
                 var checkHealth = this._healthSw.ElapsedMilliseconds > 500;
-                var checkWeaponInfo = this._weaponSw.ElapsedMilliseconds > 7500;
+                var checkWeaponInfo = this._weaponSw.ElapsedMilliseconds > 2500;
                 var checkPos = this._posSw.ElapsedMilliseconds > 10000 && players.Any(x => x.IsHumanActive);
 
                 var scatterMap = new ScatterReadMap(players.Length);
@@ -300,6 +300,7 @@ namespace eft_dma_radar
                 var round3 = scatterMap.AddRound();
                 var round4 = scatterMap.AddRound();
                 var round5 = scatterMap.AddRound();
+                var round6 = scatterMap.AddRound();
 
                 for (int i = 0; i < players.Length; i++)
                 {
@@ -311,7 +312,7 @@ namespace eft_dma_radar
                     }
                     else
                     {
-                        var rotation = round1.AddEntry<Vector2>(i, 0, (player.isOfflinePlayer ? player.MovementContext + Offsets.MovementContext.Rotation : player.MovementContext + Offsets.ObserverdPlayerMovementContext.Rotation));
+                        var rotation = round1.AddEntry<Vector2>(i, 0, (player.isOfflinePlayer ? player.MovementContext + Offsets.MovementContext.Rotation : player.MovementContext + Offsets.ObservedPlayerMovementContext.Rotation));
                         var posAddr = player.TransformScatterReadParameters;
                         var indices = round1.AddEntry<List<int>>(i, 1, posAddr.Item1, posAddr.Item2 * 4);
                         var vertices = round1.AddEntry<List<Vector128<float>>>(i, 2, posAddr.Item3, posAddr.Item4 * 16);
@@ -323,7 +324,6 @@ namespace eft_dma_radar
                             var verticesAddr = round2.AddEntry<ulong>(i, 5, hierarchy, null, Offsets.TransformHierarchy.Vertices);
                         }
 
-                        //if (checkHealth && player.IsHostileActive)
                         if (checkHealth && player.IsActive)
                         {
                             var health = round1.AddEntry<int>(i, 6, player.HealthController, null, Offsets.HealthController.HealthStatus);
@@ -346,7 +346,7 @@ namespace eft_dma_radar
                             }
 
                             var currentItemTemplate = round4.AddEntry<ulong>(i, 10, currentItem, null, Offsets.Item.Template);
-                            var currentWeaponID = round5.AddEntry<ulong>(i, 11, currentItemTemplate, null, Offsets.ItemTemplate.BsgId);
+                            var currentWeaponID = round5.AddEntry<ulong>(i, 11, currentItemTemplate, null, Offsets.ItemTemplate.MongoID + Offsets.MongoID.ID);
                         }
                     }
                 }
@@ -369,14 +369,16 @@ namespace eft_dma_radar
                         {
                             player.IsActive = false;
                             Program.Log($"{player.Name} exfiltrated");
-                            Memory.Chams.RemovePointersForPlayer(player);
+                            
+                            if (Program.Config.MasterSwitch && Program.Config.Chams["Enabled"])
+                                Memory.Chams.RemovePointersForPlayer(player);
                         }
                         else
                         {
                             player.IsAlive = false;
                             Program.Log($"{player.Name} died");
 
-                            if (Program.Config.Chams["Enabled"] && player.Type != PlayerType.LocalPlayer)
+                            if (Program.Config.MasterSwitch && Program.Config.Chams["Enabled"] && player.Type != PlayerType.LocalPlayer)
                             {
                                 if (Program.Config.Chams["Corpses"])
                                     Memory.Chams.SetPlayerBodyChams(player, Memory.Chams.ThermalMaterial);
@@ -434,7 +436,7 @@ namespace eft_dma_radar
                                 player.SetHealth(hp);
 
                         if (checkWeaponInfo)
-                            if (scatterMap.Results[i][11].TryGetResult<ulong>(out var bsgID) && bsgID != 0)
+                            if (scatterMap.Results[i][11].TryGetResult<ulong>(out var bsgID))
                             {
                                 var itemID = Memory.ReadUnityString(bsgID);
 

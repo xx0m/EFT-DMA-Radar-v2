@@ -42,6 +42,11 @@ namespace eft_dma_radar
             this.RefreshGear();
         }
 
+        public struct MongoID
+        {
+            public string Name { get; set; }
+        }
+
         public void RefreshGear()
         {
             this._slotsToSkip = (Memory.IsPvEMode ? GearManager.SLOTS_TO_SKIP_PVE : GearManager.SLOTS_TO_SKIP);
@@ -61,9 +66,11 @@ namespace eft_dma_radar
             for (int i = 0; i < slotDict.Count; i++)
             {
                 var containedItem = round1.AddEntry<ulong>(i, 0, slotPtrs[i], null, Offsets.Slot.ContainedItem);
+
                 var itemTemplate = round2.AddEntry<ulong>(i, 1, containedItem, null, Offsets.LootItemBase.ItemTemplate);
                 var itemSlots = round2.AddEntry<ulong>(i, 2, containedItem, null, Offsets.LootItemBase.Slots);
-                var idPtr = round3.AddEntry<ulong>(i, 3, itemTemplate, null, Offsets.ItemTemplate.BsgId);
+
+                var bsgIDPtr = round3.AddEntry<ulong>(i, 3, itemTemplate, null, Offsets.ItemTemplate.MongoID + Offsets.MongoID.ID);
             }
 
             scatterReadMap.Execute();
@@ -146,9 +153,11 @@ namespace eft_dma_radar
             for (int i = 0; i < slotDict.Count; i++)
             {
                 var containedItem = round1.AddEntry<ulong>(i, 0, slotPtrs[i], null, Offsets.Slot.ContainedItem);
+
                 var itemTemplate = round2.AddEntry<ulong>(i, 1, containedItem, null, Offsets.LootItemBase.ItemTemplate);
                 var itemSlotsPtr = round2.AddEntry<ulong>(i, 2, containedItem, null, Offsets.LootItemBase.Slots);
-                var idPtr = round3.AddEntry<ulong>(i, 3, itemTemplate, null, Offsets.ItemTemplate.BsgId);
+
+                var bsgIDPtr = round3.AddEntry<ulong>(i, 3, itemTemplate, null, Offsets.ItemTemplate.MongoID + Offsets.MongoID.ID);
 
                 if (slotNames[i] == "mod_magazine")
                 {
@@ -157,7 +166,7 @@ namespace eft_dma_radar
                     var cartridgeStackList = round4.AddEntry<ulong>(i, 6, cartridgeStack, null, Offsets.UnityList.Base);
                     var firstRoundItem = round5.AddEntry<ulong>(i, 7, cartridgeStackList, null, Offsets.UnityListBase.Start);
                     var firstRoundItemTemplate = round6.AddEntry<ulong>(i, 8, firstRoundItem, null, Offsets.LootItemBase.ItemTemplate);
-                    var firstRoundIdPtr = round7.AddEntry<ulong>(i, 9, firstRoundItemTemplate, null, Offsets.ItemTemplate.BsgId);
+                    var firstRoundBsgIdPtr = round7.AddEntry<ulong>(i, 9, firstRoundItemTemplate, null, Offsets.ItemTemplate.MongoID + Offsets.MongoID.ID);
                 }
             }
 

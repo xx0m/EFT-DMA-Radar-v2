@@ -443,6 +443,7 @@ namespace eft_dma_radar
             var round2 = scatterMap.AddRound();
             var round3 = scatterMap.AddRound();
             var round4 = scatterMap.AddRound();
+            var round5 = scatterMap.AddRound();
 
             var baseMovementStatePtr = round1.AddEntry<ulong>(0, 0, this._movementContext, null, Offsets.MovementContext.BaseMovementState);
             var isADSPtr = round1.AddEntry<bool>(0, 1, this._proceduralWeaponAnimation, null, Offsets.ProceduralWeaponAnimation.IsAiming);
@@ -454,7 +455,8 @@ namespace eft_dma_radar
             var weaponLnPtr = round2.AddEntry<float>(0, 7, firearmControllerPtr, null, Offsets.FirearmController.WeaponLn);
             var animationStatePtr = round2.AddEntry<byte>(0, 8, baseMovementStatePtr, null, Offsets.BaseMovementState.Name);
             var currentItemTemplatePtr = round3.AddEntry<ulong>(0, 9, currentItemPtr, null, Offsets.Item.Template);
-            var currentItemIDPtr = round4.AddEntry<ulong>(0, 10, currentItemTemplatePtr, null, Offsets.ItemTemplate.BsgId);
+            var currentItemMongoIDPtr = round4.AddEntry<ulong>(0, 10, currentItemTemplatePtr, null, Offsets.ItemTemplate.MongoID);
+            var currentItemIDPtr = round5.AddEntry<ulong>(0, 11, currentItemTemplatePtr, null, Offsets.MongoID.ID);
 
             scatterMap.Execute();
 
@@ -478,7 +480,7 @@ namespace eft_dma_radar
                 return;
             if (!scatterMap.Results[0][9].TryGetResult<ulong>(out var currentItemTemplate))
                 return;
-            if (!scatterMap.Results[0][10].TryGetResult<ulong>(out var currentItemId))
+            if (!scatterMap.Results[0][11].TryGetResult<ulong>(out var currentItemId))
                 return;
 
             this._baseMovementState = baseMovementState;
