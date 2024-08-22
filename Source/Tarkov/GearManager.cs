@@ -5,7 +5,7 @@ namespace eft_dma_radar
 {
     public class GearManager
     {
-        private static readonly ConcurrentBag<string> SLOTS_TO_SKIP = new ConcurrentBag<string> { "SecuredContainer", "Dogtag", "Compass", "Eyewear", "ArmBand" };
+        private static readonly ConcurrentBag<string> SLOTS_TO_SKIP = new ConcurrentBag<string> { "SecuredContainer", "Dogtag", "Compass", "Eyewear", "ArmBand"};
         private static readonly ConcurrentBag<string> SLOTS_TO_SKIP_PVE = new ConcurrentBag<string> { "SecuredContainer", "Compass", "Eyewear", "ArmBand" };
         private static readonly ConcurrentBag<string> THERMAL_IDS = new ConcurrentBag<string> { "6478641c19d732620e045e17", "609bab8b455afd752b2e6138", "5c110624d174af029e69734c", "63fc44e2429a8a166c7f61e6", "5d1b5e94d7ad1a2b865a96b0", "606f2696f2cb2e02a42aceb1", "5a1eaa87fcdbcb001865f75e" };
         private static readonly ConcurrentBag<string> NVG_IDS = new ConcurrentBag<string> { "5b3b6e495acfc4330140bd88", "5a7c74b3e899ef0014332c29", "5c066e3a0db834001b7353f0", "5c0696830db834001d23f5da", "5c0558060db834001b735271", "57235b6f24597759bf5a30f1" };
@@ -98,7 +98,9 @@ namespace eft_dma_radar
                         var totalGearValue = lootItem.Value;
 
                         var result = new PlayerGearInfo();
-                        this.GetItemsInSlots(itemSlots, tmpGearItemMods, ref result);
+
+                        if (slotNames[i] != "Scabbard")
+                            this.GetItemsInSlots(itemSlots, tmpGearItemMods, ref result);
 
                         totalGearValue += tmpGearItemMods.Sum(x => x.Value);
                         totalValue += tmpGearItemMods.Sum(x => x.Value);
@@ -286,6 +288,9 @@ namespace eft_dma_radar
 
         private string FindAmmoTypeForWeapon(string weaponName)
         {
+            if (this.Gear is null)
+                return null;
+
             foreach (var gear in this.Gear.Values)
             {
                 if (gear.Short.Contains(weaponName, StringComparison.OrdinalIgnoreCase))

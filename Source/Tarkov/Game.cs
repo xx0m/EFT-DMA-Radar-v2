@@ -255,9 +255,9 @@ namespace eft_dma_radar
         {
             var activeObject = Memory.ReadValue<BaseObject>(Memory.ReadPtr(activeObjectsPtr));
             var lastObject = Memory.ReadValue<BaseObject>(Memory.ReadPtr(lastObjectPtr));
+
             if (activeObject.obj != 0x0 && lastObject.obj == 0x0)
             {
-                // Add wait for lastObject to be populated
                 Program.Log("Waiting for lastObject to be populated...");
                 while (lastObject.obj == 0x0)
                 {
@@ -266,31 +266,39 @@ namespace eft_dma_radar
                 }
             }
 
-            if (activeObject.obj != 0x0)
+            while (activeObject.obj != 0x0 && activeObject.obj != lastObject.obj)
             {
-                while (activeObject.obj != 0x0 && activeObject.obj != lastObject.obj)
+                ulong objectNamePtr = Memory.ReadPtr(activeObject.obj + Offsets.GameObject.ObjectName);
+                string objectNameStr = Memory.ReadString(objectNamePtr, 64);
+
+                if (string.Equals(objectNameStr, objectName, StringComparison.OrdinalIgnoreCase))
                 {
-                    var objectNamePtr = Memory.ReadPtr(activeObject.obj + Offsets.GameObject.ObjectName);
-                    var objectNameStr = Memory.ReadString(objectNamePtr, 64);
-                    if (objectNameStr.Contains(objectName, StringComparison.OrdinalIgnoreCase))
+                    ulong _localGameWorld = Memory.ReadPtrChain(activeObject.obj, Offsets.GameWorld.To_LocalGameWorld);
+                    if (!Memory.ReadValue<bool>(_localGameWorld + Offsets.LocalGameWorld.RaidStarted))
                     {
-                        Program.Log($"Found object {objectNameStr}");
-                        return activeObject.obj;
+                        activeObject = Memory.ReadValue<BaseObject>(activeObject.nextObjectLink);
+                        continue;
                     }
 
-                    activeObject = Memory.ReadValue<BaseObject>(activeObject.nextObjectLink); // Read next object
+                    Program.Log($"Found object {objectNameStr}");
+                    return activeObject.obj;
                 }
+
+                activeObject = Memory.ReadValue<BaseObject>(activeObject.nextObjectLink);
             }
+
             if (lastObject.obj != 0x0)
             {
-                var objectNamePtr = Memory.ReadPtr(lastObject.obj + Offsets.GameObject.ObjectName);
-                var objectNameStr = Memory.ReadString(objectNamePtr, 64);
-                if (objectNameStr.Contains(objectName, StringComparison.OrdinalIgnoreCase))
+                ulong objectNamePtr = Memory.ReadPtr(lastObject.obj + Offsets.GameObject.ObjectName);
+                string objectNameStr = Memory.ReadString(objectNamePtr, 64);
+
+                if (string.Equals(objectNameStr, objectName, StringComparison.OrdinalIgnoreCase))
                 {
                     Program.Log($"Found object {objectNameStr}");
                     return lastObject.obj;
                 }
             }
+
             Program.Log($"Couldn't find object {objectName}");
             return 0;
         }

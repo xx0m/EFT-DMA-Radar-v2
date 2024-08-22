@@ -85,20 +85,6 @@ namespace eft_dma_radar
             return path;
         }
 
-
-        private PlayerInformationSettings GetPlayerInfoSettings(Player player)
-        {
-            string playerType = player.Type.ToString();
-            if (player.IsPMC && player.Type is not PlayerType.Teammate && !player.IsLocalPlayer)
-                playerType = "PMC";
-
-            if (_config.PlayerInformationSettings.TryGetValue(playerType, out var settings))
-                return settings;
-
-            return _config.PlayerInformationSettings["Scav"];
-        }
-
-
         /// <summary>
         /// Draws an Exfil on this location.
         /// </summary>
@@ -122,7 +108,7 @@ namespace eft_dma_radar
                 canvas.DrawCircle(this.GetPoint(), 4 * UIScale, paint);
             }
 
-            if (_config.ShowExfilNames)
+            if (_config.ExfilNames)
             {
                 var coords = this.GetPoint();
                 var textWidth = text.MeasureText(exfil.Name);
@@ -169,7 +155,7 @@ namespace eft_dma_radar
         {
             var paint = Extensions.GetEntityPaint(item);
             var text = Extensions.GetTextPaint(item);
-            var label = _config.ShowLootValue ? item.GetFormattedValueShortName() : item.Item.shortName;
+            var label = _config.LootValue ? item.GetFormattedValueShortName() : item.Item.shortName;
 
             if (heightDiff > 1.45)
             {
@@ -441,18 +427,12 @@ namespace eft_dma_radar
         /// </summary>
         public void DrawLootableObjectToolTip(SKCanvas canvas, LootableObject item)
         {
-            if (item is LootContainer container)
-            {
-                DrawToolTip(canvas, container);
-            }
-            else if (item is LootCorpse corpse)
-            {
+            //if (item is LootContainer container)
+                //DrawToolTip(canvas, container);
+            if (item is LootCorpse corpse)
                 DrawToolTip(canvas, corpse);
-            }
             else if (item is LootItem lootItem)
-            {
                 DrawToolTip(canvas, lootItem);
-            }
         }
 
         /// <summary>
@@ -571,73 +551,74 @@ namespace eft_dma_radar
         /// <summary>
         /// Draws the tool tip for loot containers
         /// </summary>
-        private void DrawToolTip(SKCanvas canvas, LootContainer container)
-        {
-            var maxWidth = 0f;
-            var tmpItems = container.Items.Count > 1 ? LootManager.MergeDupelicateLootItems(container.Items) : container.Items;
+        //private void DrawToolTip(SKCanvas canvas, LootContainer container)
+        //{
+        //    var maxWidth = 0f;
+        //    var tmpItems = container.Items.Count > 1 ? LootManager.MergeDupelicateLootItems(container.Items) : container.Items;
 
-            foreach (var item in tmpItems)
-            {
-                var width = SKPaints.TextBase.MeasureText(item.GetFormattedValueName());
-                maxWidth = Math.Max(maxWidth, width);
-            }
+        //    foreach (var item in tmpItems)
+        //    {
+        //        var width = SKPaints.TextBase.MeasureText(item.GetFormattedValueName());
+        //        maxWidth = Math.Max(maxWidth, width);
+        //    }
 
-            var textSpacing = 15 * UIScale;
-            var padding = 3 * UIScale;
+        //    var textSpacing = 15 * UIScale;
+        //    var padding = 3 * UIScale;
 
-            var height = tmpItems.Count * textSpacing;
+        //    var height = tmpItems.Count * textSpacing;
 
-            var left = X + padding;
-            var top = Y - padding;
-            var right = left + maxWidth + padding * 2;
-            var bottom = top + height + padding * 2;
+        //    var left = X + padding;
+        //    var top = Y - padding;
+        //    var right = left + maxWidth + padding * 2;
+        //    var bottom = top + height + padding * 2;
 
-            var backgroundRect = new SKRect(left, top, right, bottom);
-            canvas.DrawRect(backgroundRect, SKPaints.PaintTransparentBacker);
+        //    var backgroundRect = new SKRect(left, top, right, bottom);
+        //    canvas.DrawRect(backgroundRect, SKPaints.PaintTransparentBacker);
 
-            var y = bottom - (padding * 2.2f);
+        //    var y = bottom - (padding * 2.2f);
 
-            foreach (var item in tmpItems)
-            {
-                canvas.DrawText(item.GetFormattedValueName(), left + padding, y, Extensions.GetTextPaint(item));
-                y -= textSpacing;
-            }
-        }
+        //    foreach (var item in tmpItems)
+        //    {
+        //        canvas.DrawText(item.GetFormattedValueName(), left + padding, y, Extensions.GetTextPaint(item));
+        //        y -= textSpacing;
+        //    }
+        //}
 
         /// <summary>
         /// Draws the tool tip for loot corpses
         /// </summary>
         private void DrawToolTip(SKCanvas canvas, LootCorpse corpse)
         {
-            var maxWidth = 0f;
+            //var maxWidth = 0f;
+            var maxWidth = SKPaints.TextBase.MeasureText(corpse.Name);
             var items = corpse.Items;
             var height = items.Count;
-            var isEmptyCorpseName = corpse.Name.Contains("Clone");
+            //var isEmptyCorpseName = corpse.Name.Contains("Clone");
 
-            if (!isEmptyCorpseName)
-                height += 1;
+            //if (!isEmptyCorpseName)
+            height += 1;
 
-            foreach (var gearItem in items)
-            {
-                var width = SKPaints.TextBase.MeasureText(gearItem.GetFormattedTotalValueName());
-                maxWidth = Math.Max(maxWidth, width);
-                
-                var tmpItems = gearItem.Loot.Count > 1 ? LootManager.MergeDupelicateLootItems(gearItem.Loot) : gearItem.Loot;
+            //foreach (var gearItem in items)
+            //{
+            //    var width = SKPaints.TextBase.MeasureText(gearItem.GetFormattedTotalValueName());
+            //    maxWidth = Math.Max(maxWidth, width);
 
-                if (_config.ShowSubItems && tmpItems.Count > 0)
-                {
-                    foreach (var lootItem in tmpItems)
-                    {
-                        if (lootItem.AlwaysShow || lootItem.Important || (!_config.ImportantLootOnly && _config.ShowSubItems && lootItem.Value > _config.MinSubItemValue))
-                        {
-                            width = SKPaints.TextBase.MeasureText($"     {lootItem.GetFormattedValueName()}");
-                            maxWidth = Math.Max(maxWidth, width);
+            //    var tmpItems = gearItem.Loot.Count > 1 ? LootManager.MergeDupelicateLootItems(gearItem.Loot) : gearItem.Loot;
 
-                            height++;
-                        }
-                    }
-                }
-            }
+            //    if (_config.SubItems && tmpItems.Count > 0)
+            //    {
+            //        foreach (var lootItem in tmpItems)
+            //        {
+            //            if (lootItem.AlwaysShow || lootItem.Important || (!_config.ImportantLootOnly && _config.SubItems && lootItem.Value > _config.MinSubItemValue))
+            //            {
+            //                width = SKPaints.TextBase.MeasureText($"     {lootItem.GetFormattedValueName()}");
+            //                maxWidth = Math.Max(maxWidth, width);
+
+            //                height++;
+            //            }
+            //        }
+            //    }
+            //}
 
             var textSpacing = 15 * UIScale;
             var padding = 3 * UIScale;
@@ -653,31 +634,31 @@ namespace eft_dma_radar
             canvas.DrawRect(backgroundRect, SKPaints.PaintTransparentBacker);
 
             var y = bottom - (padding * 2.2f);
-            foreach (var gearItem in items)
-            {
-                var tmpItems = gearItem.Loot.Count > 1 ? LootManager.MergeDupelicateLootItems(gearItem.Loot) : gearItem.Loot;
+            //foreach (var gearItem in items)
+            //{
+            //    var tmpItems = gearItem.Loot.Count > 1 ? LootManager.MergeDupelicateLootItems(gearItem.Loot) : gearItem.Loot;
 
-                if (_config.ShowSubItems && tmpItems.Count > 0)
-                {
-                    foreach (var lootItem in tmpItems)
-                    {
-                        if (lootItem.AlwaysShow || lootItem.Important || (!_config.ImportantLootOnly && _config.ShowSubItems && lootItem.Value > _config.MinSubItemValue))
-                        {
-                            canvas.DrawText("   " + lootItem.GetFormattedValueName(), left + padding, y, Extensions.GetTextPaint(lootItem));
-                            y -= textSpacing;
-                        }
-                    }
-                }
+            //    if (_config.SubItems && tmpItems.Count > 0)
+            //    {
+            //        foreach (var lootItem in tmpItems)
+            //        {
+            //            if (lootItem.AlwaysShow || lootItem.Important || (!_config.ImportantLootOnly && _config.SubItems && lootItem.Value > _config.MinSubItemValue))
+            //            {
+            //                canvas.DrawText("   " + lootItem.GetFormattedValueName(), left + padding, y, Extensions.GetTextPaint(lootItem));
+            //                y -= textSpacing;
+            //            }
+            //        }
+            //    }
 
-                canvas.DrawText(gearItem.GetFormattedTotalValueName(), left + padding, y, Extensions.GetTextPaint(gearItem));
-                y -= textSpacing;
-            }
+            //    canvas.DrawText(gearItem.GetFormattedTotalValueName(), left + padding, y, Extensions.GetTextPaint(gearItem));
+            //    y -= textSpacing;
+            //}
 
-            if (!isEmptyCorpseName)
-            {
+            //if (!isEmptyCorpseName)
+            //{
                 canvas.DrawText(corpse.Name, left + padding, y, SKPaints.TextBase);
                 y -= textSpacing;
-            }
+            //}
         }
 
         /// <summary>

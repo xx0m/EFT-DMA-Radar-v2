@@ -21,11 +21,20 @@ namespace eft_dma_radar
         [JsonPropertyName("chams")]
         public Dictionary<string, bool> Chams { get; set; }
 
+        [JsonPropertyName("containerSettings")]
+        public Dictionary<string, bool> ContainerSettings { get; set; }
+
+        [JsonPropertyName("corpses")]
+        public bool Corpses { get; set; }
+
         [JsonPropertyName("defaultZoom")]
         public int DefaultZoom { get; set; }
 
         [JsonPropertyName("enemyCount")]
         public bool EnemyCount { get; set; }
+
+        [JsonPropertyName("exfilNames")]
+        public bool ExfilNames { get; set; }
 
         [JsonPropertyName("extendedReach")]
         public bool ExtendedReach { get; set; }
@@ -45,6 +54,9 @@ namespace eft_dma_radar
         [JsonPropertyName("globalFontSize")]
         public int GlobalFontSize { get; set; }
 
+        [JsonPropertyName("hoverArmor")]
+        public bool HoverArmor { get; set; }
+
         [JsonPropertyName("importantLootOnly")]
         public bool ImportantLootOnly { get; set; }
 
@@ -60,11 +72,17 @@ namespace eft_dma_radar
         [JsonPropertyName("logging")]
         public bool Logging { get; set; }
 
+        [JsonPropertyName("looseLoot")]
+        public bool LooseLoot { get; set; }
+
         [JsonPropertyName("lootItemViewer")]
         public bool LootItemViewer { get; set; }
 
         [JsonPropertyName("lootPing")]
         public Dictionary<string, int> LootPing { get; set; }
+
+        [JsonPropertyName("lootThroughWalls")]
+        public bool LootThroughWalls { get; set; }
 
         [JsonPropertyName("lootThroughWallsDistance")]
         public float LootThroughWallsDistance { get; set; }
@@ -72,8 +90,8 @@ namespace eft_dma_radar
         [JsonPropertyName("lootThroughWallsDistancePvE")]
         public float LootThroughWallsDistancePvE { get; set; }
 
-        [JsonPropertyName("lootThroughWalls")]
-        public bool LootThroughWalls { get; set; }
+        [JsonPropertyName("lootValue")]
+        public bool LootValue { get; set; }
 
         [JsonPropertyName("magDrillSpeed")]
         public int MagDrillSpeed { get; set; }
@@ -102,9 +120,6 @@ namespace eft_dma_radar
         [JsonPropertyName("minSubItemValue")]
         public int MinSubItemValue { get; set; }
 
-        [JsonPropertyName("noWeaponMalfunctions")]
-        public bool NoWeaponMalfunctions { get; set; }
-
         [JsonPropertyName("nightVision")]
         public bool NightVision { get; set; }
 
@@ -113,6 +128,9 @@ namespace eft_dma_radar
 
         [JsonPropertyName("noVisor")]
         public bool NoVisor { get; set; }
+
+        [JsonPropertyName("noWeaponMalfunctions")]
+        public bool NoWeaponMalfunctions { get; set; }
 
         [JsonPropertyName("opticThermalSetting")]
         public ThermalSettings OpticThermalSetting { get; set; }
@@ -138,26 +156,11 @@ namespace eft_dma_radar
         [JsonPropertyName("questHelper")]
         public bool QuestHelper { get; set; }
 
-        [JsonPropertyName("showCorpses")]
-        public bool ShowCorpses { get; set; }
+        [JsonPropertyName("radarStats")]
+        public bool RadarStats { get; set; }
 
-        [JsonPropertyName("showExfilNames")]
-        public bool ShowExfilNames { get; set; }
-
-        [JsonPropertyName("showHoverArmor")]
-        public bool ShowHoverArmor { get; set; }
-
-        [JsonPropertyName("showLoot")]
-        public bool ShowLoot { get; set; }
-
-        [JsonPropertyName("showLootValue")]
-        public bool ShowLootValue { get; set; }
-
-        [JsonPropertyName("showRadarStats")]
-        public bool ShowRadarStats { get; set; }
-
-        [JsonPropertyName("showSubItems")]
-        public bool ShowSubItems { get; set; }
+        [JsonPropertyName("subItems")]
+        public bool SubItems { get; set; }
 
         [JsonPropertyName("thermalVision")]
         public bool ThermalVision { get; set; }
@@ -183,11 +186,11 @@ namespace eft_dma_radar
         [JsonPropertyName("unknownQuestItems")]
         public bool UnknownQuestItems { get; set; }
 
-        [JsonPropertyName("zoomSensitivity")]
-        public int ZoomSensitivity { get; set; }
-
         [JsonPropertyName("vsync")]
         public bool VSync { get; set; }
+
+        [JsonPropertyName("zoomSensitivity")]
+        public int ZoomSensitivity { get; set; }
         #endregion
 
         #region Json Ignore
@@ -268,6 +271,37 @@ namespace eft_dma_radar
             ["Rogues"] = false,
             ["Scavs"] = false,
             ["Teammates"] = false
+        };
+
+        [JsonIgnore]
+        public Dictionary<string, bool> DefaultContainerSettings = new Dictionary<string, bool>()
+        {
+            ["Enabled"] = false,
+            ["Bank cash register"] = false,
+            ["Bank safe"] = false,
+            ["Buried barrel cache"] = false,
+            ["Cash register"] = false,
+            ["Civilian body"] = false,
+            ["Dead Scav"] = false,
+            ["Drawer"] = false,
+            ["Duffle bag"] = false,
+            ["Grenade box"] = false,
+            ["Ground cache"] = false,
+            ["Jacket"] = false,
+            ["Lab technician body"] = false,
+            ["Medbag SMU06"] = false,
+            ["Medical supply crate"] = false,
+            ["PC block"] = false,
+            ["PMC body"] = false,
+            ["Ration supply crate"] = false,
+            ["Safe"] = false,
+            ["Scav body"] = false,
+            ["Shturman's Stash"] = false,
+            ["Technical supply crate"] = false,
+            ["Toolbox"] = false,
+            ["Weapon box"] = false,
+            ["Wooden ammo box"] = false,
+            ["Wooden crate"] = false
         };
 
         [JsonIgnore]
@@ -367,24 +401,30 @@ namespace eft_dma_radar
             AutoLootRefresh = false;
             AutoRefreshSettings = DefaultAutoRefreshSettings;
             Chams = DefaultChamsSettings;
+            ContainerSettings = DefaultContainerSettings;
+            Corpses = false;
             DefaultZoom = 100;
             EnemyCount = false;
+            ExfilNames = false;
             ExtendedReach = false;
             ExtendedReachDistance = 2f;
             ExtendedReachDistancePvE = 2f;
+            FreezeTimeOfDay = false;
             GlobalFont = 0;
             GlobalFontSize = 13;
-            FreezeTimeOfDay = false;
+            HoverArmor = false;
             ImportantLootOnly = false;
             InfiniteStamina = false;
             InstantADS = false;
             JumpPowerStrength = 0;
             Logging = false;
+            LooseLoot = true;
             LootItemViewer = false;
             LootPing = DefaultLootPingSettings;
             LootThroughWalls = false;
             LootThroughWallsDistance = 2f;
             LootThroughWallsDistancePvE = 2f;
+            LootValue = false;
             MagDrillSpeed = 1;
             MainThermalSetting = new ThermalSettings(1f, 0.0011f, -0.1f, 0);
             MasterSwitch = false;
@@ -394,10 +434,10 @@ namespace eft_dma_radar
             MinImportantLootValue = 300000;
             MinLootValue = 90000;
             MinSubItemValue = 15000;
-            NoWeaponMalfunctions = false;
             NightVision = false;
             NoRecoilSway = false;
             NoVisor = false;
+            NoWeaponMalfunctions = false;
             OpticThermalSetting = new ThermalSettings(1f, 0.0011f, -0.1f, 0);
             OpticThermalVision = false;
             PaintColors = DefaultPaintColors;
@@ -407,13 +447,8 @@ namespace eft_dma_radar
             ProcessLoot = true;
             PvEMode = false;
             QuestHelper = true;
-            ShowCorpses = false;
-            ShowExfilNames = false;
-            ShowHoverArmor = false;
-            ShowLoot = true;
-            ShowLootValue = false;
-            ShowRadarStats = false;
-            ShowSubItems = false;
+            RadarStats = false;
+            SubItems = false;
             ThermalVision = false;
             Thirdperson = false;
             ThrowPowerStrength = 1;
@@ -422,8 +457,8 @@ namespace eft_dma_radar
             TimeScaleFactor = 1.8f;
             UIScale = 100;
             UnknownQuestItems = false;
-            ZoomSensitivity = 25;
             VSync = true;
+            ZoomSensitivity = 25;
         }
 
         /// <summary>

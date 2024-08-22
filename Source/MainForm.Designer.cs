@@ -37,7 +37,6 @@
             swQuestHelper = new MaterialSkin.Controls.MaterialSwitch();
             swHoverArmor = new MaterialSkin.Controls.MaterialSwitch();
             swAimview = new MaterialSkin.Controls.MaterialSwitch();
-            swShowLoot = new MaterialSkin.Controls.MaterialSwitch();
             btnRestartRadar = new MaterialSkin.Controls.MaterialButton();
             btnToggleMap = new MaterialSkin.Controls.MaterialButton();
             swMapHelper = new MaterialSkin.Controls.MaterialSwitch();
@@ -172,6 +171,8 @@
             swPlayerInfoAmmoType = new MaterialSkin.Controls.MaterialSwitch();
             btnTriggerUnityCrash = new MaterialSkin.Controls.MaterialButton();
             swThirdperson = new MaterialSkin.Controls.MaterialSwitch();
+            swContainers = new MaterialSkin.Controls.MaterialSwitch();
+            swLooseLoot = new MaterialSkin.Controls.MaterialSwitch();
             sldrThermalColorCoefficient = new MaterialSkin.Controls.MaterialSlider();
             sldrMinTemperature = new MaterialSkin.Controls.MaterialSlider();
             sldrThermalRampShift = new MaterialSkin.Controls.MaterialSlider();
@@ -234,6 +235,9 @@
             mcSettingsMemoryWritingGear = new MaterialSkin.Controls.MaterialCard();
             lblSettingsMemoryWritingGear = new MaterialSkin.Controls.MaterialLabel();
             tabSettingsLoot = new TabPage();
+            mcSettingsLootContainers = new MaterialSkin.Controls.MaterialCard();
+            lstContainers = new MaterialSkin.Controls.MaterialCheckedListBox();
+            lblSettingsLootContainers = new MaterialSkin.Controls.MaterialLabel();
             mcSettingsLootPing = new MaterialSkin.Controls.MaterialCard();
             lblSettingsLootPing = new MaterialSkin.Controls.MaterialLabel();
             mcSettingsLootMinRubleValue = new MaterialSkin.Controls.MaterialCard();
@@ -390,6 +394,7 @@
             mcSettingsMemoryWritingGlobal.SuspendLayout();
             mcSettingsMemoryWritingGear.SuspendLayout();
             tabSettingsLoot.SuspendLayout();
+            mcSettingsLootContainers.SuspendLayout();
             mcSettingsLootPing.SuspendLayout();
             mcSettingsLootMinRubleValue.SuspendLayout();
             mcSettingsLootGeneral.SuspendLayout();
@@ -478,7 +483,7 @@
             // 
             swExfilNames.Depth = 0;
             swExfilNames.Font = new Font("Segoe UI", 9F);
-            swExfilNames.Location = new Point(331, 45);
+            swExfilNames.Location = new Point(173, 45);
             swExfilNames.Margin = new Padding(0);
             swExfilNames.MouseLocation = new Point(-1, -1);
             swExfilNames.MouseState = MaterialSkin.MouseState.HOVER;
@@ -512,7 +517,7 @@
             // 
             swHoverArmor.Depth = 0;
             swHoverArmor.Font = new Font("Segoe UI", 9F);
-            swHoverArmor.Location = new Point(482, 45);
+            swHoverArmor.Location = new Point(330, 45);
             swHoverArmor.Margin = new Padding(0);
             swHoverArmor.MouseLocation = new Point(-1, -1);
             swHoverArmor.MouseState = MaterialSkin.MouseState.HOVER;
@@ -529,7 +534,7 @@
             // 
             swAimview.Depth = 0;
             swAimview.Font = new Font("Segoe UI", 9F);
-            swAimview.Location = new Point(172, 45);
+            swAimview.Location = new Point(15, 45);
             swAimview.Margin = new Padding(0);
             swAimview.MouseLocation = new Point(-1, -1);
             swAimview.MouseState = MaterialSkin.MouseState.HOVER;
@@ -541,23 +546,6 @@
             toolTip.SetToolTip(swAimview, "Displays the 3D aimview");
             swAimview.UseVisualStyleBackColor = true;
             swAimview.CheckedChanged += swAimview_CheckedChanged;
-            // 
-            // swShowLoot
-            // 
-            swShowLoot.Depth = 0;
-            swShowLoot.Font = new Font("Segoe UI", 9F);
-            swShowLoot.Location = new Point(15, 45);
-            swShowLoot.Margin = new Padding(0);
-            swShowLoot.MouseLocation = new Point(-1, -1);
-            swShowLoot.MouseState = MaterialSkin.MouseState.HOVER;
-            swShowLoot.Name = "swShowLoot";
-            swShowLoot.Ripple = true;
-            swShowLoot.Size = new Size(133, 28);
-            swShowLoot.TabIndex = 1;
-            swShowLoot.Text = "Loot (F3)";
-            toolTip.SetToolTip(swShowLoot, "Displays loose loot & lootable items on corpses/cointainers");
-            swShowLoot.UseVisualStyleBackColor = true;
-            swShowLoot.CheckedChanged += swShowLoot_CheckedChanged;
             // 
             // btnRestartRadar
             // 
@@ -936,6 +924,7 @@
             sldrMinCorpse.Value = 200;
             sldrMinCorpse.ValueMax = 800;
             sldrMinCorpse.ValueSuffix = "k";
+            sldrMinCorpse.Visible = false;
             sldrMinCorpse.onValueChanged += sldrMinCorpse_onValueChanged;
             // 
             // sldrMinRegularLoot
@@ -961,7 +950,7 @@
             // 
             swCorpses.Depth = 0;
             swCorpses.Font = new Font("Segoe UI", 9F);
-            swCorpses.Location = new Point(15, 85);
+            swCorpses.Location = new Point(177, 85);
             swCorpses.Margin = new Padding(0);
             swCorpses.MouseLocation = new Point(-1, -1);
             swCorpses.MouseState = MaterialSkin.MouseState.HOVER;
@@ -995,7 +984,7 @@
             // 
             swSubItems.Depth = 0;
             swSubItems.Font = new Font("Segoe UI", 9F);
-            swSubItems.Location = new Point(334, 85);
+            swSubItems.Location = new Point(330, 45);
             swSubItems.Margin = new Padding(0);
             swSubItems.MouseLocation = new Point(-1, -1);
             swSubItems.MouseState = MaterialSkin.MouseState.HOVER;
@@ -1006,13 +995,14 @@
             swSubItems.Text = "Sub Items";
             toolTip.SetToolTip(swSubItems, "Shows sub-items within a container/corpse");
             swSubItems.UseVisualStyleBackColor = true;
+            swSubItems.Visible = false;
             swSubItems.CheckedChanged += swSubItems_CheckedChanged;
             // 
             // swItemValue
             // 
             swItemValue.Depth = 0;
             swItemValue.Font = new Font("Segoe UI", 9F);
-            swItemValue.Location = new Point(177, 85);
+            swItemValue.Location = new Point(330, 85);
             swItemValue.Margin = new Padding(0);
             swItemValue.MouseLocation = new Point(-1, -1);
             swItemValue.MouseState = MaterialSkin.MouseState.HOVER;
@@ -2401,7 +2391,7 @@
             // 
             swUnknownQuestItems.Depth = 0;
             swUnknownQuestItems.Font = new Font("Segoe UI", 9F);
-            swUnknownQuestItems.Location = new Point(172, 85);
+            swUnknownQuestItems.Location = new Point(173, 85);
             swUnknownQuestItems.Margin = new Padding(0);
             swUnknownQuestItems.MouseLocation = new Point(-1, -1);
             swUnknownQuestItems.MouseState = MaterialSkin.MouseState.HOVER;
@@ -3275,6 +3265,40 @@
             swThirdperson.UseVisualStyleBackColor = true;
             swThirdperson.CheckedChanged += swThirdperson_CheckedChanged;
             // 
+            // swContainers
+            // 
+            swContainers.Depth = 0;
+            swContainers.Font = new Font("Segoe UI", 9F);
+            swContainers.Location = new Point(15, 45);
+            swContainers.Margin = new Padding(0);
+            swContainers.MouseLocation = new Point(-1, -1);
+            swContainers.MouseState = MaterialSkin.MouseState.HOVER;
+            swContainers.Name = "swContainers";
+            swContainers.Ripple = true;
+            swContainers.Size = new Size(138, 28);
+            swContainers.TabIndex = 40;
+            swContainers.Text = "Containers";
+            toolTip.SetToolTip(swContainers, "Shows lootable containers throughout the map");
+            swContainers.UseVisualStyleBackColor = true;
+            swContainers.CheckedChanged += swContainers_CheckedChanged;
+            // 
+            // swLooseLoot
+            // 
+            swLooseLoot.Depth = 0;
+            swLooseLoot.Font = new Font("Segoe UI", 9F);
+            swLooseLoot.Location = new Point(17, 85);
+            swLooseLoot.Margin = new Padding(0);
+            swLooseLoot.MouseLocation = new Point(-1, -1);
+            swLooseLoot.MouseState = MaterialSkin.MouseState.HOVER;
+            swLooseLoot.Name = "swLooseLoot";
+            swLooseLoot.Ripple = true;
+            swLooseLoot.Size = new Size(143, 28);
+            swLooseLoot.TabIndex = 41;
+            swLooseLoot.Text = "Loose Loot";
+            toolTip.SetToolTip(swLooseLoot, "Shows loose loot items");
+            swLooseLoot.UseVisualStyleBackColor = true;
+            swLooseLoot.CheckedChanged += swLooseLoot_CheckedChanged;
+            // 
             // sldrThermalColorCoefficient
             // 
             sldrThermalColorCoefficient.Depth = 0;
@@ -3913,7 +3937,6 @@
             mcSettingsGeneralUI.Controls.Add(swExfilNames);
             mcSettingsGeneralUI.Controls.Add(swQuestHelper);
             mcSettingsGeneralUI.Controls.Add(swAimview);
-            mcSettingsGeneralUI.Controls.Add(swShowLoot);
             mcSettingsGeneralUI.Depth = 0;
             mcSettingsGeneralUI.ForeColor = Color.FromArgb(222, 0, 0, 0);
             mcSettingsGeneralUI.Location = new Point(14, 165);
@@ -4252,6 +4275,7 @@
             // tabSettingsLoot
             // 
             tabSettingsLoot.BackColor = Color.White;
+            tabSettingsLoot.Controls.Add(mcSettingsLootContainers);
             tabSettingsLoot.Controls.Add(mcSettingsLootPing);
             tabSettingsLoot.Controls.Add(mcSettingsLootMinRubleValue);
             tabSettingsLoot.Controls.Add(mcSettingsLootGeneral);
@@ -4262,6 +4286,51 @@
             tabSettingsLoot.TabIndex = 2;
             tabSettingsLoot.Text = "Loot";
             // 
+            // mcSettingsLootContainers
+            // 
+            mcSettingsLootContainers.BackColor = Color.FromArgb(255, 255, 255);
+            mcSettingsLootContainers.Controls.Add(lstContainers);
+            mcSettingsLootContainers.Controls.Add(swContainers);
+            mcSettingsLootContainers.Controls.Add(lblSettingsLootContainers);
+            mcSettingsLootContainers.Depth = 0;
+            mcSettingsLootContainers.ForeColor = Color.FromArgb(222, 0, 0, 0);
+            mcSettingsLootContainers.Location = new Point(617, 14);
+            mcSettingsLootContainers.Margin = new Padding(14);
+            mcSettingsLootContainers.MouseState = MaterialSkin.MouseState.HOVER;
+            mcSettingsLootContainers.Name = "mcSettingsLootContainers";
+            mcSettingsLootContainers.Padding = new Padding(14);
+            mcSettingsLootContainers.Size = new Size(410, 463);
+            mcSettingsLootContainers.TabIndex = 39;
+            // 
+            // lstContainers
+            // 
+            lstContainers.AutoScroll = true;
+            lstContainers.BackColor = Color.FromArgb(255, 255, 255);
+            lstContainers.Depth = 0;
+            lstContainers.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            lstContainers.Location = new Point(17, 85);
+            lstContainers.MouseState = MaterialSkin.MouseState.HOVER;
+            lstContainers.Name = "lstContainers";
+            lstContainers.Size = new Size(376, 370);
+            lstContainers.Striped = false;
+            lstContainers.StripeDarkColor = Color.Red;
+            lstContainers.TabIndex = 41;
+            // 
+            // lblSettingsLootContainers
+            // 
+            lblSettingsLootContainers.AutoSize = true;
+            lblSettingsLootContainers.Depth = 0;
+            lblSettingsLootContainers.Font = new Font("Roboto Medium", 20F, FontStyle.Bold, GraphicsUnit.Pixel);
+            lblSettingsLootContainers.FontType = MaterialSkin.MaterialSkinManager.fontType.H6;
+            lblSettingsLootContainers.HighEmphasis = true;
+            lblSettingsLootContainers.Location = new Point(17, 15);
+            lblSettingsLootContainers.MouseState = MaterialSkin.MouseState.HOVER;
+            lblSettingsLootContainers.Name = "lblSettingsLootContainers";
+            lblSettingsLootContainers.Size = new Size(98, 24);
+            lblSettingsLootContainers.TabIndex = 30;
+            lblSettingsLootContainers.Text = "Containers";
+            lblSettingsLootContainers.UseAccent = true;
+            // 
             // mcSettingsLootPing
             // 
             mcSettingsLootPing.BackColor = Color.FromArgb(255, 255, 255);
@@ -4271,7 +4340,7 @@
             mcSettingsLootPing.Controls.Add(sldrLootPingAnimationSpeed);
             mcSettingsLootPing.Depth = 0;
             mcSettingsLootPing.ForeColor = Color.FromArgb(222, 0, 0, 0);
-            mcSettingsLootPing.Location = new Point(617, 14);
+            mcSettingsLootPing.Location = new Point(15, 349);
             mcSettingsLootPing.Margin = new Padding(14);
             mcSettingsLootPing.MouseState = MaterialSkin.MouseState.HOVER;
             mcSettingsLootPing.Name = "mcSettingsLootPing";
@@ -4330,6 +4399,7 @@
             // mcSettingsLootGeneral
             // 
             mcSettingsLootGeneral.BackColor = Color.FromArgb(255, 255, 255);
+            mcSettingsLootGeneral.Controls.Add(swLooseLoot);
             mcSettingsLootGeneral.Controls.Add(swProcessLoot);
             mcSettingsLootGeneral.Controls.Add(cboAutoRefreshMap);
             mcSettingsLootGeneral.Controls.Add(sldrAutoRefreshDelay);
@@ -6185,6 +6255,8 @@
             mcSettingsMemoryWritingGear.ResumeLayout(false);
             mcSettingsMemoryWritingGear.PerformLayout();
             tabSettingsLoot.ResumeLayout(false);
+            mcSettingsLootContainers.ResumeLayout(false);
+            mcSettingsLootContainers.PerformLayout();
             mcSettingsLootPing.ResumeLayout(false);
             mcSettingsLootPing.PerformLayout();
             mcSettingsLootMinRubleValue.ResumeLayout(false);
@@ -6292,7 +6364,6 @@
         private MaterialSkin.Controls.MaterialSwitch swQuestHelper;
         private MaterialSkin.Controls.MaterialSwitch swHoverArmor;
         private MaterialSkin.Controls.MaterialSwitch swAimview;
-        private MaterialSkin.Controls.MaterialSwitch swShowLoot;
         private MaterialSkin.Controls.MaterialSlider sldrUIScale;
         private MaterialSkin.Controls.MaterialLabel lblSettingsGeneralRadar;
         private MaterialSkin.Controls.MaterialLabel lblSettingsGeneralUI;
@@ -6608,6 +6679,11 @@
         private MaterialSkin.Controls.MaterialLabel lblPlayerLoadoutsAI;
         private FlowLayoutPanel flpPlayerLoadoutsAI;
         private MaterialSkin.Controls.MaterialSwitch swThirdperson;
+        private MaterialSkin.Controls.MaterialCard mcSettingsLootContainers;
+        private MaterialSkin.Controls.MaterialSwitch swContainers;
+        private MaterialSkin.Controls.MaterialLabel lblSettingsLootContainers;
+        private MaterialSkin.Controls.MaterialCheckedListBox lstContainers;
+        private MaterialSkin.Controls.MaterialSwitch swLooseLoot;
     }
 }
 

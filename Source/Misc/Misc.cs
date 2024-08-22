@@ -132,6 +132,7 @@ namespace eft_dma_radar
         public string Thermal;
         public string NightVision;
         public string AmmoType;
+        public int AmmoCount;
     }
 
     public struct ActiveWeaponInfo
@@ -147,13 +148,6 @@ namespace eft_dma_radar
         public int Length;
         public int Opacity;
     }
-
-    unsafe struct MongoID
-    {
-        public fixed byte pad[0x10];
-        public string str { get; set; }
-    }
-
     #endregion
 
     #region EFT Enums

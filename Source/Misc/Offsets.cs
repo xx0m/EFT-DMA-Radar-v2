@@ -77,7 +77,7 @@
 
     public struct Player // EFT.Player : MonoBehaviour, 
     {
-        public static readonly uint[] To_TransformInternal = new uint[] { 0xB8, 0x28, 0x28, 0x10, 0x20 + (0 * 0x8), 0x10 }; // to TransformInternal
+        public static readonly uint[] To_TransformInternal = new uint[] { PlayerBody, 0x28, 0x28, 0x10, 0x20 + (0 * 0x8), 0x10 }; // to TransformInternal
         public const uint MovementContext = 0x50; // to MovementContext
         public const uint Corpse = 0x3F8; // EFT.Interactive.Corpse
         public const uint Profile = 0x620; // [620] <Profile>k__BackingField : EFT.Profile
@@ -155,6 +155,7 @@
     {
         public const uint Name = 0x48; // [48] <ID>k__BackingField : String
         public const uint ContainedItem = 0x38; // [38] <ContainedItem>k__BackingField : EFT.InventoryLogic.Item
+        public const uint ParentItem = 0x40; // [40] <ParentItem>k__BackingField : EFT.InventoryLogic.Item
         public const uint Size = 0x8;
     }
 
@@ -170,7 +171,7 @@
 
     public struct LootInteractiveClass
     {
-        public const uint LootBaseObject = 0x18; // to LootBaseObject
+        public const uint LootBaseObject = 0x10; // to LootBaseObject
         public const uint ItemOwner = 0x40; // to LootItemBase
         public const uint ContainerItemOwner = 0x120; // to ContainerItemOwner
     }
@@ -185,7 +186,7 @@
 
     public struct StackSlot // EFT.InventoryLogic.StackSlot : Object, IContainer
     {
-        public const uint Items = 0x10; // to UnityList , of LootItemBase
+        public const uint Items = 0x10; // [10] _items : System.Collections.Generic.List<Item>
     }
 
     public struct ItemTemplate //EFT.InventoryLogic.ItemTemplate
@@ -362,18 +363,12 @@
     public struct LootableContainer
     {
         public const uint ItemOwner = 0x118; // [118] ItemOwner : -.GClass27E2
-        public const uint Template = 0x128; // [128] Template : String
+        public const uint Template = 0x120; // [120] Template : String
     }
 
     public struct ObservedLootItem
     {
-        public const uint ItemOwner = 0x40; // [40] ItemOwner : -.GClass27E2
         public const uint Item = 0xB0; // [B0] item_0xB0 : EFT.InventoryLogic.Item
-    }
-
-    public struct ContainerItemOwner
-    {
-        public const uint Item = 0xC0; // [C0] item_0xC0 : EFT.InventoryLogic.Item
     }
 
     public struct Item
@@ -383,7 +378,6 @@
 
     public struct WeaponTemplate
     {
-
         public const uint Chambers = 0x188; // [188] Chambers : EFT.InventoryLogic.Slot[]
         public const uint AllowJam = 0x2DC; // [2DC] AllowJam : Boolean
         public const uint AllowFeed = 0x2DD; // [2DD] AllowFeed : Boolean
@@ -393,13 +387,13 @@
 
     public struct ItemOwner
     {
-        public const uint Item = 0xC0; //[C0] item_0xC0 : EFT.InventoryLogic.Item
+        public const uint Item = 0xB8; // [B8] item_0xB8 : EFT.InventoryLogic.Item
     }
 
     public struct MovementContext //EFT.MovementContext
     {
         public const uint Rotation = 0x408; // [408] _myRotation : UnityEngine.Vector2
-        public const uint BaseMovementState = 0xE0; //[E0] <CurrentState>k__BackingField : EFT.BaseMovementState
+        public const uint BaseMovementState = 0xE0; // [E0] <CurrentState>k__BackingField : EFT.BaseMovementState
     }
 
     public struct Physical

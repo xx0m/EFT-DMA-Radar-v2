@@ -238,7 +238,6 @@ namespace eft_dma_radar
         {
             Keys.F1 => ZoomIn(5),
             Keys.F2 => ZoomOut(5),
-            Keys.F3 => swShowLoot.Checked = !swShowLoot.Checked,
             Keys.F4 => swAimview.Checked = !swAimview.Checked,
             Keys.F5 => ToggleMap(),
             Keys.Control | Keys.N => swNightVision.Checked = !swNightVision.Checked,
@@ -466,6 +465,7 @@ namespace eft_dma_radar
         {
             UpdateDictionary(_config.AutoRefreshSettings, _config.DefaultAutoRefreshSettings);
             UpdateDictionary(_config.Chams, _config.DefaultChamsSettings);
+            UpdateDictionary(_config.ContainerSettings, _config.DefaultContainerSettings);
             UpdateDictionary(_config.LootPing, _config.DefaultLootPingSettings);
             UpdateDictionary(_config.MaxSkills, _config.DefaultMaxSkillsSettings);
             UpdateDictionary(_config.PlayerInformationSettings, _config.DefaultPlayerInformationSettings);
@@ -492,8 +492,8 @@ namespace eft_dma_radar
             #region Settings
             #region General
             // Radar
-            swRadarStats.Checked = _config.ShowRadarStats;
-            mcRadarStats.Visible = _config.ShowRadarStats;
+            swRadarStats.Checked = _config.RadarStats;
+            mcRadarStats.Visible = _config.RadarStats;
             swRadarVsync.Checked = _config.VSync;
             swRadarEnemyCount.Checked = _config.EnemyCount;
             mcRadarEnemyStats.Visible = _config.EnemyCount;
@@ -503,13 +503,13 @@ namespace eft_dma_radar
             btnTriggerUnityCrash.Visible = _config.PvEMode;
 
             // User Interface
-            swShowLoot.Checked = _config.ShowLoot;
+            swLooseLoot.Checked = _config.LooseLoot;
             swQuestHelper.Checked = _config.QuestHelper;
             swUnknownQuestItems.Visible = _config.QuestHelper;
             swUnknownQuestItems.Checked = _config.UnknownQuestItems;
             swAimview.Checked = _config.Aimview;
-            swExfilNames.Checked = _config.ShowExfilNames;
-            swHoverArmor.Checked = _config.ShowHoverArmor;
+            swExfilNames.Checked = _config.ExfilNames;
+            swHoverArmor.Checked = _config.HoverArmor;
             txtTeammateID.Text = _config.PrimaryTeammateId;
             sldrZoomSensitivity.Value = _config.ZoomSensitivity;
 
@@ -614,9 +614,10 @@ namespace eft_dma_radar
             // General
             swProcessLoot.Checked = _config.ProcessLoot;
             swFilteredOnly.Checked = _config.ImportantLootOnly;
-            swSubItems.Checked = _config.ShowSubItems;
-            swItemValue.Checked = _config.ShowLootValue;
-            swCorpses.Checked = _config.ShowCorpses;
+            swSubItems.Checked = _config.SubItems;
+            swItemValue.Checked = _config.LootValue;
+            swLooseLoot.Checked = _config.LooseLoot;
+            swCorpses.Checked = _config.Corpses;
             swAutoRefresh.Enabled = _config.ProcessLoot;
             swAutoRefresh.Checked = _config.AutoLootRefresh;
             cboAutoRefreshMap.Enabled = _config.ProcessLoot;
@@ -634,9 +635,14 @@ namespace eft_dma_radar
             sldrLootPingAnimationSpeed.Value = _config.LootPing["AnimationSpeed"];
             sldrLootPingMaxRadius.Value = _config.LootPing["Radius"];
             sldrLootPingRepetition.Value = _config.LootPing["Repetition"];
+
+            // Container settings
+            swContainers.Checked = _config.ContainerSettings["Enabled"];
+            lstContainers.Enabled = _config.ContainerSettings["Enabled"];
             #endregion
             #endregion
 
+            this.InitiateContainerList();
             this.UpdatePlayerInformationSettings();
             this.UpdatePvEControls();
             this.InitiateAutoMapRefreshItems();
@@ -1353,7 +1359,7 @@ namespace eft_dma_radar
             var localPlayer = this.LocalPlayer;
             if (this.InGame && localPlayer is not null)
             {
-                if (_config.ProcessLoot && _config.ShowLoot) // Draw loot (if enabled)
+                if (_config.ProcessLoot) // Draw loot (if enabled)
                 {
                     var loot = this.Loot;
                     if (loot is not null)
@@ -1379,7 +1385,7 @@ namespace eft_dma_radar
 
                             foreach (var item in filter)
                             {
-                                if (item is null || (this._config.ImportantLootOnly && !item.Important && !item.AlwaysShow) || (item is LootCorpse && !this._config.ShowCorpses))
+                                if (item is null || (this._config.ImportantLootOnly && !item.Important && !item.AlwaysShow))
                                     continue;
 
                                 float position = item.Position.Z - localPlayerMapPos.Height;
@@ -2272,7 +2278,7 @@ namespace eft_dma_radar
                 else
                     ClearPlayerRefs();
 
-                if (_config.ProcessLoot && _config.ShowLoot)
+                if (_config.ProcessLoot)
                     _closestItemToMouse = FindClosestObject(loot, mouse, x => x.ZoomedPosition, 12 * _uiScale);
                 else
                     ClearItemRefs();
@@ -2347,10 +2353,10 @@ namespace eft_dma_radar
                     {
                         DrawMap(canvas);
 
-                        if (!_config.ShowLoot && _config.ShowCorpses)
+                        if (!_config.ProcessLoot && _config.Corpses)
                             DrawCorpses(canvas);
 
-                        if (_config.ProcessLoot && _config.ShowLoot)
+                        if (_config.ProcessLoot && (_config.LooseLoot || _config.Corpses || _config.ContainerSettings["Enabled"]))
                         {
                             DrawItemAnimations(canvas);
                             DrawLoot(canvas);
@@ -2387,7 +2393,7 @@ namespace eft_dma_radar
         private void swRadarStats_CheckedChanged(object sender, EventArgs e)
         {
             var enabled = swRadarStats.Checked;
-            _config.ShowRadarStats = enabled;
+            _config.RadarStats = enabled;
             mcRadarStats.Visible = enabled;
         }
 
@@ -2635,11 +2641,6 @@ namespace eft_dma_radar
                 mcRadarMapSetup.Visible = false;
         }
 
-        private void swShowLoot_CheckedChanged(object sender, EventArgs e)
-        {
-            _config.ShowLoot = swShowLoot.Checked;
-        }
-
         private void swQuestHelper_CheckedChanged(object sender, EventArgs e)
         {
             var enabled = swQuestHelper.Checked;
@@ -2659,12 +2660,12 @@ namespace eft_dma_radar
 
         private void swExfilNames_CheckedChanged(object sender, EventArgs e)
         {
-            _config.ShowExfilNames = swExfilNames.Checked;
+            _config.ExfilNames = swExfilNames.Checked;
         }
 
         private void swHoverArmor_CheckedChanged(object sender, EventArgs e)
         {
-            _config.ShowHoverArmor = swHoverArmor.Checked;
+            _config.HoverArmor = swHoverArmor.Checked;
         }
 
         private void sldrUIScale_onValueChanged(object sender, int newValue)
@@ -3342,6 +3343,27 @@ namespace eft_dma_radar
         #endregion
 
         #region Loot
+        #region Helper Functions
+        private void InitiateContainerList()
+        {
+            var containers = TarkovDevManager.AllLootContainers
+                                              .Select(x => x.Value.Name)
+                                              .OrderByDescending(x => x)
+                                              .Distinct();
+
+            foreach (var container in containers)
+            {
+                MaterialCheckbox checkbox = new MaterialCheckbox();
+                checkbox.Text = container;
+
+                if (_config.ContainerSettings.ContainsKey(container))
+                    checkbox.Checked = _config.ContainerSettings[container];
+
+                checkbox.CheckedChanged += ContainerCheckbox_CheckedChanged;
+                lstContainers.Items.Add(checkbox);
+            }
+        }
+        #endregion
         #region Event Handlers
         // General
         private void swProcessLoot_CheckedChanged(object sender, EventArgs e)
@@ -3349,10 +3371,19 @@ namespace eft_dma_radar
             var processLoot = swProcessLoot.Checked;
             _config.ProcessLoot = processLoot;
 
-            swShowLoot.Enabled = processLoot;
+            swLooseLoot.Enabled = processLoot;
+            swCorpses.Enabled = processLoot;
+            swFilteredOnly.Enabled = processLoot;
+            swItemValue.Enabled = processLoot;
             swAutoRefresh.Enabled = processLoot;
             cboAutoRefreshMap.Enabled = processLoot;
             sldrAutoRefreshDelay.Enabled = processLoot;
+
+            btnRefreshLoot.Enabled = processLoot;
+
+            mcSettingsLootPing.Enabled = processLoot;
+            mcSettingsLootContainers.Enabled = processLoot;
+            mcSettingsLootMinRubleValue.Enabled = processLoot;
 
             if (!processLoot)
                 return;
@@ -3366,7 +3397,15 @@ namespace eft_dma_radar
         private void btnRefreshLoot_Click(object sender, EventArgs e)
         {
             lstLootItems.Items.Clear();
-            Memory.Loot?.RefreshLoot(true);
+
+            if (this.InGame)
+                Memory.Loot?.RefreshLoot(true);
+        }
+
+        private void swLooseLoot_CheckedChanged(object sender, EventArgs e)
+        {
+            _config.LooseLoot = swLooseLoot.Checked;
+            Memory.Loot?.ApplyFilter();
         }
 
         private void swFilteredOnly_CheckedChanged(object sender, EventArgs e)
@@ -3376,19 +3415,19 @@ namespace eft_dma_radar
 
         private void swSubItems_CheckedChanged(object sender, EventArgs e)
         {
-            _config.ShowSubItems = swSubItems.Checked;
+            _config.SubItems = swSubItems.Checked;
 
             Memory.Loot?.ApplyFilter();
         }
 
         private void swItemValue_CheckedChanged(object sender, EventArgs e)
         {
-            _config.ShowLootValue = swItemValue.Checked;
+            _config.LootValue = swItemValue.Checked;
         }
 
         private void swCorpses_CheckedChanged(object sender, EventArgs e)
         {
-            _config.ShowCorpses = swCorpses.Checked;
+            _config.Corpses = swCorpses.Checked;
         }
 
         private void swAutoRefresh_CheckedChanged(object sender, EventArgs e)
@@ -3491,6 +3530,26 @@ namespace eft_dma_radar
                 newValue = 1;
 
             _config.LootPing["Repetition"] = newValue;
+        }
+
+        // Container Settings
+        private void ContainerCheckbox_CheckedChanged(object sender, EventArgs e)
+        {
+            var checkbox = (MaterialCheckbox)sender;
+
+            _config.ContainerSettings[checkbox.Text] = checkbox.Checked;
+
+            Memory.Loot?.ApplyFilter();
+        }
+
+        private void swContainers_CheckedChanged(object sender, EventArgs e)
+        {
+            var enabled = swContainers.Checked;
+
+            _config.ContainerSettings["Enabled"] = enabled;
+            lstContainers.Enabled = enabled;
+
+            Memory.Loot?.ApplyFilter();
         }
         #endregion
         #endregion

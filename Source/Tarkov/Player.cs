@@ -625,46 +625,43 @@ namespace eft_dma_radar
             var name = round1.AddEntry<ulong>(0, 4, this.Info, null, Offsets.ObservedPlayerView.NickName);
             var accountID = round1.AddEntry<ulong>(0, 5, this.Info, null, Offsets.ObservedPlayerView.AccountID);
             var playerSide = round1.AddEntry<int>(0, 6, this.Info, null, Offsets.ObservedPlayerView.PlayerSide);
-            var isAI = round1.AddEntry<bool>(0, 7, this.Info, null, Offsets.ObservedPlayerView.IsAI);
-            var groupID = round1.AddEntry<ulong>(0, 8, this.Info, null, Offsets.ObservedPlayerView.GroupID);
-            var playerBody = round1.AddEntry<ulong>(0, 9, this.Info, null, Offsets.ObservedPlayerView.PlayerBody);
-            var memberCategory = round1.AddEntry<int>(0, 10, this.Info, null, Offsets.PlayerInfo.MemberCategory);
+            var groupID = round1.AddEntry<ulong>(0, 7, this.Info, null, Offsets.ObservedPlayerView.GroupID);
+            var playerBody = round1.AddEntry<ulong>(0, 8, this.Info, null, Offsets.ObservedPlayerView.PlayerBody);
+            var memberCategory = round1.AddEntry<int>(0, 9, this.Info, null, Offsets.PlayerInfo.MemberCategory);
 
-            var movementContextPtr2 = round2.AddEntry<ulong>(0, 11, movementContextPtr1, null, Offsets.ObservedPlayerView.To_MovementContext[1]);
-            var transIntPtr2 = round2.AddEntry<ulong>(0, 12, transIntPtr1, null, Offsets.ObservedPlayerView.To_TransformInternal[1]);
-            var inventoryController = round2.AddEntry<ulong>(0, 13, inventoryControllerPtr1, null, Offsets.ObservedPlayerView.To_InventoryController[1]);
-            var healthController = round2.AddEntry<ulong>(0, 14, healthControllerPtr1, null, Offsets.ObservedPlayerView.To_HealthController[1]);
+            var movementContextPtr2 = round2.AddEntry<ulong>(0, 10, movementContextPtr1, null, Offsets.ObservedPlayerView.To_MovementContext[1]);
+            var transIntPtr2 = round2.AddEntry<ulong>(0, 11, transIntPtr1, null, Offsets.ObservedPlayerView.To_TransformInternal[1]);
+            var inventoryController = round2.AddEntry<ulong>(0, 12, inventoryControllerPtr1, null, Offsets.ObservedPlayerView.To_InventoryController[1]);
+            var healthController = round2.AddEntry<ulong>(0, 13, healthControllerPtr1, null, Offsets.ObservedPlayerView.To_HealthController[1]);
 
-            var movementContext = round3.AddEntry<ulong>(0, 15, movementContextPtr2, null, Offsets.ObservedPlayerView.To_MovementContext[2]);
-            var transIntPtr3 = round3.AddEntry<ulong>(0, 16, transIntPtr2, null, Offsets.ObservedPlayerView.To_TransformInternal[2]);
-            var inventory = round3.AddEntry<ulong>(0, 17, inventoryController, null, Offsets.InventoryController.Inventory);
+            var movementContext = round3.AddEntry<ulong>(0, 14, movementContextPtr2, null, Offsets.ObservedPlayerView.To_MovementContext[2]);
+            var transIntPtr3 = round3.AddEntry<ulong>(0, 15, transIntPtr2, null, Offsets.ObservedPlayerView.To_TransformInternal[2]);
+            var inventory = round3.AddEntry<ulong>(0, 16, inventoryController, null, Offsets.InventoryController.Inventory);
 
-            var transIntPtr4 = round4.AddEntry<ulong>(0, 18, transIntPtr3, null, Offsets.ObservedPlayerView.To_TransformInternal[3]);
-            var equipment = round4.AddEntry<ulong>(0, 19, inventory, null, Offsets.Inventory.Equipment);
+            var transIntPtr4 = round4.AddEntry<ulong>(0, 17, transIntPtr3, null, Offsets.ObservedPlayerView.To_TransformInternal[3]);
+            var equipment = round4.AddEntry<ulong>(0, 18, inventory, null, Offsets.Inventory.Equipment);
 
-            var transIntPtr5 = round5.AddEntry<ulong>(0, 20, transIntPtr4, null, Offsets.ObservedPlayerView.To_TransformInternal[4]);
-            var inventorySlots = round5.AddEntry<ulong>(0, 21, equipment, null, Offsets.Equipment.Slots);
+            var transIntPtr5 = round5.AddEntry<ulong>(0, 19, transIntPtr4, null, Offsets.ObservedPlayerView.To_TransformInternal[4]);
+            var inventorySlots = round5.AddEntry<ulong>(0, 20, equipment, null, Offsets.Equipment.Slots);
 
-            var transformInternal = round6.AddEntry<ulong>(0, 22, transIntPtr5, null, Offsets.ObservedPlayerView.To_TransformInternal[5]);
+            var transformInternal = round6.AddEntry<ulong>(0, 21, transIntPtr5, null, Offsets.ObservedPlayerView.To_TransformInternal[5]);
 
             scatterReadMap.Execute();
         }
 
         private void ProcessOnlinePlayerScatterReadResults(ScatterReadMap scatterReadMap)
         {
-            if (!scatterReadMap.Results[0][15].TryGetResult<ulong>(out var movementContext))
+            if (!scatterReadMap.Results[0][14].TryGetResult<ulong>(out var movementContext))
                 return;
-            if (!scatterReadMap.Results[0][13].TryGetResult<ulong>(out var inventoryController))
+            if (!scatterReadMap.Results[0][12].TryGetResult<ulong>(out var inventoryController))
                 return;
-            if (!scatterReadMap.Results[0][21].TryGetResult<ulong>(out var inventorySlots))
+            if (!scatterReadMap.Results[0][20].TryGetResult<ulong>(out var inventorySlots))
                 return;
-            if (!scatterReadMap.Results[0][22].TryGetResult<ulong>(out var transformInternal))
+            if (!scatterReadMap.Results[0][21].TryGetResult<ulong>(out var transformInternal))
                 return;
-            if (!scatterReadMap.Results[0][14].TryGetResult<ulong>(out var healthController))
+            if (!scatterReadMap.Results[0][13].TryGetResult<ulong>(out var healthController))
                 return;
-            if (!scatterReadMap.Results[0][9].TryGetResult<ulong>(out var playerBody))
-                return;
-            if (!scatterReadMap.Results[0][7].TryGetResult<bool>(out var isAI))
+            if (!scatterReadMap.Results[0][8].TryGetResult<ulong>(out var playerBody))
                 return;
             if (!scatterReadMap.Results[0][6].TryGetResult<int>(out var playerSide))
                 return;
@@ -672,9 +669,9 @@ namespace eft_dma_radar
                 return;
             if (!scatterReadMap.Results[0][4].TryGetResult<ulong>(out var name))
                 return;
-            if (!scatterReadMap.Results[0][10].TryGetResult<int>(out var memberCategory))
+            if (!scatterReadMap.Results[0][9].TryGetResult<int>(out var memberCategory))
                 return;
-            if (!scatterReadMap.Results[0][8].TryGetResult<ulong>(out var groupID))
+            if (!scatterReadMap.Results[0][7].TryGetResult<ulong>(out var groupID))
                 return;
 
             this.InitializePlayerProperties(movementContext, inventoryController, inventorySlots, transformInternal, playerBody, name, groupID, playerSide);
@@ -683,7 +680,7 @@ namespace eft_dma_radar
             this.HealthController = healthController;
             this.AccountID = Memory.ReadUnityString(accountID);
 
-            this.Type = this.GetOnlinePlayerType(isAI);
+            this.Type = this.GetOnlinePlayerType(this.AccountID == "0");
             this.IsPMC = (this.Type == PlayerType.BEAR || this.Type == PlayerType.USEC);
 
             this.FinishAlloc();

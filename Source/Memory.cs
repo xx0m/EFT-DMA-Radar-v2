@@ -600,10 +600,9 @@ namespace eft_dma_radar
                 var buf = _process.MemRead(addr, length, Vmm.FLAG_NOCACHE);
                 int nullTerminator = Array.IndexOf<byte>(buf, 0);
 
-                // Use UTF-8 encoding instead of ASCII
                 return nullTerminator != -1
-                    ? Encoding.UTF8.GetString(buf, 0, nullTerminator)
-                    : Encoding.UTF8.GetString(buf);
+                    ? Encoding.Default.GetString(buf, 0, nullTerminator)
+                    : Encoding.Default.GetString(buf);
             }
             catch (Exception ex)
             {
@@ -619,7 +618,10 @@ namespace eft_dma_radar
             try
             {
                 var length = (uint)ReadValue<int>(addr + Offsets.UnityString.Length);
-                if (length > PAGE_SIZE) throw new DMAException("String length outside expected bounds!");
+
+                if (length > PAGE_SIZE)
+                    throw new DMAException("String length outside expected bounds!");
+
                 ThrowIfDMAShutdown();
                 var buf = _process.MemRead(addr + Offsets.UnityString.Value, length * 2, Vmm.FLAG_NOCACHE);
                 return Encoding.Unicode.GetString(buf).TrimEnd('\0'); ;
