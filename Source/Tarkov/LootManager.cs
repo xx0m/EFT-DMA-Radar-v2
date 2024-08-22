@@ -299,48 +299,48 @@ namespace eft_dma_radar
         /// </summary>
         public async Task GetLoot()
         {
-            //await Task.Run(() =>
-            //{
-            //    var scatterMap = new ScatterReadMap(this.invalidLootEntities.Count);
-            //    var round1 = scatterMap.AddRound();
+            await Task.Run(() =>
+            {
+                var scatterMap = new ScatterReadMap(this.invalidLootEntities.Count);
+                var round1 = scatterMap.AddRound();
 
-            //    for (int i = 0; i < this.invalidLootEntities.Count; i++)
-            //    {
-            //        var p1 = round1.AddEntry<ulong>(i, 0, this.invalidLootEntities.ElementAt(i).Pointer);
-            //    }
+                for (int i = 0; i < this.invalidLootEntities.Count; i++)
+                {
+                    var p1 = round1.AddEntry<ulong>(i, 0, this.invalidLootEntities.ElementAt(i).Pointer);
+                }
 
-            //    scatterMap.Execute();
+                scatterMap.Execute();
 
-            //    for (int i = 0; i < this.invalidLootEntities.Count; i++)
-            //    {
-            //        if (!scatterMap.Results[i][0].TryGetResult<ulong>(out var lootObjectsEntity) || lootObjectsEntity == 0)
-            //            continue;
+                for (int i = 0; i < this.invalidLootEntities.Count; i++)
+                {
+                    if (!scatterMap.Results[i][0].TryGetResult<ulong>(out var lootObjectsEntity) || lootObjectsEntity == 0)
+                        continue;
 
-            //        var itemToRemove = this.invalidLootEntities.ElementAt(i);
-            //        this.validLootEntities.Add((true, itemToRemove.Index, lootObjectsEntity));
-            //        this.invalidLootEntities.TryTake(out itemToRemove);
-            //    };
+                    var itemToRemove = this.invalidLootEntities.ElementAt(i);
+                    this.validLootEntities.Add((true, itemToRemove.Index, lootObjectsEntity));
+                    this.invalidLootEntities.TryTake(out itemToRemove);
+                };
 
-            //    var validScatterCheckMap = new ScatterReadMap(this.validLootEntities.Count);
-            //    var validCheckRound1 = validScatterCheckMap.AddRound();
+                var validScatterCheckMap = new ScatterReadMap(this.validLootEntities.Count);
+                var validCheckRound1 = validScatterCheckMap.AddRound();
 
-            //    for (int i = 0; i < this.validLootEntities.Count; i++)
-            //    {
-            //        var lootUnknownPtr = validCheckRound1.AddEntry<ulong>(i, 0, this.validLootEntities.ElementAt(i).Pointer, null);
-            //    }
+                for (int i = 0; i < this.validLootEntities.Count; i++)
+                {
+                    var lootUnknownPtr = validCheckRound1.AddEntry<ulong>(i, 0, this.validLootEntities.ElementAt(i).Pointer, null);
+                }
 
-            //    validScatterCheckMap.Execute();
+                validScatterCheckMap.Execute();
 
-            //    for (int i = 0; i < this.validLootEntities.Count; i++)
-            //    {
-            //        if (!validScatterCheckMap.Results[i][0].TryGetResult<ulong>(out var lootUnknownPtr) || lootUnknownPtr != 0)
-            //            continue;
+                for (int i = 0; i < this.validLootEntities.Count; i++)
+                {
+                    if (!validScatterCheckMap.Results[i][0].TryGetResult<ulong>(out var lootUnknownPtr) || lootUnknownPtr != 0)
+                        continue;
 
-            //        var itemToRemove = this.invalidLootEntities.ElementAt(i);
-            //        this.invalidLootEntities.Add((true, itemToRemove.Index, itemToRemove.Pointer));
-            //        this.validLootEntities.TryTake(out itemToRemove);
-            //    };
-            //});
+                    var itemToRemove = this.invalidLootEntities.ElementAt(i);
+                    this.invalidLootEntities.Add((true, itemToRemove.Index, itemToRemove.Pointer));
+                    this.validLootEntities.TryTake(out itemToRemove);
+                };
+            });
 
             var validScatterMap = new ScatterReadMap(this.validLootEntities.Count);
             var vRound1 = validScatterMap.AddRound();
