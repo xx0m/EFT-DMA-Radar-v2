@@ -109,14 +109,14 @@ namespace eft_dma_radar
                                           !x.Value.IsLocalPlayer &&
                                           x.Value.Type != PlayerType.LocalPlayer)
                              .Where(x =>
-                                          _config.Chams["Corpses"] ? true : x.Value.IsAlive &&
+                                          (_config.Chams["Corpses"] ? true : x.Value.IsAlive) &&
                                           (_config.Chams["PMCs"] && x.Value.IsPMC && x.Value.Type != PlayerType.Teammate) ||
                                           (_config.Chams["Teammates"] && x.Value.IsPMC && x.Value.Type == PlayerType.Teammate) ||
-                                          _config.Chams["PlayerScavs"] && x.Value.Type == PlayerType.PlayerScav ||
-                                          _config.Chams["Bosses"] && x.Value.Type == PlayerType.Boss ||
-                                          _config.Chams["Rogues"] && x.Value.IsRogueRaider ||
-                                          _config.Chams["Cultists"] && x.Value.Type == PlayerType.Cultist ||
-                                          _config.Chams["Scavs"] && x.Value.Type == PlayerType.Scav)
+                                          (_config.Chams["PlayerScavs"] && x.Value.Type == PlayerType.PlayerScav) ||
+                                          (_config.Chams["Bosses"] && x.Value.Type == PlayerType.Boss) ||
+                                          (_config.Chams["Rogues"] && x.Value.IsRogueRaider) ||
+                                          (_config.Chams["Cultists"] && x.Value.Type == PlayerType.Cultist) ||
+                                          (_config.Chams["Scavs"] && x.Value.Type == PlayerType.Scav))
                              .Select(x => x.Value)
                              .ToList();
 

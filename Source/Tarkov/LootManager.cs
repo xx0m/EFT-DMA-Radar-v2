@@ -521,11 +521,11 @@ namespace eft_dma_radar
                 .Select(g => g.Select(x => x.Item).ToList())
                 .ToList();
 
-            foreach (var batch in savedLootItemsBatches)
-            {
+            //foreach (var batch in savedLootItemsBatches)
+            //{
                 await Task.Run(() =>
                 {
-                    Parallel.ForEach(batch, Program.Config.ParallelOptions, (savedLootItem) =>
+                    Parallel.ForEach(this.savedLootItemsInfo, Program.Config.ParallelOptions, (savedLootItem) =>
                     {
                         if (this.validLootEntities.Any(x => x.Pointer == savedLootItem.InteractiveClass))
                         {
@@ -573,13 +573,13 @@ namespace eft_dma_radar
                         this.ApplyFilter();
                     }
                 });
-            }
+            //}
 
-            foreach (var batch in savedLootCorpsesBatches)
-            {
+            //foreach (var batch in savedLootCorpsesBatches)
+            //{
                 await Task.Run(() =>
                 {
-                    Parallel.ForEach(batch, Program.Config.ParallelOptions, (savedLootCorpse) =>
+                    Parallel.ForEach(this.savedLootCorpsesInfo, Program.Config.ParallelOptions, (savedLootCorpse) =>
                     {
                         if (this.validLootEntities.Any(x => x.Pointer == savedLootCorpse.InteractiveClass))
                         {
@@ -597,13 +597,13 @@ namespace eft_dma_radar
                         this.ApplyFilter();
                     }
                 });
-            }
+            //}
 
-            foreach (var batch in groupedContainersBatches)
-            {
+            //foreach (var batch in groupedContainersBatches)
+            //{
                 await Task.Run(() =>
                 {
-                    Parallel.ForEach(batch, Program.Config.ParallelOptions, (savedContainerItem) =>
+                    Parallel.ForEach(groupedContainers, Program.Config.ParallelOptions, (savedContainerItem) =>
                     {
                         var firstContainer = savedContainerItem.First();
 
@@ -623,7 +623,7 @@ namespace eft_dma_radar
                         this.ApplyFilter();
                     }
                 });
-            }
+            //}
 
             if (hasCachedItems)
             {
