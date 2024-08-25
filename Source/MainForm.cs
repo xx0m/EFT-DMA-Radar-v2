@@ -326,7 +326,7 @@ namespace eft_dma_radar
                     IsActive = true,
                     Name = "Default",
                     Items = new List<String>(),
-                    Color = new LootFilterManager.Filter.Colors()
+                    Color = new PaintColor.Colors
                     {
                         R = 255,
                         G = 255,
@@ -356,7 +356,7 @@ namespace eft_dma_radar
 
         private void InitiateAutoMapRefreshItems()
         {
-            cboAutoRefreshMap.Items.AddRange(_config.AutoRefreshSettings.Keys.ToArray());
+            cboAutoRefreshMap.Items.AddRange(_config.LootItemRefreshSettings.Keys.ToArray());
             cboAutoRefreshMap.SelectedIndex = _selectedMap is not null ? cboAutoRefreshMap.FindStringExact(_selectedMap.Name) : 0;
         }
 
@@ -463,9 +463,10 @@ namespace eft_dma_radar
 
         private void CheckConfigDictionaries()
         {
-            UpdateDictionary(_config.AutoRefreshSettings, _config.DefaultAutoRefreshSettings);
+            UpdateDictionary(_config.PaintColors, _config.DefaultPaintColors);
+            UpdateDictionary(_config.LootItemRefreshSettings, _config.DefaultAutoRefreshSettings);
             UpdateDictionary(_config.Chams, _config.DefaultChamsSettings);
-            UpdateDictionary(_config.ContainerSettings, _config.DefaultContainerSettings);
+            UpdateDictionary(_config.LootContainerSettings, _config.DefaultContainerSettings);
             UpdateDictionary(_config.LootPing, _config.DefaultLootPingSettings);
             UpdateDictionary(_config.MaxSkills, _config.DefaultMaxSkillsSettings);
             UpdateDictionary(_config.PlayerInformationSettings, _config.DefaultPlayerInformationSettings);
@@ -504,9 +505,6 @@ namespace eft_dma_radar
 
             // User Interface
             swLooseLoot.Checked = _config.LooseLoot;
-            swQuestHelper.Checked = _config.QuestHelper;
-            swUnknownQuestItems.Visible = _config.QuestHelper;
-            swUnknownQuestItems.Checked = _config.UnknownQuestItems;
             swAimview.Checked = _config.Aimview;
             swExfilNames.Checked = _config.ExfilNames;
             swHoverArmor.Checked = _config.HoverArmor;
@@ -525,20 +523,20 @@ namespace eft_dma_radar
             mcSettingsMemoryWritingGlobal.Enabled = _config.MasterSwitch;
             swThirdperson.Checked = _config.Thirdperson;
             swFreezeTime.Checked = _config.FreezeTimeOfDay;
-            sldrTimeOfDay.Visible = _config.FreezeTimeOfDay;
+            sldrTimeOfDay.Enabled = _config.FreezeTimeOfDay;
             sldrTimeOfDay.Value = (int)_config.TimeOfDay;
             swInfiniteStamina.Checked = _config.InfiniteStamina;
             swTimeScale.Checked = _config.TimeScale;
-            sldrTimeScaleFactor.Visible = _config.TimeScale;
+            sldrTimeScaleFactor.Enabled = _config.TimeScale;
             sldrTimeScaleFactor.Value = (int)(_config.TimeScaleFactor * 10);
             lblSettingsMemoryWritingTimeScaleFactor.Text = $"x{(_config.TimeScaleFactor)}";
-            lblSettingsMemoryWritingTimeScaleFactor.Visible = _config.TimeScale;
+            lblSettingsMemoryWritingTimeScaleFactor.Enabled = _config.TimeScale;
 
             swLootThroughWalls.Checked = _config.LootThroughWalls;
-            sldrLootThroughWallsDistance.Visible = _config.LootThroughWalls;
+            sldrLootThroughWallsDistance.Enabled = _config.LootThroughWalls;
 
             swExtendedReach.Checked = _config.ExtendedReach;
-            sldrExtendedReachDistance.Visible = _config.ExtendedReach;
+            sldrExtendedReachDistance.Enabled = _config.ExtendedReach;
 
             // Gear Features
             mcSettingsMemoryWritingGear.Enabled = _config.MasterSwitch;
@@ -570,16 +568,14 @@ namespace eft_dma_radar
             swMaxLightVests.Checked = _config.MaxSkills["Light Vests"];
             swMaxHeavyVests.Checked = _config.MaxSkills["Heavy Vests"];
 
-            sldrMagDrillsSpeed.Visible = _config.MaxSkills["Mag Drills"];
+            sldrMagDrillsSpeed.Enabled = _config.MaxSkills["Mag Drills"];
             sldrMagDrillsSpeed.Value = _config.MagDrillSpeed;
-            sldrJumpStrength.Visible = _config.MaxSkills["Strength"];
-            sldrJumpStrength.Value = _config.JumpPowerStrength;
-            sldrThrowStrength.Visible = _config.MaxSkills["Strength"];
+            sldrThrowStrength.Enabled = _config.MaxSkills["Strength"];
             sldrThrowStrength.Value = _config.ThrowPowerStrength;
 
             // Thermal Features
             mcSettingsMemoryWritingThermal.Enabled = _config.MasterSwitch;
-            mcSettingsMemoryWritingThermal.Visible = _config.ThermalVision || _config.OpticThermalVision;
+            mcSettingsMemoryWritingThermal.Enabled = (_config.ThermalVision || _config.OpticThermalVision);
             cboThermalType.SelectedIndex = _config.ThermalVision ? 0 : (_config.OpticThermalVision ? 1 : 0);
             cboThermalColorScheme.SelectedIndex = _config.ThermalVision ? _config.MainThermalSetting.ColorScheme : (_config.OpticThermalVision ? _config.OpticThermalSetting.ColorScheme : 0);
             sldrThermalColorCoefficient.Value = (int)(_config.MainThermalSetting.ColorCoefficient * 100);
@@ -591,39 +587,40 @@ namespace eft_dma_radar
             var enabled = _config.Chams["Enabled"];
             swChams.Checked = enabled;
             swChamsPMCs.Checked = _config.Chams["PMCs"];
-            swChamsPMCs.Visible = enabled;
             swChamsPlayerScavs.Checked = _config.Chams["PlayerScavs"];
-            swChamsPlayerScavs.Visible = enabled;
             swChamsBosses.Checked = _config.Chams["Bosses"];
-            swChamsBosses.Visible = enabled;
             swChamsRogues.Checked = _config.Chams["Rogues"];
-            swChamsRogues.Visible = enabled;
             swChamsCultists.Checked = _config.Chams["Cultists"];
-            swChamsCultists.Visible = enabled;
             swChamsScavs.Checked = _config.Chams["Scavs"];
-            swChamsScavs.Visible = enabled;
             swChamsTeammates.Checked = _config.Chams["Teammates"];
-            swChamsTeammates.Visible = enabled;
             swChamsCorpses.Checked = _config.Chams["Corpses"];
-            swChamsCorpses.Visible = enabled;
             swChamsRevert.Checked = _config.Chams["RevertOnClose"];
-            swChamsRevert.Visible = enabled;
+
+            this.ToggleChamsControls();
             #endregion
 
             #region Loot
             // General
-            swProcessLoot.Checked = _config.ProcessLoot;
+            var processLootEnabled = _config.ProcessLoot;
+            swProcessLoot.Checked = processLootEnabled;
+            this.UpdateLootControls();
             swFilteredOnly.Checked = _config.ImportantLootOnly;
             swSubItems.Checked = _config.SubItems;
             swItemValue.Checked = _config.LootValue;
             swLooseLoot.Checked = _config.LooseLoot;
-            swCorpses.Checked = _config.Corpses;
-            swAutoRefresh.Enabled = _config.ProcessLoot;
-            swAutoRefresh.Checked = _config.AutoLootRefresh;
-            cboAutoRefreshMap.Enabled = _config.ProcessLoot;
-            cboAutoRefreshMap.Visible = _config.AutoLootRefresh;
-            sldrAutoRefreshDelay.Enabled = _config.ProcessLoot;
-            sldrAutoRefreshDelay.Visible = _config.AutoLootRefresh;
+            swCorpses.Checked = _config.LootCorpses;
+            swAutoLootRefresh.Checked = _config.LootItemRefresh;
+
+            // Quest Helper
+            var questHelperEnabled = _config.QuestHelper;
+            swQuestHelper.Checked = questHelperEnabled;
+            this.UpdateQuestControls();
+            swUnknownQuestItems.Checked = _config.UnknownQuestItems;
+            swQuestItems.Checked = _config.QuestItems;
+            swQuestLootItems.Checked = _config.QuestLootItems;
+            swQuestLocations.Checked = _config.QuestLocations;
+            swAutoTaskRefresh.Checked = _config.QuestTaskRefresh;
+            sldrAutoTaskRefreshDelay.Value = _config.QuestTaskRefreshDelay;
 
             // Minimum Loot Value
             sldrMinRegularLoot.Value = _config.MinLootValue / 1000;
@@ -637,8 +634,8 @@ namespace eft_dma_radar
             sldrLootPingRepetition.Value = _config.LootPing["Repetition"];
 
             // Container settings
-            swContainers.Checked = _config.ContainerSettings["Enabled"];
-            lstContainers.Enabled = _config.ContainerSettings["Enabled"];
+            swContainers.Checked = _config.LootContainerSettings["Enabled"];
+            lstContainers.Enabled = _config.LootContainerSettings["Enabled"];
             #endregion
             #endregion
 
@@ -1425,12 +1422,15 @@ namespace eft_dma_radar
                         var mapParams = GetMapLocation();
 
                         var questItems = this.QuestManager.QuestItems;
-                        if (questItems is not null)
+                        if (_config.QuestItems && questItems is not null)
                         {
-                            var items = _config.UnknownQuestItems ? questItems.Where(x => x?.Position.X != 0 && x?.Name == "????") : questItems.Where(x => x?.Position.X != 0 && x?.Name != "????");
+                            var items = _config.UnknownQuestItems ?
+                                questItems.Where(x => x?.Position.X != 0 && x?.Name == "????") :
+                                questItems.Where(x => x?.Position.X != 0 && x?.Name != "????");
+
                             foreach (var item in items)
                             {
-                                if (item is null)
+                                if (item is null || item.Complete)
                                     continue;
 
                                 float position = item.Position.Z - localPlayerMapPos.Height;
@@ -1453,9 +1453,9 @@ namespace eft_dma_radar
                         }
 
                         var questZones = this.QuestManager.QuestZones;
-                        if (questZones is not null)
+                        if (_config.QuestLocations && questZones is not null)
                         {
-                            foreach (var zone in questZones.Where(x => x.MapName.ToLower() == _selectedMap.Name.ToLower()))
+                            foreach (var zone in questZones.Where(x => x.MapName.ToLower() == Memory.MapNameFormatted.ToLower() && !x.Complete))
                             {
                                 float position = zone.Position.Z - localPlayerMapPos.Height;
                                 var questZoneZoomedPos = zone.Position
@@ -2353,10 +2353,13 @@ namespace eft_dma_radar
                     {
                         DrawMap(canvas);
 
-                        if (!_config.ProcessLoot && _config.Corpses)
+                        if (!_config.ProcessLoot && _config.LootCorpses)
                             DrawCorpses(canvas);
 
-                        if (_config.ProcessLoot && (_config.LooseLoot || _config.Corpses || _config.ContainerSettings["Enabled"]))
+                        if (_config.ProcessLoot && (_config.LooseLoot ||
+                            _config.LootCorpses ||
+                            _config.LootContainerSettings["Enabled"] ||
+                            (_config.QuestHelper && _config.QuestLootItems)))
                         {
                             DrawItemAnimations(canvas);
                             DrawLoot(canvas);
@@ -2470,10 +2473,10 @@ namespace eft_dma_radar
             sldrLootThroughWallsDistance.Value = (int)LTWDistance;
             sldrExtendedReachDistance.Value = (int)reachDistance;
 
-            lblSettingsMemoryWritingLootThroughWallsDistance.Visible = _config.LootThroughWalls;
+            lblSettingsMemoryWritingLootThroughWallsDistance.Enabled = _config.LootThroughWalls;
             lblSettingsMemoryWritingLootThroughWallsDistance.Text = $"x{(LTWDistance / 10)}";
 
-            lblSettingsMemoryWritingExtendedReachDistance.Visible = _config.ExtendedReach;
+            lblSettingsMemoryWritingExtendedReachDistance.Enabled = _config.ExtendedReach;
             lblSettingsMemoryWritingExtendedReachDistance.Text = $"x{(reachDistance / 10)}";
 
             if (Memory.LocalPlayer is not null)
@@ -2594,8 +2597,8 @@ namespace eft_dma_radar
             swPlayerInfoAimline.Checked = playerInfoSettings.Aimline;
             sldrPlayerInfoAimlineLength.Value = playerInfoSettings.AimlineLength;
             sldrPlayerInfoAimlineOpacity.Value = playerInfoSettings.AimlineOpacity;
-            sldrPlayerInfoAimlineLength.Visible = playerInfoSettings.Aimline;
-            sldrPlayerInfoAimlineOpacity.Visible = playerInfoSettings.Aimline;
+            sldrPlayerInfoAimlineLength.Enabled = playerInfoSettings.Aimline;
+            sldrPlayerInfoAimlineOpacity.Enabled = playerInfoSettings.Aimline;
 
             cboPlayerInfoFont.SelectedIndex = playerInfoSettings.Font;
             sldrPlayerInfoFontSize.Value = playerInfoSettings.FontSize;
@@ -2611,20 +2614,20 @@ namespace eft_dma_radar
             swPlayerInfoHealth.Checked = playerInfoSettings.Health;
             swPlayerInfoTag.Checked = playerInfoSettings.Tag;
 
-            swPlayerInfoActiveWeapon.Visible = flagsChecked;
-            swPlayerInfoThermal.Visible = flagsChecked;
-            swPlayerInfoNightVision.Visible = flagsChecked;
-            swPlayerInfoAmmoType.Visible = flagsChecked;
-            swPlayerInfoGroup.Visible = flagsChecked;
-            swPlayerInfoValue.Visible = flagsChecked;
-            swPlayerInfoHealth.Visible = flagsChecked;
-            swPlayerInfoTag.Visible = flagsChecked;
+            swPlayerInfoActiveWeapon.Enabled = flagsChecked;
+            swPlayerInfoThermal.Enabled = flagsChecked;
+            swPlayerInfoNightVision.Enabled = flagsChecked;
+            swPlayerInfoAmmoType.Enabled = flagsChecked;
+            swPlayerInfoGroup.Enabled = flagsChecked;
+            swPlayerInfoValue.Enabled = flagsChecked;
+            swPlayerInfoHealth.Enabled = flagsChecked;
+            swPlayerInfoTag.Enabled = flagsChecked;
 
             cboPlayerInfoFlagsFont.SelectedIndex = playerInfoSettings.FlagsFont;
             sldrPlayerInfoFlagsFontSize.Value = playerInfoSettings.FlagsFontSize;
 
-            cboPlayerInfoFlagsFont.Visible = flagsChecked;
-            sldrPlayerInfoFlagsFontSize.Visible = flagsChecked;
+            cboPlayerInfoFlagsFont.Enabled = flagsChecked;
+            sldrPlayerInfoFlagsFontSize.Enabled = flagsChecked;
         }
         #endregion
         #region Event Handlers
@@ -2639,18 +2642,6 @@ namespace eft_dma_radar
             }
             else
                 mcRadarMapSetup.Visible = false;
-        }
-
-        private void swQuestHelper_CheckedChanged(object sender, EventArgs e)
-        {
-            var enabled = swQuestHelper.Checked;
-            _config.QuestHelper = enabled;
-            swUnknownQuestItems.Visible = enabled;
-        }
-
-        private void swUnknownQuestItems_CheckedChanged(object sender, EventArgs e)
-        {
-            _config.UnknownQuestItems = swUnknownQuestItems.Checked;
         }
 
         private void swAimview_CheckedChanged(object sender, EventArgs e)
@@ -2765,8 +2756,8 @@ namespace eft_dma_radar
 
             playerInfoSettings.Aimline = aimlineChecked;
 
-            sldrPlayerInfoAimlineLength.Visible = aimlineChecked;
-            sldrPlayerInfoAimlineOpacity.Visible = aimlineChecked;
+            sldrPlayerInfoAimlineLength.Enabled = aimlineChecked;
+            sldrPlayerInfoAimlineOpacity.Enabled = aimlineChecked;
         }
 
         private void sldrPlayerInfoAimlineLength_onValueChanged(object sender, int newValue)
@@ -2819,17 +2810,17 @@ namespace eft_dma_radar
             var flagsChecked = swPlayerInfoFlags.Checked;
 
             playerInfoSettings.Flags = flagsChecked;
-            swPlayerInfoActiveWeapon.Visible = flagsChecked;
-            swPlayerInfoThermal.Visible = flagsChecked;
-            swPlayerInfoNightVision.Visible = flagsChecked;
-            swPlayerInfoAmmoType.Visible = flagsChecked;
-            swPlayerInfoGroup.Visible = flagsChecked;
-            swPlayerInfoValue.Visible = flagsChecked;
-            swPlayerInfoHealth.Visible = flagsChecked;
-            swPlayerInfoTag.Visible = flagsChecked;
+            swPlayerInfoActiveWeapon.Enabled = flagsChecked;
+            swPlayerInfoThermal.Enabled = flagsChecked;
+            swPlayerInfoNightVision.Enabled = flagsChecked;
+            swPlayerInfoAmmoType.Enabled = flagsChecked;
+            swPlayerInfoGroup.Enabled = flagsChecked;
+            swPlayerInfoValue.Enabled = flagsChecked;
+            swPlayerInfoHealth.Enabled = flagsChecked;
+            swPlayerInfoTag.Enabled = flagsChecked;
 
-            cboPlayerInfoFlagsFont.Visible = flagsChecked;
-            sldrPlayerInfoFlagsFontSize.Visible = flagsChecked;
+            cboPlayerInfoFlagsFont.Enabled = flagsChecked;
+            sldrPlayerInfoFlagsFontSize.Enabled = flagsChecked;
         }
 
         private void swPlayerInfoActiveWeapon_CheckedChanged(object sender, EventArgs e)
@@ -2948,7 +2939,7 @@ namespace eft_dma_radar
             var enabled = swFreezeTime.Checked;
             _config.FreezeTimeOfDay = enabled;
 
-            sldrTimeOfDay.Visible = enabled;
+            sldrTimeOfDay.Enabled = enabled;
         }
 
         private void sldrTimeOfDay_onValueChanged(object sender, int newValue)
@@ -2960,9 +2951,9 @@ namespace eft_dma_radar
         {
             var enabled = swTimeScale.Checked;
             _config.TimeScale = enabled;
-            sldrTimeScaleFactor.Visible = enabled;
+            sldrTimeScaleFactor.Enabled = enabled;
 
-            lblSettingsMemoryWritingTimeScaleFactor.Visible = enabled;
+            lblSettingsMemoryWritingTimeScaleFactor.Enabled = enabled;
         }
 
         private void sldrTimeScaleFactor_onValueChanged(object sender, int newValue)
@@ -2981,8 +2972,8 @@ namespace eft_dma_radar
             var enabled = swLootThroughWalls.Checked;
             _config.LootThroughWalls = enabled;
 
-            sldrLootThroughWallsDistance.Visible = enabled;
-            lblSettingsMemoryWritingLootThroughWallsDistance.Visible = enabled;
+            sldrLootThroughWallsDistance.Enabled = enabled;
+            lblSettingsMemoryWritingLootThroughWallsDistance.Enabled = enabled;
         }
 
         private void sldrLootThroughWallsDistance_onValueChanged(object sender, int newValue)
@@ -3011,8 +3002,8 @@ namespace eft_dma_radar
             var enabled = swExtendedReach.Checked;
             _config.ExtendedReach = enabled;
 
-            sldrExtendedReachDistance.Visible = enabled;
-            lblSettingsMemoryWritingExtendedReachDistance.Visible = enabled;
+            sldrExtendedReachDistance.Enabled = enabled;
+            lblSettingsMemoryWritingExtendedReachDistance.Enabled = enabled;
         }
 
         private void sldrExtendedReachDistance_onValueChanged(object sender, int newValue)
@@ -3056,7 +3047,7 @@ namespace eft_dma_radar
             var enabled = swThermalVision.Checked;
             _config.ThermalVision = enabled;
 
-            mcSettingsMemoryWritingThermal.Visible = enabled || _config.OpticThermalVision;
+            mcSettingsMemoryWritingThermal.Enabled = enabled || _config.OpticThermalVision;
         }
 
         private void swOpticalThermal_CheckedChanged(object sender, EventArgs e)
@@ -3064,7 +3055,7 @@ namespace eft_dma_radar
             var enabled = swOpticalThermal.Checked;
             _config.OpticThermalVision = enabled;
 
-            mcSettingsMemoryWritingThermal.Visible = enabled || _config.ThermalVision;
+            mcSettingsMemoryWritingThermal.Enabled = enabled || _config.ThermalVision;
         }
 
         private void swNightVision_CheckedChanged(object sender, EventArgs e)
@@ -3097,19 +3088,6 @@ namespace eft_dma_radar
         private void swInfiniteStamina_CheckedChanged(object sender, EventArgs e)
         {
             _config.InfiniteStamina = swInfiniteStamina.Checked;
-        }
-
-        private void sldrJumpStrength_onValueChanged(object sender, int newValue)
-        {
-            _config.JumpPowerStrength = newValue;
-
-            if (_config.MaxSkills["Strength"] && Memory.LocalPlayer is not null)
-            {
-                var jumpHeightSkill = Memory.PlayerManager.Skills["Strength"]["BuffJumpHeightInc"];
-                jumpHeightSkill.MaxValue = 0.2f + ((float)newValue / 100);
-
-                Memory.PlayerManager?.SetMaxSkill(jumpHeightSkill);
-            }
         }
 
         private void sldrThrowStrength_onValueChanged(object sender, int newValue)
@@ -3190,8 +3168,7 @@ namespace eft_dma_radar
             var enabled = swMaxStrength.Checked;
             _config.MaxSkills["Strength"] = enabled;
 
-            sldrThrowStrength.Visible = enabled;
-            sldrJumpStrength.Visible = enabled;
+            sldrThrowStrength.Enabled = enabled;
         }
 
         private void swMaxVitality_CheckedChanged(object sender, EventArgs e)
@@ -3258,7 +3235,7 @@ namespace eft_dma_radar
         {
             var enabled = swMaxMagDrills.Checked;
             _config.MaxSkills["Mag Drills"] = enabled;
-            sldrMagDrillsSpeed.Visible = enabled;
+            sldrMagDrillsSpeed.Enabled = enabled;
         }
 
         private void swMaxLightVests_CheckedChanged(object sender, EventArgs e)
@@ -3271,20 +3248,27 @@ namespace eft_dma_radar
             _config.MaxSkills["Heavy Vests"] = swMaxHeavyVests.Checked;
         }
 
+        private void ToggleChamsControls()
+        {
+            var isChecked = swChams.Checked;
+
+            swChamsPMCs.Enabled = isChecked;
+            swChamsPlayerScavs.Enabled = isChecked;
+            swChamsBosses.Enabled = isChecked;
+            swChamsRogues.Enabled = isChecked;
+            swChamsCultists.Enabled = isChecked;
+            swChamsScavs.Enabled = isChecked;
+            swChamsTeammates.Enabled = isChecked;
+            swChamsCorpses.Enabled = isChecked;
+            swChamsRevert.Enabled = isChecked;
+        }
+
         private void swChams_CheckedChanged(object sender, EventArgs e)
         {
             var isChecked = swChams.Checked;
             _config.Chams["Enabled"] = isChecked;
 
-            swChamsPMCs.Visible = isChecked;
-            swChamsPlayerScavs.Visible = isChecked;
-            swChamsBosses.Visible = isChecked;
-            swChamsRogues.Visible = isChecked;
-            swChamsCultists.Visible = isChecked;
-            swChamsScavs.Visible = isChecked;
-            swChamsTeammates.Visible = isChecked;
-            swChamsCorpses.Visible = isChecked;
-            swChamsRevert.Visible = isChecked;
+            this.ToggleChamsControls();
         }
 
         private void swChamsPlayers_CheckedChanged(object sender, EventArgs e)
@@ -3356,12 +3340,52 @@ namespace eft_dma_radar
                 MaterialCheckbox checkbox = new MaterialCheckbox();
                 checkbox.Text = container;
 
-                if (_config.ContainerSettings.ContainsKey(container))
-                    checkbox.Checked = _config.ContainerSettings[container];
+                if (_config.LootContainerSettings.ContainsKey(container))
+                    checkbox.Checked = _config.LootContainerSettings[container];
 
                 checkbox.CheckedChanged += ContainerCheckbox_CheckedChanged;
                 lstContainers.Items.Add(checkbox);
             }
+        }
+
+        private void UpdateLootControls()
+        {
+            var questHelper = swQuestHelper.Checked;
+            var processLoot = swProcessLoot.Checked;
+            var lootRefresh = swAutoLootRefresh.Checked;
+
+            swLooseLoot.Enabled = processLoot;
+            swCorpses.Enabled = processLoot;
+            swItemValue.Enabled = processLoot;
+            swAutoLootRefresh.Enabled = processLoot;
+            cboAutoRefreshMap.Enabled = (processLoot && lootRefresh);
+            sldrAutoLootRefreshDelay.Enabled = (processLoot && lootRefresh);
+
+            btnRefreshLoot.Enabled = processLoot;
+
+            cboAutoRefreshMap.Enabled = (processLoot && lootRefresh);
+
+            swQuestItems.Enabled = (processLoot && questHelper);
+            swQuestLootItems.Enabled = (processLoot && questHelper);
+            swUnknownQuestItems.Enabled = (processLoot && questHelper);
+
+            mcSettingsLootMinRubleValue.Enabled = processLoot;
+            mcSettingsLootPing.Enabled = processLoot;
+        }
+
+        private void UpdateQuestControls()
+        {
+            var questHelper = swQuestHelper.Checked;
+            var processLoot = swProcessLoot.Checked;
+
+            swQuestItems.Enabled = (processLoot && questHelper);
+            swQuestLootItems.Enabled = (processLoot && questHelper);
+            swQuestLocations.Enabled = questHelper;
+            swAutoTaskRefresh.Enabled = questHelper;
+            sldrAutoTaskRefreshDelay.Enabled = questHelper;
+            swUnknownQuestItems.Enabled = (processLoot && questHelper);
+
+            btnRefreshTasks.Enabled = questHelper;
         }
         #endregion
         #region Event Handlers
@@ -3371,24 +3395,13 @@ namespace eft_dma_radar
             var processLoot = swProcessLoot.Checked;
             _config.ProcessLoot = processLoot;
 
-            swLooseLoot.Enabled = processLoot;
-            swCorpses.Enabled = processLoot;
-            swFilteredOnly.Enabled = processLoot;
-            swItemValue.Enabled = processLoot;
-            swAutoRefresh.Enabled = processLoot;
-            cboAutoRefreshMap.Enabled = processLoot;
-            sldrAutoRefreshDelay.Enabled = processLoot;
-
-            btnRefreshLoot.Enabled = processLoot;
-
-            mcSettingsLootPing.Enabled = processLoot;
-            mcSettingsLootContainers.Enabled = processLoot;
-            mcSettingsLootMinRubleValue.Enabled = processLoot;
+            this.UpdateLootControls();
+            this.UpdateQuestControls();
 
             if (!processLoot)
                 return;
 
-            if (_config.AutoLootRefresh)
+            if (_config.LootItemRefresh)
                 Memory.Loot?.StartAutoRefresh();
             else
                 Memory.Loot?.RefreshLoot(true);
@@ -3398,13 +3411,15 @@ namespace eft_dma_radar
         {
             lstLootItems.Items.Clear();
 
-            if (this.InGame)
-                Memory.Loot?.RefreshLoot(true);
+            Memory.Loot?.RefreshLoot(true);
         }
 
         private void swLooseLoot_CheckedChanged(object sender, EventArgs e)
         {
-            _config.LooseLoot = swLooseLoot.Checked;
+            var looseLoot = swLooseLoot.Checked;
+
+            _config.LooseLoot = looseLoot;
+
             Memory.Loot?.ApplyFilter();
         }
 
@@ -3416,8 +3431,6 @@ namespace eft_dma_radar
         private void swSubItems_CheckedChanged(object sender, EventArgs e)
         {
             _config.SubItems = swSubItems.Checked;
-
-            Memory.Loot?.ApplyFilter();
         }
 
         private void swItemValue_CheckedChanged(object sender, EventArgs e)
@@ -3427,16 +3440,20 @@ namespace eft_dma_radar
 
         private void swCorpses_CheckedChanged(object sender, EventArgs e)
         {
-            _config.Corpses = swCorpses.Checked;
+            _config.LootCorpses = swCorpses.Checked;
         }
 
-        private void swAutoRefresh_CheckedChanged(object sender, EventArgs e)
+        private void swAutoLootRefresh_CheckedChanged(object sender, EventArgs e)
         {
-            var enabled = swAutoRefresh.Checked;
-            _config.AutoLootRefresh = enabled;
+            var enabled = swAutoLootRefresh.Checked;
+            var processLoot = swProcessLoot.Checked;
+            _config.LootItemRefresh = enabled;
 
-            cboAutoRefreshMap.Visible = enabled;
-            sldrAutoRefreshDelay.Visible = enabled;
+            cboAutoRefreshMap.Enabled = (processLoot && enabled);
+            sldrAutoLootRefreshDelay.Enabled = (processLoot && enabled);
+
+            if (!processLoot)
+                return;
 
             if (enabled)
                 Memory.Loot?.StartAutoRefresh();
@@ -3448,23 +3465,78 @@ namespace eft_dma_radar
         {
             var mapName = cboAutoRefreshMap.SelectedItem.ToString();
 
-            if (string.IsNullOrEmpty(mapName) || !_config.AutoRefreshSettings.ContainsKey(mapName))
+            if (string.IsNullOrEmpty(mapName) || !_config.LootItemRefreshSettings.ContainsKey(mapName))
                 return;
 
-            sldrAutoRefreshDelay.Value = _config.AutoRefreshSettings[mapName];
+            sldrAutoLootRefreshDelay.Value = _config.LootItemRefreshSettings[mapName];
         }
 
         private void sldrAutoRefreshDelay_onValueChanged(object sender, int newValue)
         {
             var mapName = cboAutoRefreshMap.SelectedItem.ToString();
 
-            if (string.IsNullOrEmpty(mapName) || !_config.AutoRefreshSettings.ContainsKey(mapName))
+            if (string.IsNullOrEmpty(mapName) || !_config.LootItemRefreshSettings.ContainsKey(mapName))
                 return;
 
-            if (newValue != _config.AutoRefreshSettings[mapName])
-            {
-                _config.AutoRefreshSettings[mapName] = newValue;
-            }
+            if (newValue != _config.LootItemRefreshSettings[mapName])
+                _config.LootItemRefreshSettings[mapName] = newValue;
+        }
+
+        // Quest Helper
+        private void swQuestHelper_CheckedChanged(object sender, EventArgs e)
+        {
+            var enabled = swQuestHelper.Checked;
+
+            _config.QuestHelper = enabled;
+
+            this.UpdateQuestControls();
+        }
+
+        private void swQuestItems_CheckedChanged(object sender, EventArgs e)
+        {
+            _config.QuestItems = swQuestItems.Checked;
+        }
+
+        private void swQuestLootItems_CheckedChanged(object sender, EventArgs e)
+        {
+            _config.QuestLootItems = swQuestLootItems.Checked;
+            Memory.Loot?.ApplyFilter();
+        }
+
+        private void swQuestLocations_CheckedChanged(object sender, EventArgs e)
+        {
+            _config.QuestLocations = swQuestLocations.Checked;
+        }
+
+        private void swAutoTaskRefresh_CheckedChanged(object sender, EventArgs e)
+        {
+            var enabled = swAutoTaskRefresh.Checked;
+
+            _config.QuestTaskRefresh = enabled;
+            sldrAutoTaskRefreshDelay.Enabled = enabled;
+
+            if (enabled)
+                Memory.QuestManager?.StartAutoRefresh();
+            else
+                Memory.QuestManager?.StopAutoRefresh();
+        }
+
+        private void sldrAutoTaskRefreshDelay_onValueChanged(object sender, int newValue)
+        {
+            if (newValue < 1)
+                newValue = 1;
+
+            _config.QuestTaskRefreshDelay = newValue;
+        }
+
+        private void swUnknownQuestItems_CheckedChanged(object sender, EventArgs e)
+        {
+            _config.UnknownQuestItems = swUnknownQuestItems.Checked;
+        }
+
+        private void btnRefreshTasks_Click(object sender, EventArgs e)
+        {
+            Memory.QuestManager?.RefreshQuests(true);
         }
 
         // Minimum Ruble Value
@@ -3537,7 +3609,7 @@ namespace eft_dma_radar
         {
             var checkbox = (MaterialCheckbox)sender;
 
-            _config.ContainerSettings[checkbox.Text] = checkbox.Checked;
+            _config.LootContainerSettings[checkbox.Text] = checkbox.Checked;
 
             Memory.Loot?.ApplyFilter();
         }
@@ -3546,7 +3618,7 @@ namespace eft_dma_radar
         {
             var enabled = swContainers.Checked;
 
-            _config.ContainerSettings["Enabled"] = enabled;
+            _config.LootContainerSettings["Enabled"] = enabled;
             lstContainers.Enabled = enabled;
 
             Memory.Loot?.ApplyFilter();
@@ -3940,6 +4012,7 @@ namespace eft_dma_radar
             setColor(picLootImportant, "ImportantLoot");
             setColor(picQuestItem, "QuestItem");
             setColor(picQuestZone, "QuestZone");
+            setColor(picRequiredQuestItem, "RequiredQuestItem");
             setColor(picLootPing, "LootPing");
 
             // Other
@@ -4115,6 +4188,11 @@ namespace eft_dma_radar
         private void picQuestZone_Click(object sender, EventArgs e)
         {
             UpdatePaintColorByName("QuestZone", picQuestZone);
+        }
+
+        private void picRequiredQuestItem_Click(object sender, EventArgs e)
+        {
+            UpdatePaintColorByName("RequiredQuestItem", picRequiredQuestItem);
         }
 
         private void picLootPing_Click(object sender, EventArgs e)
@@ -4619,7 +4697,7 @@ namespace eft_dma_radar
 
                 selectedFilter.Name = txtLootFilterName.Text;
                 selectedFilter.IsActive = swLootFilterActive.Checked;
-                selectedFilter.Color = new LootFilterManager.Filter.Colors
+                selectedFilter.Color = new PaintColor.Colors
                 {
                     R = picLootFilterColor.BackColor.R,
                     G = picLootFilterColor.BackColor.G,

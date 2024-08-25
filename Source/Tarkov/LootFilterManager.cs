@@ -99,7 +99,7 @@ namespace eft_dma_radar
                 IsActive = true,
                 Name = "New Filter",
                 Items = new List<string>(),
-                Color = new Filter.Colors { R = 255, G = 255, B = 255, A = 255 }
+                Color = new PaintColor.Colors { R = 255, G = 255, B = 255, A = 255 }
             });
 
             LootFilterManager.SaveLootFilterManager(this);
@@ -133,18 +133,10 @@ namespace eft_dma_radar
         public class Filter
         {
             public List<string>? Items { get; set; }
-            public Colors Color { get; set; }
+            public PaintColor.Colors Color { get; set; }
             public bool IsActive { get; set; }
             public int Order { get; set; }
             public string Name { get; set; }
-
-            public struct Colors
-            {
-                public byte A { get; set; }
-                public byte R { get; set; }
-                public byte G { get; set; }
-                public byte B { get; set; }
-            }
         }
     }
 }

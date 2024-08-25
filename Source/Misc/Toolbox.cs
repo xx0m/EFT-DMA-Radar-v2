@@ -166,12 +166,12 @@ namespace eft_dma_radar
                     try
                     {
                         this.TOD_Sky_static = MonoSharp.GetStaticFieldDataOfClass("Assembly-CSharp", "TOD_Sky");
-                        this.TOD_Sky_cached_ptr = Memory.ReadValue<ulong>(this.TOD_Sky_static + 0x10);
-                        this.TOD_Sky_inst_ptr = Memory.ReadValue<ulong>(this.TOD_Sky_cached_ptr + 0x20);
-                        this.TOD_Components = Memory.ReadValue<ulong>(this.TOD_Sky_inst_ptr + 0x80);
-                        this.TOD_Time = Memory.ReadValue<ulong>(this.TOD_Components + 0x140);
-                        this.GameDateTime = Memory.ReadValue<ulong>(this.TOD_Time + 0x18);
-                        this.Cycle = Memory.ReadValue<ulong>(this.TOD_Sky_inst_ptr + 0x18);
+                        this.TOD_Sky_cached_ptr = Memory.ReadValue<ulong>(this.TOD_Sky_static + Offsets.TOD_SKY.CachedPtr);
+                        this.TOD_Sky_inst_ptr = Memory.ReadValue<ulong>(this.TOD_Sky_cached_ptr + Offsets.TOD_SKY.Instance);
+                        this.TOD_Components = Memory.ReadValue<ulong>(this.TOD_Sky_inst_ptr + Offsets.TOD_SKY.TOD_Components);
+                        this.TOD_Time = Memory.ReadValue<ulong>(this.TOD_Components + Offsets.TOD_Components.Time);
+                        this.GameDateTime = Memory.ReadValue<ulong>(this.TOD_Time + Offsets.TOD_Time.GameDateTime);
+                        this.Cycle = Memory.ReadValue<ulong>(this.TOD_Sky_inst_ptr + Offsets.TOD_SKY.Cycle);
 
                         this.FoundTOD_Sky = true;
                     }
@@ -247,7 +247,7 @@ namespace eft_dma_radar
                     // Thirdperson
                     if (this._config.Thirdperson != this.thirdperson)
                     {
-                        this.thirdperson = _config.Thirdperson;
+                        this.thirdperson = this._config.Thirdperson;
                         this._playerManager.SetThirdPerson(this.thirdperson, ref entries);
                     }
 
@@ -355,16 +355,10 @@ namespace eft_dma_radar
                     }
                     #endregion
 
-                    // Infinite Stamina
-                    if (this._config.InfiniteStamina)
+                    if (this._config.InfiniteStamina != this.infiniteStamina)
                     {
-                        this._playerManager.SetMovementState(true, ref entries);
-                        this._playerManager.SetMaxStamina(ref entries);
-
-                    }
-                    else if (!this._config.InfiniteStamina)
-                    {
-                        this._playerManager.SetMovementState(false, ref entries);
+                        this.infiniteStamina = this._config.InfiniteStamina;
+                        this._playerManager.SetInfiniteStamina(this._config.InfiniteStamina, ref entries);
                     }
                 }
 

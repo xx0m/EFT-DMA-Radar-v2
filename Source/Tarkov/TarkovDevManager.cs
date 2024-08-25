@@ -36,13 +36,9 @@ namespace eft_dma_radar
             TarkovDevResponse jsonResponse;
 
             if (ShouldFetchDataFromApi())
-            {
                 jsonResponse = FetchDataFromApi();
-            }
             else
-            {
                 jsonResponse = LoadDataFromFile();
-            }
 
             if (jsonResponse is not null)
             {
@@ -107,7 +103,7 @@ namespace eft_dma_radar
                                                 normalizedName
                                             }
                                             ... on TaskObjectiveItem {
-                                                item {
+                                                items {
                                                 id
                                                 name
                                                 shortName
@@ -337,6 +333,10 @@ namespace eft_dma_radar
                                 z = z.position.y
                             }
                         }).ToList(),
+                        Items = objective.items?.Select(i => new ObjectiveItem
+                        {
+                            Id = i.id
+                        }).ToList(),
 
                         Count = objective.count,
                         FoundInRaid = objective.foundInRaid
@@ -500,11 +500,17 @@ namespace eft_dma_radar
             public List<ObjectiveZones>? zones { get; set; } 
             public int? count { get; set; }
             public bool? foundInRaid { get; set; }
-            public ObjectiveItems questItem { get; set; }
+            public List<ObjectiveRequiredItem>? items { get; set; }
+            public ObjectiveQuestItem questItem { get; set; }
         }
     }
 
-    public class ObjectiveItems
+    public class ObjectiveRequiredItem
+    {
+        public string id { get; set; }
+    }
+
+    public class ObjectiveQuestItem
     {
         public string id { get; set; }
         public string name { get; set; }
@@ -568,7 +574,6 @@ namespace eft_dma_radar
         public string Name { get; set; }
         public string ID { get; set; }
         public string ShortName { get; set; }
-
     }
 
     public class ObjectiveItem
@@ -623,13 +628,12 @@ namespace eft_dma_radar
             public string Description { get; set; }
             public string Type { get; set; }
             public string ID { get; set; }
+            public List<ObjectiveItem> Items { get; set; }
             public List<ObjectiveMaps> Maps { get; set; } = new List<ObjectiveMaps>();
-            public List<ObjectiveZones> Zones { get; set; } = new List<ObjectiveZones>(); // Renamed from ObjectiveZones for clarity
-            // Add more properties here as needed, for example:
+            public List<ObjectiveZones> Zones { get; set; } = new List<ObjectiveZones>();
             public ObjectiveItem QuestItem { get; set; }
-            public int? Count { get; set; } // For objectives requiring collecting or using a certain number of items
-            public bool? FoundInRaid { get; set; } // For objectives requiring items to be found in raid
-            // You can add more specific fields as needed for various objective types.
+            public int? Count { get; set; }
+            public bool? FoundInRaid { get; set; }
         }
     }
 

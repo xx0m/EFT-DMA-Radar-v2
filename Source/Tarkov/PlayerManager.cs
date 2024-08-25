@@ -73,7 +73,7 @@ namespace eft_dma_radar
                     {
                         { "BuffLiftWeightInc", new Skill(Offsets.SkillManager.StrengthBuffLiftWeightInc, 0.3f) },
                         { "BuffSprintSpeedInc", new Skill(Offsets.SkillManager.StrengthBuffSprintSpeedInc, 0.2f) },
-                        { "BuffJumpHeightInc", new Skill(Offsets.SkillManager.StrengthBuffJumpHeightInc, 0.2f + (_config.JumpPowerStrength / 100)) },
+                        { "BuffJumpHeightInc", new Skill(Offsets.SkillManager.StrengthBuffJumpHeightInc, 0.2f) },
                         { "BuffAimFatigue", new Skill(Offsets.SkillManager.StrengthBuffAimFatigue, 0.2f) },
                         { "BuffThrowDistanceInc", new Skill(Offsets.SkillManager.StrengthBuffThrowDistanceInc, _config.ThrowPowerStrength / 100) },
                         { "BuffMeleePowerInc", new Skill(Offsets.SkillManager.StrengthBuffMeleePowerInc, 0.3f) },
@@ -499,41 +499,15 @@ namespace eft_dma_radar
                 this.OriginalValues["weaponLn"] = this._weaponLn;
         }
 
-        public void SetMovementState(bool on, ref List<IScatterWriteEntry> entries)
+        public void SetInfiniteStamina(bool on, ref List<IScatterWriteEntry> entries)
         {
             try
             {
-                if (on && this._animationState == 5)
-                {
-                    entries.Add(new ScatterWriteDataEntry<byte>(this._baseMovementState + Offsets.BaseMovementState.Name, 6));
-                }
-                else if (!on && this._animationState == 6)
-                {
-                    entries.Add(new ScatterWriteDataEntry<byte>(this._baseMovementState + Offsets.BaseMovementState.Name, 5));
-                }
+                entries.Add(new ScatterWriteDataEntry<bool>(this._stamina + Offsets.Stamina.ForceMode, on));
             }
             catch (Exception ex)
             {
-                Program.Log($"[PlayerManager] - SetMovementState ({ex.Message})\n{ex.StackTrace}");
-            }
-        }
-
-        public void SetMaxStamina(ref List<IScatterWriteEntry> entries)
-        {
-            try
-            {
-                if (this.OriginalValues["StaminaCapacity"] == -1)
-                {
-                    this.OriginalValues["StaminaCapacity"] = Memory.ReadValue<float>(this._physical + 0xC0);
-                    this.OriginalValues["HandStaminaCapacity"] = Memory.ReadValue<float>(this._physical + 0xC8);
-                }
-
-                entries.Add(new ScatterWriteDataEntry<float>(this._stamina + 0x48, this.OriginalValues["StaminaCapacity"]));
-                entries.Add(new ScatterWriteDataEntry<float>(this._handsStamina + 0x48, this.OriginalValues["HandStaminaCapacity"]));
-            }
-            catch (Exception ex)
-            {
-                Program.Log($"[PlayerManager] - SetMaxStamina ({ex.Message})\n{ex.StackTrace}");
+                Program.Log($"[PlayerManager] - SetInfiniteStamina ({ex.Message})\n{ex.StackTrace}");
             }
         }
 

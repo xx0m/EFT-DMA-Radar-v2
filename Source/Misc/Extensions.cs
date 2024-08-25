@@ -53,7 +53,7 @@ namespace eft_dma_radar
         public static Dictionary<string, SKPaint> PlayerTypeTextPaints = new Dictionary<string, SKPaint>();
         public static Dictionary<string, SKPaint> PlayerTypeFlagTextPaints = new Dictionary<string, SKPaint>();
         public static Dictionary<string, SKColor> SKColors = new Dictionary<string, SKColor>();
-
+        private static PaintColor.Colors DefaultPaintColor = new PaintColor.Colors { R = 0, G = 0, B = 0, A = 0 };
 
         /// <summary>
         /// Convert game position to 'Bitmap' Map Position coordinates.
@@ -144,22 +144,20 @@ namespace eft_dma_radar
         /// </summary>
         public static SKPaint GetEntityPaint(LootableObject item)
         {
-            bool isFiltered = !item.Color.Equals(new LootFilterManager.Filter.Colors { R = 0, G = 0, B = 0, A = 0 });
+            bool isFiltered = !item.Color.Equals(DefaultPaintColor);
             SKPaint paintToUse = SKPaints.LootPaint.Clone();
 
-            if (isFiltered)
+            if (item.RequiredByQuest)
+                paintToUse.Color = Extensions.SKColorFromPaintColor("RequiredQuestItem");
+            else if (isFiltered)
             {
                 var col = item.Color;
                 paintToUse.Color = new SKColor(col.R, col.G, col.B, col.A);
             }
             else if (item.Important)
-            {
                 paintToUse.Color = Extensions.SKColorFromPaintColor("ImportantLoot");
-            }
             else
-            {
                 paintToUse.Color = Extensions.SKColorFromPaintColor("RegularLoot");
-            }
 
             return paintToUse;
         }
@@ -169,7 +167,7 @@ namespace eft_dma_radar
         /// </summary>
         public static SKPaint GetDeathMarkerPaint(LootCorpse corpse)
         {
-            bool isFiltered = !corpse.Color.Equals(new LootFilterManager.Filter.Colors { R = 0, G = 0, B = 0, A = 0 });
+            bool isFiltered = !corpse.Color.Equals(DefaultPaintColor);
             SKPaint paintToUse = SKPaints.DeathMarker.Clone();
 
             if (isFiltered)
@@ -178,13 +176,9 @@ namespace eft_dma_radar
                 paintToUse.Color = new SKColor(col.R, col.G, col.B, col.A);
             }
             else if (corpse.Important)
-            {
                 paintToUse.Color = Extensions.SKColorFromPaintColor("ImportantLoot");
-            }
             else
-            {
                 paintToUse.Color = Extensions.SKColorFromPaintColor("DeathMarker");
-            }
 
             return paintToUse;
         }
@@ -270,29 +264,27 @@ namespace eft_dma_radar
         /// </summary>
         public static SKPaint GetTextPaint(LootableObject item)
         {
-            bool isFiltered = !item.Color.Equals(new LootFilterManager.Filter.Colors { R = 0, G = 0, B = 0, A = 0 });
+            bool isFiltered = !item.Color.Equals(DefaultPaintColor);
             SKPaint paintToUse = SKPaints.LootText.Clone();
 
-            if (isFiltered)
+            if (item.RequiredByQuest)
+                paintToUse.Color = Extensions.SKColorFromPaintColor("RequiredQuestItem");
+            else if (isFiltered)
             {
                 var col = item.Color;
                 paintToUse.Color = new SKColor(col.R, col.G, col.B, col.A);
             }
             else if (item.Important)
-            {
                 paintToUse.Color = Extensions.SKColorFromPaintColor("ImportantLoot");
-            }
             else
-            {
                 paintToUse.Color = Extensions.SKColorFromPaintColor("RegularLoot");
-            }
 
             return paintToUse;
         }
 
         public static SKPaint GetTextPaint(GearItem item)
         {
-            bool isFiltered = !item.Color.Equals(new LootFilterManager.Filter.Colors { R = 0, G = 0, B = 0, A = 0 });
+            bool isFiltered = !item.Color.Equals(DefaultPaintColor);
             SKPaint paintToUse = SKPaints.LootText.Clone();
 
             if (isFiltered)
@@ -301,13 +293,9 @@ namespace eft_dma_radar
                 paintToUse.Color = new SKColor(col.R, col.G, col.B, col.A);
             }
             else if (item.Important)
-            {
                 paintToUse.Color = Extensions.SKColorFromPaintColor("ImportantLoot");
-            }
             else
-            {
                 paintToUse.Color = Extensions.SKColorFromPaintColor("RegularLoot");
-            }
 
             return paintToUse;
         }
