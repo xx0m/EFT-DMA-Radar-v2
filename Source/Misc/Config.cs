@@ -12,20 +12,8 @@ namespace eft_dma_radar
         [JsonPropertyName("aimviewFOV")]
         public float AimViewFOV { get; set; }
 
-        [JsonPropertyName("lootItemRefresh")]
-        public bool LootItemRefresh { get; set; }
-
-        [JsonPropertyName("lootItemRefreshSettings")]
-        public Dictionary<string, int> LootItemRefreshSettings { get; set; }
-
         [JsonPropertyName("chams")]
         public Dictionary<string, bool> Chams { get; set; }
-
-        [JsonPropertyName("lootCntainerSettings")]
-        public Dictionary<string, bool> LootContainerSettings { get; set; }
-
-        [JsonPropertyName("lootCorpses")]
-        public bool LootCorpses { get; set; }
 
         [JsonPropertyName("defaultZoom")]
         public int DefaultZoom { get; set; }
@@ -71,6 +59,18 @@ namespace eft_dma_radar
 
         [JsonPropertyName("looseLoot")]
         public bool LooseLoot { get; set; }
+
+        [JsonPropertyName("lootContainerSettings")]
+        public Dictionary<string, bool> LootContainerSettings { get; set; }
+
+        [JsonPropertyName("lootCorpses")]
+        public bool LootCorpses { get; set; }
+
+        [JsonPropertyName("lootItemRefresh")]
+        public bool LootItemRefresh { get; set; }
+
+        [JsonPropertyName("lootItemRefreshSettings")]
+        public Dictionary<string, int> LootItemRefreshSettings { get; set; }
 
         [JsonPropertyName("lootItemViewer")]
         public bool LootItemViewer { get; set; }
@@ -409,13 +409,9 @@ namespace eft_dma_radar
 
         public Config()
         {
-            Aimview = false;
             AimViewFOV = 30;
-            LootItemRefresh = false;
-            LootItemRefreshSettings = DefaultAutoRefreshSettings;
+            Aimview = false;
             Chams = DefaultChamsSettings;
-            LootContainerSettings = DefaultContainerSettings;
-            LootCorpses = false;
             DefaultZoom = 100;
             EnemyCount = false;
             ExfilNames = false;
@@ -431,6 +427,10 @@ namespace eft_dma_radar
             InstantADS = false;
             Logging = false;
             LooseLoot = true;
+            LootContainerSettings = DefaultContainerSettings;
+            LootCorpses = false;
+            LootItemRefresh = false;
+            LootItemRefreshSettings = DefaultAutoRefreshSettings;
             LootItemViewer = false;
             LootPing = DefaultLootPingSettings;
             LootThroughWalls = false;
