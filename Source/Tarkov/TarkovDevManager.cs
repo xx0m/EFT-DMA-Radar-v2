@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Net;
 using System.Numerics;
 using System.Text;
 using System.Text.Json;
@@ -16,6 +17,9 @@ namespace eft_dma_radar
         private static readonly Dictionary<string, Tasks> _allTasks = new(StringComparer.OrdinalIgnoreCase);
         private static readonly Dictionary<string, Containers> _allLootContainers = new(StringComparer.OrdinalIgnoreCase);
         private static readonly Dictionary<string, Maps> _allMaps = new(StringComparer.OrdinalIgnoreCase);
+
+        private static readonly string FileName = "api_tarkov_dev_items.json";
+        private static bool DataFileExists => File.Exists(FileName);
 
         public static ReadOnlyDictionary<string, LootItem> AllItems => new(_allItems);
         public static ReadOnlyDictionary<string, QuestItems> AllQuestItems => new(_allQuestItems);
@@ -52,14 +56,15 @@ namespace eft_dma_radar
 
         private static bool ShouldFetchDataFromApi()
         {
-            return !File.Exists("api_tarkov_dev_items.json") || File.GetLastWriteTime("api_tarkov_dev_items.json").AddHours(6) < DateTime.Now;
+            return !TarkovDevManager.DataFileExists || File.GetLastWriteTime(FileName).AddHours(6) < DateTime.Now;
         }
 
         private static TarkovDevResponse FetchDataFromApi()
         {
             using (var client = new HttpClient())
             {
-                //Create body and content-type
+                client.Timeout = TimeSpan.FromSeconds(20);
+
                 var body = new
                 {
                     query = @"query {
@@ -261,16 +266,37 @@ namespace eft_dma_radar
                 };
                 var jsonBody = JsonSerializer.Serialize(body);
                 var content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
-                var response = client.PostAsync("https://api.tarkov.dev/graphql", content).Result;
-                var responseString = response.Content.ReadAsStringAsync().Result;
-                File.WriteAllText("api_tarkov_dev_items.json", responseString);
-                return JsonSerializer.Deserialize<TarkovDevResponse>(responseString);
+
+                try
+                {
+                    var response = client.PostAsync("https://api.tarkov.dev/graphql", content).Result;
+
+                    if (response.StatusCode == HttpStatusCode.RequestTimeout)
+                    {
+                        Program.Log("Tarkov.Dev API request failed - attempting fall back to file");
+
+                        if (!TarkovDevManager.DataFileExists)
+                            throw new FileNotFoundException($"Tarkov.Dev API request failed & the data file '{FileName}' doesn't exist!");
+
+                        return TarkovDevManager.LoadDataFromFile();
+                    }
+
+                    response.EnsureSuccessStatusCode();
+
+                    var responseString = response.Content.ReadAsStringAsync().Result;
+                    File.WriteAllText(FileName, responseString);
+                    return JsonSerializer.Deserialize<TarkovDevResponse>(responseString);
+                }
+                catch (HttpRequestException ex)
+                {
+                    throw new FileNotFoundException($"Tarkov.Dev API request failed & the data file '{FileName}' doesn't exist!");
+                }
             }
         }
 
         private static TarkovDevResponse LoadDataFromFile()
         {
-            var responseString = File.ReadAllText("api_tarkov_dev_items.json");
+            var responseString = File.ReadAllText(FileName);
             return JsonSerializer.Deserialize<TarkovDevResponse>(responseString);
         }
 

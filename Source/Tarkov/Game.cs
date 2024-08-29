@@ -45,7 +45,6 @@ namespace eft_dma_radar
             get => _inGame;
         }
 
-        // in InHideout means local game world not false and registered players is 1
         public bool InHideout
         {
             get => _inHideout;

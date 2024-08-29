@@ -367,6 +367,7 @@ namespace eft_dma_radar
                     {
                         if (player.Position == DEFAULT_POSITION)
                         {
+
                             player.IsActive = false;
                             Program.Log($"{player.Name} exfiltrated");
                             
@@ -375,16 +376,24 @@ namespace eft_dma_radar
                         }
                         else
                         {
+                            if (Program.Config.MasterSwitch && Program.Config.Chams["Enabled"])
+                            {
+                                if (player.IsLocalPlayer)
+                                {
+                                    Memory.Chams.RestorePointers();
+                                    Program.Log("LocalPlayer has died!");
+                                }
+                                else
+                                {
+                                    if (Program.Config.Chams["Corpses"])
+                                        Memory.Chams.SetPlayerBodyChams(player, Memory.Chams.ThermalMaterial);
+                                    else
+                                        Memory.Chams.RestorePointersForPlayer(player);
+                                }
+                            }
+
                             player.IsAlive = false;
                             Program.Log($"{player.Name} died");
-
-                            if (Program.Config.MasterSwitch && Program.Config.Chams["Enabled"] && player.Type != PlayerType.LocalPlayer)
-                            {
-                                if (Program.Config.Chams["Corpses"])
-                                    Memory.Chams.SetPlayerBodyChams(player, Memory.Chams.ThermalMaterial);
-                                else
-                                    Memory.Chams.RestorePointersForPlayer(player);
-                            }
                         }
 
                         player.LastUpdate = false;
@@ -438,10 +447,16 @@ namespace eft_dma_radar
                         if (checkWeaponInfo)
                             if (scatterMap.Results[i][11].TryGetResult<ulong>(out var bsgID) && bsgID != 0)
                             {
-                                var itemID = Memory.ReadUnityString(bsgID);
+                                try
+                                {
+                                    var itemID = Memory.ReadUnityString(bsgID);
 
-                                if (itemID != player.WeaponInfo.ID)
-                                    player.SetWeaponInfo(itemID);
+                                    if (itemID != player.WeaponInfo.ID)
+                                        player.SetWeaponInfo(itemID);
+
+                                    player.CheckForRequiredGear();
+                                }
+                                catch { }
                             }
 
                         if (p2 && p3)

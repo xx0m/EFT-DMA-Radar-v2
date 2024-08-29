@@ -1,14 +1,15 @@
-﻿using System.Collections.Concurrent;
+﻿using Microsoft.VisualBasic;
+using System.Collections.Concurrent;
 using System.Numerics;
 
 namespace eft_dma_radar
 {
     public class GearManager
     {
-        private static readonly ConcurrentBag<string> SLOTS_TO_SKIP = new ConcurrentBag<string> { "SecuredContainer", "Dogtag", "Compass", "Eyewear", "ArmBand"};
-        private static readonly ConcurrentBag<string> SLOTS_TO_SKIP_PVE = new ConcurrentBag<string> { "SecuredContainer", "Compass", "Eyewear", "ArmBand" };
-        private static readonly ConcurrentBag<string> THERMAL_IDS = new ConcurrentBag<string> { "6478641c19d732620e045e17", "609bab8b455afd752b2e6138", "5c110624d174af029e69734c", "63fc44e2429a8a166c7f61e6", "5d1b5e94d7ad1a2b865a96b0", "606f2696f2cb2e02a42aceb1", "5a1eaa87fcdbcb001865f75e" };
-        private static readonly ConcurrentBag<string> NVG_IDS = new ConcurrentBag<string> { "5b3b6e495acfc4330140bd88", "5a7c74b3e899ef0014332c29", "5c066e3a0db834001b7353f0", "5c0696830db834001d23f5da", "5c0558060db834001b735271", "57235b6f24597759bf5a30f1" };
+        private static readonly HashSet<string> SLOTS_TO_SKIP = new HashSet<string> { "SecuredContainer", "Dogtag", "Compass", "Eyewear", "ArmBand"};
+        private static readonly HashSet<string> SLOTS_TO_SKIP_PVE = new HashSet<string> { "SecuredContainer", "Compass", "Eyewear", "ArmBand" };
+        private static readonly HashSet<string> THERMAL_IDS = new HashSet<string> { "6478641c19d732620e045e17", "609bab8b455afd752b2e6138", "5c110624d174af029e69734c", "63fc44e2429a8a166c7f61e6", "5d1b5e94d7ad1a2b865a96b0", "606f2696f2cb2e02a42aceb1", "5a1eaa87fcdbcb001865f75e" };
+        private static readonly HashSet<string> NVG_IDS = new HashSet<string> { "5b3b6e495acfc4330140bd88", "5a7c74b3e899ef0014332c29", "5c066e3a0db834001b7353f0", "5c0696830db834001d23f5da", "5c0558060db834001b735271", "57235b6f24597759bf5a30f1" };
 
         public static readonly Dictionary<string, string> GEAR_SLOT_NAMES = new(StringComparer.OrdinalIgnoreCase)
         {
@@ -26,13 +27,13 @@ namespace eft_dma_radar
 
         public static string GetGearSlotName(string key) => GEAR_SLOT_NAMES.TryGetValue(key, out var value) ? value : "n/a";
 
-        public ConcurrentDictionary<string, GearItem> Gear { get; set; }
+        public Dictionary<string, GearItem> Gear { get; set; }
 
         public int Value { get; set; }
         public bool HasNVG { get; set; }
         public bool HasThermal { get; set; }
 
-        private ConcurrentBag<string> _slotsToSkip;
+        private HashSet<string> _slotsToSkip;
 
         private ulong _slots { get; set; }
 
@@ -53,7 +54,7 @@ namespace eft_dma_radar
             var gearItemMods = new List<LootItem>();
             var totalValue = 0;
             var slotDict = this.GetSlotDictionary(this._slots);
-            var gearDict = new ConcurrentDictionary<string, GearItem>(StringComparer.OrdinalIgnoreCase);
+            var gearDict = new Dictionary<string, GearItem>(StringComparer.OrdinalIgnoreCase);
 
             var scatterReadMap = new ScatterReadMap(slotDict.Count);
             var round1 = scatterReadMap.AddRound();
@@ -226,9 +227,9 @@ namespace eft_dma_radar
             this.GetItemsInSlots(itemSlots, loot, ref result, recurseDepth + 1);
         }
 
-        private ConcurrentDictionary<string, ulong> GetSlotDictionary(ulong slotItemBase)
+        private Dictionary<string, ulong> GetSlotDictionary(ulong slotItemBase)
         {
-            var slotDict = new ConcurrentDictionary<string, ulong>(StringComparer.OrdinalIgnoreCase);
+            var slotDict = new Dictionary<string, ulong>(StringComparer.OrdinalIgnoreCase);
 
             try
             {

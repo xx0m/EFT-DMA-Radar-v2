@@ -9,6 +9,7 @@ using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.CompilerServices;
 using System.Data;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace eft_dma_radar
 {
@@ -108,7 +109,7 @@ namespace eft_dma_radar
         /// <summary>
         /// Key = Slot Name, Value = Item 'Long Name' in Slot
         /// </summary>
-        public ConcurrentDictionary<string, GearItem> Gear
+        public Dictionary<string, GearItem> Gear
         {
             get => this._gearManager is not null ? this._gearManager.Gear : null;
             set
@@ -128,6 +129,7 @@ namespace eft_dma_radar
         public bool isOfflinePlayer { get; set; } = false;
         public int PlayerSide { get; set; }
         public int PlayerRole { get; set; }
+        public bool HasRequiredGear { get; set; } = false;
 
         public List<ulong> BonePointers { get; } = new List<ulong>();
         public List<Vector3> BonePositions { get; } = new List<Vector3>();
@@ -474,6 +476,31 @@ namespace eft_dma_radar
                 };
             }
         }
+
+        public void CheckForRequiredGear()
+        {
+            var found = false;
+
+            foreach (var gearItem in _gearManager.Gear.Values)
+            {
+                if (QuestManager.RequiredItems.Contains(gearItem.ID))
+                {
+                    found = true;
+                    break;
+                }
+
+                foreach (var lootItem in gearItem.Loot)
+                {
+                    if (QuestManager.RequiredItems.Contains(lootItem.ID))
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+            }
+
+            this.HasRequiredGear = found;
+        }
         #endregion
 
         #region Methods
@@ -777,7 +804,7 @@ namespace eft_dma_radar
 
         public void RefreshGear()
         {
-            this._gearManager.RefreshGear();
+            //this._gearManager.RefreshGear();
         }
 
         /// <summary>

@@ -84,7 +84,7 @@ namespace eft_dma_radar
 
         private HashSet<string> RequiredItems
         {
-            get => Memory.QuestManager?.RequiredItems ?? null;
+            get => QuestManager.RequiredItems ?? null;
         }
 
         private string CurrentMapName;

@@ -79,14 +79,14 @@
     {
         public static readonly uint[] To_TransformInternal = new uint[] { PlayerBody, 0x28, 0x28, 0x10, 0x20 + (0 * 0x8), 0x10 }; // to TransformInternal
         public const uint MovementContext = 0x50; // to MovementContext
-        public const uint Corpse = 0x3F8; // EFT.Interactive.Corpse
-        public const uint Profile = 0x620; // [620] <Profile>k__BackingField : EFT.Profile
-        public const uint InventoryController = 0x678; // [678] _inventoryController : -.Player.PlayerInventoryController
+        public const uint Corpse = 0x408; // EFT.Interactive.Corpse
+        public const uint Profile = 0x630; // [630] <Profile>k__BackingField : EFT.Profile
+        public const uint InventoryController = 0x688; // [688] _inventoryController : -.Player.PlayerInventoryController
         public const uint PlayerBody = 0xB8; // [B8] _playerBody : EFT.PlayerBody
-        public const uint Location = 0x5E8; // [5E8] <Location>k__BackingField : String
-        public const uint Physical = 0x630; // [630] Physical : -.GClass
+        public const uint Location = 0x5F8; // [5F8] <Location>k__BackingField : String
+        public const uint Physical = 0x640; // [640] Physical : -.GClass
         public const uint ProceduralWeaponAnimation = 0x1D8; // [1D8] <ProceduralWeaponAnimation>k__BackingField : EFT.Animations.ProceduralWeaponAnimation
-        public const uint HandsController = 0x680; // [680] _handsController : -.Player.AbstractHandsController
+        public const uint HandsController = 0x690; // [690] _handsController : -.Player.AbstractHandsController
     }
 
     public struct Profile // EFT.Profile

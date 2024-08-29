@@ -1,23 +1,11 @@
 ﻿using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Numerics;
-using System.Text;
 using SkiaSharp;
 using SkiaSharp.Views.Desktop;
 using MaterialSkin;
 using MaterialSkin.Controls;
 using eft_dma_radar.Properties;
-using System.Windows.Forms;
-using System.Collections.Generic;
-using System.Runtime.InteropServices;
-using System.Text.RegularExpressions;
-using static Vmmsharp.LeechCore;
-using System.ComponentModel;
-using System.Linq;
-using System.Net;
-using System.Net.NetworkInformation;
-using System;
-using Offsets;
 
 namespace eft_dma_radar
 {
@@ -1276,6 +1264,10 @@ namespace eft_dma_radar
                         if (player.HasNVG)
                             rightLines.Add("NVG");
 
+                    if (true)
+                        if (player.HasRequiredGear)
+                            rightLines.Add("GEAR");
+
                     if (playerSettings.Value)
                         rightLines.Add($"${TarkovDevManager.FormatNumber(player.Value)}");
 
@@ -1283,7 +1275,7 @@ namespace eft_dma_radar
                         rightLines.Add(player.GroupID.ToString());
 
                     if (playerSettings.Tag && !string.IsNullOrEmpty(player.Tag))
-                        rightLines.Add("Example Tag");
+                        rightLines.Add(player.Tag);
                 }
 
                 if (aimlineSettings.Length == 15)

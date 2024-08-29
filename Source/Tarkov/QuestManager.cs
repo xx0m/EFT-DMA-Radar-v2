@@ -42,11 +42,7 @@ namespace eft_dma_radar
             private set;
         }
 
-        public HashSet<string> RequiredItems
-        {
-            get;
-            private set;
-        }
+        public static HashSet<string> RequiredItems { get; set; } = new HashSet<string>();
 
         public QuestManager(ulong localGameWorld)
         {
@@ -57,10 +53,16 @@ namespace eft_dma_radar
             this.QuestItems = new ConcurrentBag<QuestItem>();
             this.QuestZones = new ConcurrentBag<QuestZone>();
             this.CompletedSubTasks = new HashSet<string>();
-            this.RequiredItems = new HashSet<string>();
-
+            
             if (Memory.IsScav)
+            {
+                if (RequiredItems.Count == 0)
+                    RequiredItems = new HashSet<string>();
+
                 return;
+            }
+           else
+                RequiredItems = new HashSet<string>();
 
             this.GetQuests();
 
@@ -199,25 +201,25 @@ namespace eft_dma_radar
 
             questScatterMap.Execute();
 
-            for(int i = 0; i <  questCount; i++)
+            for (int i = 0; i <  questCount; i++)
             {
                 try
                 {
                     if (!questScatterMap.Results[i][0].TryGetResult<ulong>(out var questEntry))
-                        return;
+                        continue;
                     if (!questScatterMap.Results[i][2].TryGetResult<int>(out var questStatus))
-                        return;
+                        continue;
                     if (!questScatterMap.Results[i][3].TryGetResult<ulong>(out var completedSubTasks))
-                        return;
+                        continue;
                     if (!questScatterMap.Results[i][4].TryGetResult<ulong>(out var questIDPtr))
-                        return;
+                        continue;
                     if (questStatus != 2)
-                        return;
+                        continue;
 
                     var questID = Memory.ReadUnityString(questIDPtr);
 
                     if (!TarkovDevManager.AllTasks.TryGetValue(questID, out var task) || task is null)
-                        return;
+                        continue;
 
                     if (!this.savedQuestInfo.Any(x => x.ID == questID))
                         this.savedQuestInfo.Add(new QuestInfo { ID = questID, CompletedSubTasks = completedSubTasks, Task = task });
@@ -228,6 +230,8 @@ namespace eft_dma_radar
 
         public void CheckQuestItemsAndZones()
         {
+            var tempRequiredLooseLoot = new HashSet<string>();
+
             foreach (var quest in this.savedQuestInfo)
             {
                 try
@@ -241,9 +245,9 @@ namespace eft_dma_radar
                     scatterReadMap.Execute();
 
                     if (!scatterReadMap.Results[0][0].TryGetResult<ulong>(out var completedSubTaskList))
-                        return;
+                        continue;
                     if (!scatterReadMap.Results[0][1].TryGetResult<int>(out var completedSubTaskCount))
-                        return;
+                        continue;
 
                     if (completedSubTaskCount > 0)
                     {
@@ -264,7 +268,7 @@ namespace eft_dma_radar
                             try
                             {
                                 if (!scatterReadMapConditions.Results[j][0].TryGetResult<ulong>(out var conditionIDPtr))
-                                    return;
+                                    continue;
 
                                 var conditionID = Memory.ReadUnityString(conditionIDPtr);
 
@@ -285,12 +289,14 @@ namespace eft_dma_radar
                             objective.Type != "findQuestItem" &&
                             objective.Type != "plantItem" &&
                             objective.Type != "plantQuestItem" &&
+                            objective.Type != "findItem" &&
                             objective.Type != "giveItem"))
                             continue;
 
                         var zones = objective.Zones;
                         var objectiveType = Regex.Replace(objective.Type, "(\\B[A-Z])", " $1");
                         objectiveType = objectiveType[0].ToString().ToUpper() + objectiveType.Substring(1);
+                        var objectiveComplete = this.CompletedSubTasks.Contains(objective.ID);
 
                         if (zones is not null)
                         {
@@ -309,21 +315,21 @@ namespace eft_dma_radar
                                         ObjectiveType = objectiveType,
                                         Description = objective.Description,
                                         TaskName = quest.Task.Name,
-                                        Complete = this.CompletedSubTasks.Contains(objective.ID)
+                                        Complete = objectiveComplete
                                     });
                                 }
                                 else
                                 {
-                                    existingQuestZone.Complete = this.CompletedSubTasks.Contains(objective.ID);
+                                    existingQuestZone.Complete = objectiveComplete;
                                 }
                             }
                         }
 
-                        if (objective.Type == "giveItem")
+                        if ((objective.Type == "giveItem" || objective.Type == "findItem") && !objectiveComplete)
                         {
                             foreach (var item in objective.Items)
                             {
-                                this.RequiredItems.Add(item.Id);
+                                tempRequiredLooseLoot.Add(item.Id);
                             }
                         }
 
@@ -342,18 +348,20 @@ namespace eft_dma_radar
                                     NormalizedName = objective.QuestItem.NormalizedName,
                                     TaskName = quest.Task.Name,
                                     Description = objective.QuestItem.Description,
-                                    Complete = this.CompletedSubTasks.Contains(objective.ID)
+                                    Complete = objectiveComplete
                                 });
                             }
                             else
                             {
-                                existingQuestItem.Complete = this.CompletedSubTasks.Contains(objective.ID);
+                                existingQuestItem.Complete = objectiveComplete;
                             }
                         }
                     }
                 }
                 catch { }
             }
+
+            RequiredItems = tempRequiredLooseLoot;
         }
 
         private struct QuestInfo
