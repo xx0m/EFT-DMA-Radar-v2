@@ -41,6 +41,7 @@ namespace eft_dma_radar
             "Trebuchet MS",
             "Verdana",
         };
+
         private static readonly string[] PlayerTypeNames = {
             "LocalPlayer",
             "Teammate",
@@ -49,8 +50,6 @@ namespace eft_dma_radar
             "Boss",
             "Raider",
             "Cultist",
-            "USEC",
-            "BEAR",
             "PlayerScav"
         };
 
