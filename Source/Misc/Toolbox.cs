@@ -7,8 +7,9 @@ namespace eft_dma_radar
         private Thread autoRefreshThread;
         private CancellationTokenSource autoRefreshCancellationTokenSource;
 
-        private const int MAX_ATTEMPTS = 5;
+        private const int MAX_ATTEMPTS = 3;
 
+        private bool medInfoPanel = false;
         private bool extendedReach = false;
         private bool freezeTime = false;
         private float timeOfDay = -1f;
@@ -67,6 +68,7 @@ namespace eft_dma_radar
         private bool ShouldInitializeToolboxMono => !this.ToolboxMonoInitialized && Memory.InGame && Memory.LocalPlayer is not null;
 
         public bool UpdateExtendedReachDistance { get; set; } = false;
+        public bool UpdateThermalSettings{ get; set; } = false;
 
         public Toolbox(ulong unityBase)
         {
@@ -81,7 +83,7 @@ namespace eft_dma_radar
                             break;
 
                         this.InitiateMonoAddresses();
-                        Thread.Sleep(5000);
+                        Thread.Sleep(1000);
                         attempts++;
                     }
                 });
@@ -130,7 +132,7 @@ namespace eft_dma_radar
 
         private void ToolboxWorkerThread(CancellationToken cancellationToken)
         {
-            while (!cancellationToken.IsCancellationRequested && this.IsSafeToWriteMemory())
+            while (!cancellationToken.IsCancellationRequested && this.IsSafeToWriteMemory)
             {
                 if (this._config.MasterSwitch)
                 {
@@ -150,10 +152,7 @@ namespace eft_dma_radar
             Program.Log("[ToolBox] Refresh thread stopped.");
         }
 
-        private bool IsSafeToWriteMemory()
-        {
-            return Memory.InGame && Memory.LocalPlayer is not null && this._playerManager is not null;
-        }
+        private bool IsSafeToWriteMemory => Memory.InGame && Memory.LocalPlayer is not null;
 
         private void InitiateMonoAddresses()
         {
@@ -178,12 +177,12 @@ namespace eft_dma_radar
                     catch (Exception ex)
                     {
                         attempts++;
-                        Program.Log("[ToolBox] Failed to get TOD_SKY, retrying in 1 second!");
-                        Thread.Sleep(1000);
+                        Program.Log("[ToolBox] Failed to get TOD_SKY, retrying in 500ms!");
+                        Thread.Sleep(500);
 
                         if (attempts == MAX_ATTEMPTS)
                         {
-                            Program.Log("[Toolbox] Failed to get TOD_Sky 5 times, skipping!");
+                            Program.Log("[Toolbox] Failed to get TOD_Sky 3 times, skipping!");
                             break;
                         }
                     }
@@ -201,12 +200,12 @@ namespace eft_dma_radar
                     catch (Exception ex)
                     {
                         attempts++;
-                        Program.Log("[ToolBox] Failed to get EFTHardSettings, retrying in 1 second!");
-                        Thread.Sleep(1000);
+                        Program.Log("[ToolBox] Failed to get EFTHardSettings, retrying in 500ms!");
+                        Thread.Sleep(500);
 
                         if (attempts == MAX_ATTEMPTS)
                         {
-                            Program.Log("[Toolbox] Failed to get EFTHardSettings 5 times, skipping!");
+                            Program.Log("[Toolbox] Failed to get EFTHardSettings 3 times, skipping!");
                             break;
                         }
                     }
@@ -223,6 +222,9 @@ namespace eft_dma_radar
 
         private void ToolboxWorker()
         {
+            if (Memory.Exfils?.Count < 1)
+                return;
+
             try
             {
                 var entries = new List<IScatterWriteEntry>();
@@ -232,13 +234,18 @@ namespace eft_dma_radar
                     this._playerManager.UpdateVariables();
 
                     // No Recoil / Sway
-                    this._playerManager.SetNoRecoilSway(this._config.NoRecoilSway, ref entries);
+                    this._playerManager.SetNoRecoil(this._config.NoRecoil, ref entries);
+                    this._playerManager.SetNoSway(this._config.NoSway, ref entries);
 
                     // Instant ADS
                     this._playerManager.SetInstantADS(this._config.InstantADS, ref entries);
 
                     // Loot Through Walls
                     this._playerManager.SetLootThroughWalls(this._config.LootThroughWalls, ref entries);
+
+                    // Juggernaut
+                    if (this._config.Juggernaut)
+                        this._playerManager.SetJuggernaut(ref entries);
 
                     // No Weapon Malfunctions
                     if (this._config.NoWeaponMalfunctions)
@@ -378,6 +385,12 @@ namespace eft_dma_radar
 
                             this.SetInteractDistance(this.extendedReach, ref entries);
                         }
+
+                        if (this._config.MedInfoPanel != this.medInfoPanel)
+                        {
+                            this.medInfoPanel = this._config.MedInfoPanel;
+                            this.SetMedInfoPanel(this.medInfoPanel, ref entries);
+                        }
                     }
 
                     // Lock time of day + set time of day
@@ -416,13 +429,17 @@ namespace eft_dma_radar
                         // No Visor
                         this._cameraManager.VisorEffect(this._config.NoVisor, ref entries);
 
+                        // Inventory Blur
+                        this._cameraManager.InventoryBlur(this._config.InventoryBlur, ref entries);
+
                         // Smart Thermal Vision
-                        if (this._playerManager is null || !this._playerManager.IsADS)
+                        if (this._playerManager is not null && !this._playerManager.IsADS)
                         {
-                            if (this._config.ThermalVision != thermalVision)
+                            if (this._config.ThermalVision != this.thermalVision || this.UpdateThermalSettings)
                             {
                                 this.thermalVision = this._config.ThermalVision;
                                 this._cameraManager.ThermalVision(this.thermalVision, ref entries);
+                                this.UpdateThermalSettings = false;
                             }
                         }
                         else
@@ -450,6 +467,10 @@ namespace eft_dma_radar
                             this._cameraManager.NightVision(this.nightVision, ref entries);
                         }
 
+                        // FOV - don't use, ghetto asf
+                        //if (!this._playerManager.IsADS)
+                            //this._cameraManager.SetFOV(this._config.FOV, ref entries);
+
                         // Chams
                         if (this._config.Chams["Enabled"])
                         {
@@ -463,7 +484,7 @@ namespace eft_dma_radar
                 }
 
                 // Time Scale
-                var timeScaleChanged = this._config.TimeScale != this.timeScale;
+                var timeScaleChanged = (this._config.TimeScale != this.timeScale);
                 var factorChanged = this._config.TimeScaleFactor != this.timeScaleFactor;
 
                 if (timeScaleChanged || (this._config.TimeScale && factorChanged))
@@ -505,6 +526,11 @@ namespace eft_dma_radar
                 entries.Add(new ScatterWriteDataEntry<float>(this.HardSettings + Offsets.EFTHardSettings.LOOT_RAYCAST_DISTANCE, 1.3f));
                 entries.Add(new ScatterWriteDataEntry<float>(this.HardSettings + Offsets.EFTHardSettings.DOOR_RAYCAST_DISTANCE, 1f));
             }
+        }
+
+        private void SetMedInfoPanel(bool on, ref List<IScatterWriteEntry> entries)
+        {
+            entries.Add(new ScatterWriteDataEntry<bool>(this.HardSettings + Offsets.EFTHardSettings.MED_EFFECT_USING_PANEL, on));
         }
 
         /// <summary>

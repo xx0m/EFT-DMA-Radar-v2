@@ -1,4 +1,5 @@
-﻿using System.Collections.ObjectModel;
+﻿using System.Collections.Concurrent;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Numerics;
 
@@ -10,7 +11,7 @@ namespace eft_dma_radar
         private ulong _corpseDictionary;
         private ulong? _DictionaryBase = null;
         public ulong localGameWorld;
-        public ReadOnlyCollection<PlayerCorpse> Corpses { get; private set; }
+        public List<PlayerCorpse> Corpses { get; private set; }
         private ReadOnlyDictionary<string, Player> AllPlayers
         {
             get => Memory.Players;
@@ -103,7 +104,7 @@ namespace eft_dma_radar
 
                     });
                 }
-                this.Corpses = new ReadOnlyCollection<PlayerCorpse>(corpses);
+                this.Corpses = new List<PlayerCorpse>(corpses);
             }
             catch { }
         }

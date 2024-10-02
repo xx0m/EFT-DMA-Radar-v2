@@ -1,15 +1,5 @@
 ﻿using System.Diagnostics;
 using System.Numerics;
-using System.Collections.Concurrent;
-using System.Collections.ObjectModel;
-using System.Text;
-using static eft_dma_radar.Config;
-using Offsets;
-using System.Runtime.InteropServices;
-using System.Runtime.Intrinsics;
-using System.Runtime.CompilerServices;
-using System.Data;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace eft_dma_radar
 {
@@ -109,14 +99,16 @@ namespace eft_dma_radar
         /// <summary>
         /// Key = Slot Name, Value = Item 'Long Name' in Slot
         /// </summary>
-        public Dictionary<string, GearItem> Gear
+        public List<GearManager.Gear> Gear
         {
-            get => this._gearManager is not null ? this._gearManager.Gear : null;
+            get => this._gearManager is not null ? this._gearManager.GearItems : null;
             set
             {
-                this._gearManager.Gear = value;
+                this._gearManager.GearItems = value;
             }
         }
+
+        public GearManager GearManager => this._gearManager;
         /// <summary>
         /// If 'true', Player object is no longer in the RegisteredPlayers list.
         /// Will be checked if dead/exfil'd on next loop.
@@ -323,7 +315,7 @@ namespace eft_dma_radar
         public bool HasThermal => _gearManager.HasThermal;
         public bool HasNVG => _gearManager.HasNVG;
 
-        public ActiveWeaponInfo WeaponInfo { get; set; }
+        public GearManager.Gear ItemInHands { get; set; }
         #endregion
 
         #region Constructor
@@ -461,41 +453,28 @@ namespace eft_dma_radar
             }
         }
 
-        public void SetWeaponInfo(string bsgID)
+        public void SetItemInHands(ulong pointer)
         {
-            if (TarkovDevManager.AllItems.TryGetValue(bsgID, out var item))
-            {
-                var weaponName = item.Item.shortName;
-                var ammoType = this._gearManager.GetAmmoTypeFromWeapon(weaponName);
-
-                this.WeaponInfo = new ActiveWeaponInfo
-                {
-                    ID = bsgID,
-                    Name = weaponName,
-                    AmmoType = ammoType
-                };
-            }
+            this.ItemInHands = this.GearManager.GearItems.FirstOrDefault(x => x.Pointer == pointer);
         }
 
         public void CheckForRequiredGear()
         {
             var found = false;
+            var loot = Memory.Loot;
+            var requiredQuestItems = QuestManager.RequiredItems;
 
-            foreach (var gearItem in _gearManager.Gear.Values)
+            foreach (var gearItem in this.Gear)
             {
-                if (QuestManager.RequiredItems.Contains(gearItem.ID))
+                var parentItem = gearItem.Item.ID;
+
+                if (requiredQuestItems.Contains(parentItem) ||
+                    gearItem.Item.Loot.Any(x => requiredQuestItems.Contains(x.ID)) ||
+                    (loot is not null && loot.RequiredFilterItems is not null && (loot.RequiredFilterItems.ContainsKey(parentItem) ||
+                                      gearItem.Item.Loot.Any(x => loot.RequiredFilterItems.ContainsKey(x.ID)))))
                 {
                     found = true;
                     break;
-                }
-
-                foreach (var lootItem in gearItem.Loot)
-                {
-                    if (QuestManager.RequiredItems.Contains(lootItem.ID))
-                    {
-                        found = true;
-                        break;
-                    }
                 }
             }
 
@@ -529,8 +508,12 @@ namespace eft_dma_radar
                     var inFaction = Program.AIFactionManager.IsInFaction(this.Name, out var playerType);
 
                     if (!inFaction && Memory.IsPvEMode)
-                        if (this.Gear.ContainsKey("Dogtag"))
-                            playerType = (this.Gear["Dogtag"].Short == "BEAR" ? PlayerType.BEAR : PlayerType.USEC);
+                    {
+                        var dogtagSlot = this.Gear.FirstOrDefault(x => x.Slot.Key == "Dogtag");
+                        
+                        if (dogtagSlot.Item is not null)
+                            playerType = (dogtagSlot.Item.Short == "BEAR" ? PlayerType.BEAR : PlayerType.USEC);
+                    }
 
                     return playerType;
                 }
@@ -549,9 +532,9 @@ namespace eft_dma_radar
                 {
                     return PlayerType.Boss;
                 }
-                else if (this.PlayerRole == 49 || this.PlayerRole == 50)
+                else if (this.PlayerRole == 51 || this.PlayerRole == 52)
                 {
-                    return (this.PlayerRole == 49 ? PlayerType.BEAR : PlayerType.USEC);
+                    return (this.PlayerRole == 51 ? PlayerType.BEAR : PlayerType.USEC);
                 }
                 else
                 {

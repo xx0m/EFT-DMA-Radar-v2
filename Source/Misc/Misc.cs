@@ -1,7 +1,5 @@
 ﻿using System.Diagnostics;
-using System.Runtime.InteropServices;
 using System.Text;
-using static Vmmsharp.Vmm;
 
 namespace eft_dma_radar
 {
@@ -53,6 +51,30 @@ namespace eft_dma_radar
             RepetitionCount = 0;
         }
     }
+
+    public class Hotkey
+    {
+        public string Action { get; set; }
+        public Keys Key { get; set; }
+        public HotkeyType Type { get; set; }
+    }
+
+    public class HotkeyKey
+    {
+        public string Name { get; }
+        public Keys Key { get; }
+
+        public HotkeyKey(string name, Keys key)
+        {
+            this.Name = name;
+            this.Key = key;
+        }
+
+        public override string ToString()
+        {
+            return this.Name;
+        }
+    }
     #endregion
 
     #region Custom EFT Classes
@@ -88,6 +110,7 @@ namespace eft_dma_radar
         public bool ActiveWeapon { get; set; }
         public bool Thermal { get; set; }
         public bool NightVision { get; set; }
+        public bool Gear { get; set; }
         public bool AmmoType { get; set; }
         public bool Group { get; set; }
         public bool Value { get; set; }
@@ -100,7 +123,7 @@ namespace eft_dma_radar
             bool name, bool height, bool distance, bool aimline,
             int aimlineLength, int aimlineOpacity, int font, int fontSize,
             bool flags, bool activeWeapon, bool thermal, bool nightVision,
-            bool ammoType, bool group, bool value, bool health, 
+            bool gear, bool ammoType, bool group, bool value, bool health, 
             bool tag, int flagsFont, int flagsFontSize)
         {
             this.Name = name;
@@ -115,6 +138,7 @@ namespace eft_dma_radar
             this.ActiveWeapon = activeWeapon;
             this.Thermal = thermal;
             this.NightVision = nightVision;
+            this.Gear = gear;
             this.AmmoType = ammoType;
             this.Group = group;
             this.Value = value;
@@ -123,23 +147,6 @@ namespace eft_dma_radar
             this.FlagsFont = flagsFont;
             this.FlagsFontSize = flagsFontSize;
         }
-    }
-    /// <summary>
-    /// Contains weapon info for Primary Weapons.
-    /// </summary>
-    public struct PlayerGearInfo
-    {
-        public string Thermal;
-        public string NightVision;
-        public string AmmoType;
-        public int AmmoCount;
-    }
-
-    public struct ActiveWeaponInfo
-    {
-        public string AmmoType;
-        public string Name;
-        public string ID;
     }
 
     public struct AimlineSettings
@@ -224,6 +231,29 @@ namespace eft_dma_radar
         HumanNeck = 132,
         HumanHead = 133
     };
+
+    public enum HotkeyType
+    {
+        OnKey,
+        Toggle
+    }
+
+    public enum HotkeyAction
+    {
+        Chams,
+        ImportantLoot,
+        NoRecoil,
+        NoSway,
+        OpticalThermal,
+        ShowContainers,
+        ShowCorpses,
+        ShowLoot,
+        Thirdperson,
+        ThermalVision,
+        TimeScale,
+        ZoomIn,
+        ZoomOut
+    }
     #endregion
 
     #region Helpers

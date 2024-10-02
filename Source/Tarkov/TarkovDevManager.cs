@@ -3,7 +3,6 @@ using System.Net;
 using System.Numerics;
 using System.Text;
 using System.Text.Json;
-using static eft_dma_radar.Maps;
 
 namespace eft_dma_radar
 {
@@ -39,10 +38,10 @@ namespace eft_dma_radar
         {
             TarkovDevResponse jsonResponse;
 
-            if (ShouldFetchDataFromApi())
+            //if (ShouldFetchDataFromApi())
                 jsonResponse = FetchDataFromApi();
-            else
-                jsonResponse = LoadDataFromFile();
+            //else
+                //jsonResponse = LoadDataFromFile();
 
             if (jsonResponse is not null)
             {
@@ -253,8 +252,17 @@ namespace eft_dma_radar
                                     }
                                     maps{
                                         name
-                                        extracts{
+                                        extracts {
                                             name
+                                            position {
+                                                x
+                                                y
+                                                z
+                                            }
+                                        }
+                                        transits {
+                                            id
+                                            description
                                             position {
                                                 x
                                                 y
@@ -264,6 +272,7 @@ namespace eft_dma_radar
                                     }
                                 }"
                 };
+
                 var jsonBody = JsonSerializer.Serialize(body);
                 var content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
 
@@ -272,14 +281,7 @@ namespace eft_dma_radar
                     var response = client.PostAsync("https://api.tarkov.dev/graphql", content).Result;
 
                     if (response.StatusCode == HttpStatusCode.RequestTimeout)
-                    {
-                        Program.Log("Tarkov.Dev API request failed - attempting fall back to file");
-
-                        if (!TarkovDevManager.DataFileExists)
-                            throw new FileNotFoundException($"Tarkov.Dev API request failed & the data file '{FileName}' doesn't exist!");
-
-                        return TarkovDevManager.LoadDataFromFile();
-                    }
+                        throw new FileNotFoundException($"Tarkov.Dev API request failed!");
 
                     response.EnsureSuccessStatusCode();
 
@@ -287,9 +289,21 @@ namespace eft_dma_radar
                     File.WriteAllText(FileName, responseString);
                     return JsonSerializer.Deserialize<TarkovDevResponse>(responseString);
                 }
-                catch (HttpRequestException ex)
+                catch (Exception ex)
                 {
-                    throw new FileNotFoundException($"Tarkov.Dev API request failed & the data file '{FileName}' doesn't exist!");
+                    try
+                    {
+                        Program.Log("Tarkov.Dev API request failed - attempting fall back to file");
+
+                        if (!TarkovDevManager.DataFileExists)
+                            throw new FileNotFoundException($"The data file '{FileName}' doesn't exist!");
+
+                        return TarkovDevManager.LoadDataFromFile();
+                    }
+                    catch
+                    {
+                        throw new FileNotFoundException($"Tarkov.Dev API request failed & the data file '{FileName}' doesn't exist!");
+                    }
                 }
             }
         }
@@ -436,18 +450,31 @@ namespace eft_dma_radar
                 var newMap = new Maps()
                 {
                     name = map.name,
-                    extracts = new List<Extract>()
+                    extracts = new List<Maps.Extract>(),
+                    transits = new List<Maps.MapTransit>()
                 };
 
                 foreach (var extract in map.extracts)
                 {
-                    var newExtract = new Extract()
+                    var newExtract = new Maps.Extract()
                     {
                         name = extract.name,
                         position = new Vector3(extract.position.x, extract.position.z, extract.position.y)
                     };
 
                     newMap.extracts.Add(newExtract);
+                };
+
+                foreach (var transit in map.transits)
+                {
+                    var newTransit = new Maps.MapTransit()
+                    {
+                        id = transit.id,
+                        description = transit.description,
+                        position = new Vector3(transit.position.x, transit.position.z, transit.position.y)
+                    };
+
+                    newMap.transits.Add(newTransit);
                 };
 
                 _allMaps.TryAdd(newMap.name, newMap);
@@ -615,10 +642,25 @@ namespace eft_dma_radar
     {
         public string name { get; set; }
         public List<ExtractInfo> extracts { get; set; }
+        public List<TransitInfo> transits { get; set; }
 
         public class ExtractInfo
         {
             public string name { get; set; }
+            public Position position { get; set; }
+
+            public class Position
+            {
+                public float x { get; set; }
+                public float y { get; set; }
+                public float z { get; set; }
+            }
+        }
+
+        public class TransitInfo
+        {
+            public string id { get; set; }
+            public string description { get; set; }
             public Position position { get; set; }
 
             public class Position
@@ -634,12 +676,20 @@ namespace eft_dma_radar
     {
         public string name { get; set; }
         public List<Extract> extracts { get; set; }
+        public List<MapTransit> transits { get; set; }
 
         public class Extract
         {
             public string name { get; set; }
             public Vector3 position { get; set; }
 
+        }
+
+        public class MapTransit
+        {
+            public string id { get; set; }
+            public string description { get; set; }
+            public Vector3 position { get; set; }
         }
     }
 

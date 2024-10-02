@@ -1,6 +1,5 @@
 ﻿using SkiaSharp;
 using System.Numerics;
-using static eft_dma_radar.Config;
 
 namespace eft_dma_radar
 {
@@ -102,22 +101,22 @@ namespace eft_dma_radar
 
             basePaint.Color = player.Type switch {
                 // AI
-                PlayerType.Boss => SKColorFromPaintColor("Boss"),
-                PlayerType.BossGuard => SKColorFromPaintColor("BossGuard"),
-                PlayerType.BossFollower => SKColorFromPaintColor("BossFollower"),
-                PlayerType.Raider => SKColorFromPaintColor("Raider"),
-                PlayerType.Rogue => SKColorFromPaintColor("Rogue"),
-                PlayerType.Cultist => SKColorFromPaintColor("Cultist"),
-                PlayerType.FollowerOfMorana => SKColorFromPaintColor("FollowerOfMorana"),
-                PlayerType.Scav => SKColorFromPaintColor("Scav"),
+                PlayerType.Boss => Extensions.SKColorFromPaintColor("Boss"),
+                PlayerType.BossGuard => Extensions.SKColorFromPaintColor("BossGuard"),
+                PlayerType.BossFollower => Extensions.SKColorFromPaintColor("BossFollower"),
+                PlayerType.Raider => Extensions.SKColorFromPaintColor("Raider"),
+                PlayerType.Rogue => Extensions.SKColorFromPaintColor("Rogue"),
+                PlayerType.Cultist => Extensions.SKColorFromPaintColor("Cultist"),
+                PlayerType.FollowerOfMorana => Extensions.SKColorFromPaintColor("FollowerOfMorana"),
+                PlayerType.Scav => Extensions.SKColorFromPaintColor("Scav"),
 
                 // Player
-                PlayerType.PlayerScav => SKColorFromPaintColor("PlayerScav"),
-                PlayerType.LocalPlayer => SKColorFromPaintColor("LocalPlayer"),
-                PlayerType.Teammate => SKColorFromPaintColor("Teammate"),
-                PlayerType.BEAR => SKColorFromPaintColor("BEAR"),
-                PlayerType.USEC => SKColorFromPaintColor("USEC"),
-                PlayerType.SpecialPlayer => SKColorFromPaintColor("Special"),
+                PlayerType.PlayerScav => Extensions.SKColorFromPaintColor("PlayerScav"),
+                PlayerType.LocalPlayer => Extensions.SKColorFromPaintColor("LocalPlayer"),
+                PlayerType.Teammate => Extensions.SKColorFromPaintColor("Teammate"),
+                PlayerType.BEAR => Extensions.SKColorFromPaintColor("BEAR"),
+                PlayerType.USEC => Extensions.SKColorFromPaintColor("USEC"),
+                PlayerType.SpecialPlayer => Extensions.SKColorFromPaintColor("Special"),
 
                 // default to yellow
                 _ => new SKColor(255, 0, 255, 255),
@@ -186,9 +185,27 @@ namespace eft_dma_radar
         public static SKPaint GetDeathMarkerPaint()
         {
             SKPaint paintToUse = SKPaints.DeathMarker.Clone();
-
             paintToUse.Color = Extensions.SKColorFromPaintColor("DeathMarker");
+            return paintToUse;
+        }
 
+        /// <summary>
+        /// Determines grenade paint color.
+        /// </summary>
+        public static SKPaint GetEntityPaint(Grenade grenade)
+        {
+            SKPaint paintToUse = SKPaints.PaintGrenades.Clone();
+            paintToUse.Color = Extensions.SKColorFromPaintColor("Grenades");
+            return paintToUse;
+        }
+
+        /// <summary>
+        /// Determines tripwire paint color.
+        /// </summary>
+        public static SKPaint GetEntityPaint(Tripwire tripwire)
+        {
+            SKPaint paintToUse = SKPaints.PaintTripwires.Clone();
+            paintToUse.Color = Extensions.SKColorFromPaintColor("Tripwires");
             return paintToUse;
         }
 
@@ -220,11 +237,29 @@ namespace eft_dma_radar
             SKPaint paintToUse = SKPaints.LootPaint.Clone();
             paintToUse.Color = exfil.Status switch
             {
-                ExfilStatus.Open => SKColorFromPaintColor("ExfilActiveIcon"),
-                ExfilStatus.Pending => SKColorFromPaintColor("ExfilPendingIcon"),
-                ExfilStatus.Closed => SKColorFromPaintColor("ExfilClosedIcon"),
-                _ => SKColorFromPaintColor("ExfilClosedIcon"),
+                ExfilStatus.Open => Extensions.SKColorFromPaintColor("ExfilActiveIcon"),
+                ExfilStatus.Pending => Extensions.SKColorFromPaintColor("ExfilPendingIcon"),
+                ExfilStatus.Closed => Extensions.SKColorFromPaintColor("ExfilClosedIcon"),
+                _ => Extensions.SKColorFromPaintColor("ExfilClosedIcon"),
             };
+
+            return paintToUse;
+        }
+
+        /// <summary>
+        /// Determines the transit paint color.
+        /// </summary>
+        public static SKPaint GetEntityPaint(Transit transit)
+        {
+            SKPaint paintToUse = SKPaints.LootPaint.Clone();
+            paintToUse.Color = Extensions.SKColorFromPaintColor("TransitIcon");
+            //paintToUse.Color = transit.Status switch
+            //{
+            //    TransitStatus.Open => Extensions.SKColorFromPaintColor("TransitActiveIcon"),
+            //    TransitStatus.Pending => Extensions.SKColorFromPaintColor("TransitPendingIcon"),
+            //    TransitStatus.Closed => Extensions.SKColorFromPaintColor("TransitClosedIcon"),
+            //    _ => Extensions.SKColorFromPaintColor("TransitClosedIcon"),
+            //};
 
             return paintToUse;
         }
@@ -237,22 +272,22 @@ namespace eft_dma_radar
             return player.Type switch
             {
                 // AI
-                PlayerType.Boss => SKColorFromPaintColor("Boss"),
-                PlayerType.BossGuard => SKColorFromPaintColor("BossGuard"),
-                PlayerType.BossFollower => SKColorFromPaintColor("BossFollower"),
-                PlayerType.Raider => SKColorFromPaintColor("Raider"),
-                PlayerType.Rogue => SKColorFromPaintColor("Rogue"),
-                PlayerType.Cultist => SKColorFromPaintColor("Cultist"),
-                PlayerType.FollowerOfMorana => SKColorFromPaintColor("FollowerOfMorana"),
-                PlayerType.Scav => SKColorFromPaintColor("Scav"),
+                PlayerType.Boss => Extensions.SKColorFromPaintColor("Boss"),
+                PlayerType.BossGuard => Extensions.SKColorFromPaintColor("BossGuard"),
+                PlayerType.BossFollower => Extensions.SKColorFromPaintColor("BossFollower"),
+                PlayerType.Raider => Extensions.SKColorFromPaintColor("Raider"),
+                PlayerType.Rogue => Extensions.SKColorFromPaintColor("Rogue"),
+                PlayerType.Cultist => Extensions.SKColorFromPaintColor("Cultist"),
+                PlayerType.FollowerOfMorana => Extensions.SKColorFromPaintColor("FollowerOfMorana"),
+                PlayerType.Scav => Extensions.SKColorFromPaintColor("Scav"),
 
                 // Player
-                PlayerType.PlayerScav => SKColorFromPaintColor("PlayerScav"),
-                PlayerType.LocalPlayer => SKColorFromPaintColor("LocalPlayer"),
-                PlayerType.Teammate => SKColorFromPaintColor("Teammate"),
-                PlayerType.BEAR => SKColorFromPaintColor("BEAR"),
-                PlayerType.USEC => SKColorFromPaintColor("USEC"),
-                PlayerType.SpecialPlayer => SKColorFromPaintColor("Special"),
+                PlayerType.PlayerScav => Extensions.SKColorFromPaintColor("PlayerScav"),
+                PlayerType.LocalPlayer => Extensions.SKColorFromPaintColor("LocalPlayer"),
+                PlayerType.Teammate => Extensions.SKColorFromPaintColor("Teammate"),
+                PlayerType.BEAR => Extensions.SKColorFromPaintColor("BEAR"),
+                PlayerType.USEC => Extensions.SKColorFromPaintColor("USEC"),
+                PlayerType.SpecialPlayer => Extensions.SKColorFromPaintColor("Special"),
 
                 // default to magenta
                 _ => new SKColor(255, 0, 255, 255),
@@ -328,11 +363,29 @@ namespace eft_dma_radar
             SKPaint paintToUse = SKPaints.LootText.Clone();
             paintToUse.Color = exfil.Status switch
             {
-                ExfilStatus.Open => SKColorFromPaintColor("ExfilActiveText"),
-                ExfilStatus.Pending => SKColorFromPaintColor("ExfilPendingText"),
-                ExfilStatus.Closed => SKColorFromPaintColor("ExfilClosedText"),
-                _ => SKColorFromPaintColor("ExfilClosedText"),
+                ExfilStatus.Open => Extensions.SKColorFromPaintColor("ExfilActiveText"),
+                ExfilStatus.Pending => Extensions.SKColorFromPaintColor("ExfilPendingText"),
+                ExfilStatus.Closed => Extensions.SKColorFromPaintColor("ExfilClosedText"),
+                _ => Extensions.SKColorFromPaintColor("ExfilClosedText"),
             };
+
+            return paintToUse;
+        }
+
+        /// <summary>
+        /// Determines the transit text color.
+        /// </summary>
+        public static SKPaint GetTextPaint(Transit transit)
+        {
+            SKPaint paintToUse = SKPaints.LootText.Clone();
+            paintToUse.Color = Extensions.SKColorFromPaintColor("TransitText");
+            //paintToUse.Color = transit.Status switch
+            //{
+            //    TransitStatus.Open => Extensions.SKColorFromPaintColor("TransitActiveText"),
+            //    TransitStatus.Pending => Extensions.SKColorFromPaintColor("TransitPendingText"),
+            //    TransitStatus.Closed => Extensions.SKColorFromPaintColor("TransitClosedText"),
+            //    _ => Extensions.SKColorFromPaintColor("TransitClosedText"),
+            //};
 
             return paintToUse;
         }
@@ -358,22 +411,22 @@ namespace eft_dma_radar
 
             basePaint.Color = player.Type switch {
                 // AI
-                PlayerType.Boss => SKColorFromPaintColor("Boss"),
-                PlayerType.BossGuard => SKColorFromPaintColor("BossGuard"),
-                PlayerType.BossFollower => SKColorFromPaintColor("BossFollower"),
-                PlayerType.Raider => SKColorFromPaintColor("Raider"),
-                PlayerType.Rogue => SKColorFromPaintColor("Rogue"),
-                PlayerType.Cultist => SKColorFromPaintColor("Cultist"),
-                PlayerType.FollowerOfMorana => SKColorFromPaintColor("FollowerOfMorana"),
-                PlayerType.Scav => SKColorFromPaintColor("Scav"),
+                PlayerType.Boss => Extensions.SKColorFromPaintColor("Boss"),
+                PlayerType.BossGuard => Extensions.SKColorFromPaintColor("BossGuard"),
+                PlayerType.BossFollower => Extensions.SKColorFromPaintColor("BossFollower"),
+                PlayerType.Raider => Extensions.SKColorFromPaintColor("Raider"),
+                PlayerType.Rogue => Extensions.SKColorFromPaintColor("Rogue"),
+                PlayerType.Cultist => Extensions.SKColorFromPaintColor("Cultist"),
+                PlayerType.FollowerOfMorana => Extensions.SKColorFromPaintColor("FollowerOfMorana"),
+                PlayerType.Scav => Extensions.SKColorFromPaintColor("Scav"),
 
                 // Player
-                PlayerType.PlayerScav => SKColorFromPaintColor("PlayerScav"),
-                PlayerType.LocalPlayer => SKColorFromPaintColor("LocalPlayer"),
-                PlayerType.Teammate => SKColorFromPaintColor("Teammate"),
-                PlayerType.BEAR => SKColorFromPaintColor("BEAR"),
-                PlayerType.USEC => SKColorFromPaintColor("USEC"),
-                PlayerType.SpecialPlayer => SKColorFromPaintColor("Special"),
+                PlayerType.PlayerScav => Extensions.SKColorFromPaintColor("PlayerScav"),
+                PlayerType.LocalPlayer => Extensions.SKColorFromPaintColor("LocalPlayer"),
+                PlayerType.Teammate => Extensions.SKColorFromPaintColor("Teammate"),
+                PlayerType.BEAR => Extensions.SKColorFromPaintColor("BEAR"),
+                PlayerType.USEC => Extensions.SKColorFromPaintColor("USEC"),
+                PlayerType.SpecialPlayer => Extensions.SKColorFromPaintColor("Special"),
 
                 // default to yellow
                 _ => new SKColor(255, 0, 255, 255),

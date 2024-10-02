@@ -1,12 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 using System.Text.Json;
-using System.Threading.Tasks;
-using static eft_dma_radar.Watchlist;
-using static eft_dma_radar.AIFactionManager;
 
 namespace eft_dma_radar
 {

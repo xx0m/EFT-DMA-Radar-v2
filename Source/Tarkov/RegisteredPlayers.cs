@@ -1,10 +1,8 @@
-﻿using Offsets;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.Intrinsics;
-using System.Security.Policy;
 
 namespace eft_dma_radar
 {
@@ -105,14 +103,14 @@ namespace eft_dma_radar
 
                 for (int i = 0; i < count; i++)
                 {
-                    var p1 = round1.AddEntry<ulong>(i, 0, _listBase + UnityListBase.Start + (uint)(i * 0x8));
+                    var p1 = round1.AddEntry<ulong>(i, 0, _listBase + Offsets.UnityListBase.Start + (uint)(i * 0x8));
                     var p2 = round2.AddEntry<ulong>(i, 1, p1, null, 0x0);
                     var p3 = round3.AddEntry<ulong>(i, 2, p2, null, 0x0);
                     var p4 = round4.AddEntry<ulong>(i, 3, p3, null, 0x48);
                     var p5 = round5.AddEntry<string>(i, 4, p4, 64);
 
                     var p6 = round2.AddEntry<ulong>(i, 5, p1, null, Offsets.Player.Profile);
-                    var p7 = round3.AddEntry<ulong>(i, 6, p6, null, Profile.Id);
+                    var p7 = round3.AddEntry<ulong>(i, 6, p6, null, Offsets.Profile.Id);
                 }
 
                 scatterMap.Execute();
@@ -344,9 +342,6 @@ namespace eft_dma_radar
                                 handsController = round2.AddEntry<ulong>(i, 8, handsController, null, Offsets.ObservedPlayerView.To_HandsController[1]);
                                 currentItem = round3.AddEntry<ulong>(i, 9, handsController, null, Offsets.ObservedHandsController.Item);
                             }
-
-                            var currentItemTemplate = round4.AddEntry<ulong>(i, 10, currentItem, null, Offsets.Item.Template);
-                            var currentWeaponID = round5.AddEntry<ulong>(i, 11, currentItemTemplate, null, Offsets.ItemTemplate.MongoID + Offsets.MongoID.ID);
                         }
                     }
                 }
@@ -365,35 +360,48 @@ namespace eft_dma_radar
 
                     if (player.LastUpdate) // player may be dead/exfil'd
                     {
+                        var doChams = Program.Config.MasterSwitch && Program.Config.Chams["Enabled"];
+
                         if (player.Position == DEFAULT_POSITION)
                         {
 
                             player.IsActive = false;
                             Program.Log($"{player.Name} exfiltrated");
-                            
-                            if (Program.Config.MasterSwitch && Program.Config.Chams["Enabled"])
+
+                            if (doChams)
                                 Memory.Chams.RemovePointersForPlayer(player);
                         }
                         else
                         {
-                            if (Program.Config.MasterSwitch && Program.Config.Chams["Enabled"])
+                            if (player.Position == DEFAULT_POSITION)
                             {
-                                if (player.IsLocalPlayer)
-                                {
-                                    Memory.Chams.RestorePointers();
-                                    Program.Log("LocalPlayer has died!");
-                                }
-                                else
-                                {
-                                    if (Program.Config.Chams["Corpses"])
-                                        Memory.Chams.SetPlayerBodyChams(player, Memory.Chams.ThermalMaterial);
-                                    else
-                                        Memory.Chams.RestorePointersForPlayer(player);
-                                }
-                            }
 
-                            player.IsAlive = false;
-                            Program.Log($"{player.Name} died");
+                                player.IsActive = false;
+                                Program.Log($"{player.Name} exfiltrated");
+
+                                Memory.Chams.RemovePointersForPlayer(player);
+                            }
+                            else
+                            {
+                                if (doChams)
+                                {
+                                    if (player.IsLocalPlayer)
+                                    {
+                                        Memory.Chams.RestorePointers();
+                                        Program.Log("LocalPlayer has died!");
+                                    }
+                                    else
+                                    {
+                                        if (Program.Config.Chams["Corpses"])
+                                            Memory.Chams.SetPlayerBodyChams(player, Memory.Chams.ThermalMaterial);
+                                        else
+                                            Memory.Chams.RestorePointersForPlayer(player);
+                                    }
+                                }
+
+                                player.IsAlive = false;
+                                Program.Log($"{player.Name} died");
+                            }
                         }
 
                         player.LastUpdate = false;
@@ -445,19 +453,22 @@ namespace eft_dma_radar
                                 player.SetHealth(hp);
 
                         if (checkWeaponInfo)
-                            if (scatterMap.Results[i][11].TryGetResult<ulong>(out var bsgID) && bsgID != 0)
+                        {
+                            try
                             {
-                                try
-                                {
-                                    var itemID = Memory.ReadUnityString(bsgID);
+                                var slotsRefreshed = player.GearManager.CheckGearSlots();
 
-                                    if (itemID != player.WeaponInfo.ID)
-                                        player.SetWeaponInfo(itemID);
+                                scatterMap.Results[i][9].TryGetResult<ulong>(out var activeWeaponPtr);
 
-                                    player.CheckForRequiredGear();
-                                }
-                                catch { }
-                            }
+                                if (activeWeaponPtr != 0 && !slotsRefreshed.Any(x => x.Pointer == activeWeaponPtr))
+                                    player.GearManager.RefreshActiveWeaponAmmoInfo(activeWeaponPtr);
+
+                                if (player.ItemInHands.Pointer != activeWeaponPtr)
+                                    player.SetItemInHands(activeWeaponPtr);
+
+                                player.CheckForRequiredGear();
+                            } catch { }
+                        }
 
                         if (p2 && p3)
                             player.ErrorCount = 0;

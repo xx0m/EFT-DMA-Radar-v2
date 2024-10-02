@@ -1,7 +1,8 @@
-﻿using SkiaSharp;
-using System.Text.Json.Serialization;
+﻿using Offsets;
+using SkiaSharp;
+using System.Text;
 using System.Text.Json;
-using System.ComponentModel;
+using System.Text.Json.Serialization;
 
 namespace eft_dma_radar
 {
@@ -93,6 +94,7 @@ namespace eft_dma_radar
             var paint = Extensions.GetEntityPaint(exfil);
             var text = Extensions.GetTextPaint(exfil);
             var heightDiff = this.Height - localPlayerHeight;
+
             if (heightDiff > 1.85) // exfil is above player
             {
                 using var path = this.GetUpArrow(5);
@@ -121,12 +123,75 @@ namespace eft_dma_radar
             }
         }
 
+        public void DrawTransit(SKCanvas canvas, Transit transit, float localPlayerHeight)
+        {
+            var paint = Extensions.GetEntityPaint(transit);
+            var text = Extensions.GetTextPaint(transit);
+            var heightDiff = this.Height - localPlayerHeight;
+
+            if (heightDiff > 1.85) // transit is above player
+            {
+                using var path = this.GetUpArrow(5);
+                canvas.DrawPath(path, paint);
+            }
+            else if (heightDiff < -1.85) // transit is below player
+            {
+                using var path = this.GetDownArrow(5);
+                canvas.DrawPath(path, paint);
+            }
+            else // transit is level with player
+            {
+                canvas.DrawCircle(this.GetPoint(), 4 * UIScale, paint);
+            }
+
+            if (_config.ExfilNames)
+            {
+                var coords = this.GetPoint();
+                var textWidth = text.MeasureText(transit.Name);
+
+                coords.X = (coords.X - textWidth / 2);
+                coords.Y = (coords.Y - text.TextSize / 2) - 3;
+
+                canvas.DrawText(transit.Name, coords, Extensions.GetTextOutlinePaint());
+                canvas.DrawText(transit.Name, coords, text);
+            }
+        }
+
         /// <summary>
         /// Draws a 'Hot' Grenade on this location.
         /// </summary>
-        public void DrawGrenade(SKCanvas canvas)
+        public void DrawGrenade(SKCanvas canvas, Grenade grenade)
         {
-            canvas.DrawCircle(this.GetPoint(), 5 * UIScale, SKPaints.PaintGrenades);
+            var paint = Extensions.GetEntityPaint(grenade);
+            canvas.DrawCircle(this.GetPoint(), 5 * UIScale, paint);
+        }
+
+        /// <summary>
+        /// Draws a tripwire on this location.
+        /// </summary>
+        public void DrawTripwire(SKCanvas canvas, MapPosition toPosZoomedPos, Tripwire tripwire, float localPlayerHeight)
+        {
+            var paint = Extensions.GetEntityPaint(tripwire);
+            var heightDiff = this.Height - localPlayerHeight;
+
+            canvas.DrawLine(this.GetPoint().X, this.GetPoint().Y, toPosZoomedPos.X, toPosZoomedPos.Y, paint);
+
+            paint.Style = SKPaintStyle.Fill;
+
+            if (heightDiff > 1.85) // tripwire is above player
+            {
+                using var path = toPosZoomedPos.GetUpArrow(7);
+                canvas.DrawPath(path, paint);
+            }
+            else if (heightDiff < -1.85) // tripwire is below player
+            {
+                using var path = toPosZoomedPos.GetDownArrow(7);
+                canvas.DrawPath(path, paint);
+            }
+            else // tripwire is level with player
+            {
+                canvas.DrawCircle(toPosZoomedPos.GetPoint(), 5 * UIScale, paint);
+            }
         }
 
         /// <summary>
@@ -353,7 +418,6 @@ namespace eft_dma_radar
             else
             {
                 text.Color = Extensions.GetTextColor(player);
-                
             }
 
             flagsText.Color = text.Color;
@@ -421,8 +485,6 @@ namespace eft_dma_radar
         /// </summary>
         public void DrawLootableObjectToolTip(SKCanvas canvas, LootableObject item)
         {
-            //if (item is LootContainer container)
-                //DrawToolTip(canvas, container);
             if (item is LootCorpse corpse)
                 DrawToolTip(canvas, corpse);
             else if (item is LootItem lootItem)
@@ -543,76 +605,39 @@ namespace eft_dma_radar
         }
 
         /// <summary>
-        /// Draws the tool tip for loot containers
-        /// </summary>
-        //private void DrawToolTip(SKCanvas canvas, LootContainer container)
-        //{
-        //    var maxWidth = 0f;
-        //    var tmpItems = container.Items.Count > 1 ? LootManager.MergeDupelicateLootItems(container.Items) : container.Items;
-
-        //    foreach (var item in tmpItems)
-        //    {
-        //        var width = SKPaints.TextBase.MeasureText(item.GetFormattedValueName());
-        //        maxWidth = Math.Max(maxWidth, width);
-        //    }
-
-        //    var textSpacing = 15 * UIScale;
-        //    var padding = 3 * UIScale;
-
-        //    var height = tmpItems.Count * textSpacing;
-
-        //    var left = X + padding;
-        //    var top = Y - padding;
-        //    var right = left + maxWidth + padding * 2;
-        //    var bottom = top + height + padding * 2;
-
-        //    var backgroundRect = new SKRect(left, top, right, bottom);
-        //    canvas.DrawRect(backgroundRect, SKPaints.PaintTransparentBacker);
-
-        //    var y = bottom - (padding * 2.2f);
-
-        //    foreach (var item in tmpItems)
-        //    {
-        //        canvas.DrawText(item.GetFormattedValueName(), left + padding, y, Extensions.GetTextPaint(item));
-        //        y -= textSpacing;
-        //    }
-        //}
-
-        /// <summary>
         /// Draws the tool tip for loot corpses
         /// </summary>
         private void DrawToolTip(SKCanvas canvas, LootCorpse corpse)
         {
-            //var maxWidth = 0f;
             var maxWidth = SKPaints.TextBase.MeasureText(corpse.Name);
             var items = corpse.Items;
             var height = items.Count;
-            //var isEmptyCorpseName = corpse.Name.Contains("Clone");
+            var isEmptyCorpseName = corpse.Name.Contains("Clone");
 
-            //if (!isEmptyCorpseName)
-            height += 1;
+            if (!isEmptyCorpseName)
+                height += 1;
 
-            //foreach (var gearItem in items)
-            //{
-            //    var width = SKPaints.TextBase.MeasureText(gearItem.GetFormattedTotalValueName());
-            //    maxWidth = Math.Max(maxWidth, width);
+            foreach (var gearItem in items)
+            {
+                var width = SKPaints.TextBase.MeasureText(gearItem.Item.GetFormattedTotalValueName());
+                maxWidth = Math.Max(maxWidth, width);
 
-            //    var tmpItems = gearItem.Loot.Count > 1 ? LootManager.MergeDupelicateLootItems(gearItem.Loot) : gearItem.Loot;
+                var tmpItems = gearItem.Item.Loot.Count > 1 ? LootManager.MergeDupelicateLootItems(gearItem.Item.Loot) : gearItem.Item.Loot;
 
-            //    if (_config.SubItems && tmpItems.Count > 0)
-            //    {
-            //        foreach (var lootItem in tmpItems)
-            //        {
-            //            if (lootItem.AlwaysShow || lootItem.Important || (!_config.ImportantLootOnly && _config.SubItems && lootItem.Value > _config.MinSubItemValue))
-            //            {
-            //                width = SKPaints.TextBase.MeasureText($"     {lootItem.GetFormattedValueName()}");
-            //                maxWidth = Math.Max(maxWidth, width);
+                if (_config.SubItems && tmpItems.Count > 0)
+                {
+                    foreach (var lootItem in tmpItems)
+                    {
+                        if (lootItem.AlwaysShow || lootItem.Important || (!_config.ImportantLootOnly && _config.SubItems && lootItem.Value > _config.MinSubItemValue))
+                        {
+                            width = SKPaints.TextBase.MeasureText($"     {lootItem.GetFormattedValueName()}");
+                            maxWidth = Math.Max(maxWidth, width);
 
-            //                height++;
-            //            }
-            //        }
-            //    }
-            //}
+                            height++;
+                        }
+                    }
+                }
+            }
 
             var textSpacing = 15 * UIScale;
             var padding = 3 * UIScale;
@@ -628,31 +653,31 @@ namespace eft_dma_radar
             canvas.DrawRect(backgroundRect, SKPaints.PaintTransparentBacker);
 
             var y = bottom - (padding * 2.2f);
-            //foreach (var gearItem in items)
-            //{
-            //    var tmpItems = gearItem.Loot.Count > 1 ? LootManager.MergeDupelicateLootItems(gearItem.Loot) : gearItem.Loot;
+            foreach (var gearItem in items)
+            {
+                var tmpItems = gearItem.Item.Loot.Count > 1 ? LootManager.MergeDupelicateLootItems(gearItem.Item.Loot) : gearItem.Item.Loot;
 
-            //    if (_config.SubItems && tmpItems.Count > 0)
-            //    {
-            //        foreach (var lootItem in tmpItems)
-            //        {
-            //            if (lootItem.AlwaysShow || lootItem.Important || (!_config.ImportantLootOnly && _config.SubItems && lootItem.Value > _config.MinSubItemValue))
-            //            {
-            //                canvas.DrawText("   " + lootItem.GetFormattedValueName(), left + padding, y, Extensions.GetTextPaint(lootItem));
-            //                y -= textSpacing;
-            //            }
-            //        }
-            //    }
+                if (_config.SubItems && tmpItems.Count > 0)
+                {
+                    foreach (var lootItem in tmpItems)
+                    {
+                        if (lootItem.AlwaysShow || lootItem.Important || (!_config.ImportantLootOnly && _config.SubItems && lootItem.Value > _config.MinSubItemValue))
+                        {
+                            canvas.DrawText("   " + lootItem.GetFormattedValueName(), left + padding, y, Extensions.GetTextPaint(lootItem));
+                            y -= textSpacing;
+                        }
+                    }
+                }
 
-            //    canvas.DrawText(gearItem.GetFormattedTotalValueName(), left + padding, y, Extensions.GetTextPaint(gearItem));
-            //    y -= textSpacing;
-            //}
+                canvas.DrawText(gearItem.Item.GetFormattedTotalValueName(), left + padding, y, Extensions.GetTextPaint(gearItem.Item));
+                y -= textSpacing;
+            }
 
-            //if (!isEmptyCorpseName)
-            //{
+            if (!isEmptyCorpseName)
+            {
                 canvas.DrawText(corpse.Name, left + padding, y, SKPaints.TextBase);
                 y -= textSpacing;
-            //}
+            }
         }
 
         /// <summary>
@@ -669,14 +694,17 @@ namespace eft_dma_radar
 
             if (player.Gear is not null)
             {
-                foreach (var slot in GearManager.GEAR_SLOT_NAMES)
+                foreach (var gear in player.Gear)
                 {
-                    if (player.Gear.TryGetValue(slot.Key, out var gearItem))
+                    var key = gear.Slot.Key;
+
+                    if (GearManager.GEAR_SLOT_NAMES.ContainsKey(key))
                     {
+                        var gearItem = gear.Item;
                         var itemName = gearItem.Short;
 
                         if (!string.IsNullOrEmpty(gearItem.GearInfo.AmmoType))
-                            itemName += $" ({gearItem.GearInfo.AmmoType})";
+                            itemName += $" ({gearItem.GearInfo.AmmoType}/{gearItem.GearInfo.AmmoCount})";
 
                         if (!string.IsNullOrEmpty(gearItem.GearInfo.Thermal))
                             itemName += $" ({gearItem.GearInfo.Thermal})";
@@ -684,31 +712,12 @@ namespace eft_dma_radar
                         if (!string.IsNullOrEmpty(gearItem.GearInfo.NightVision))
                             itemName += $" ({gearItem.GearInfo.NightVision})";
 
-                        lines.Insert(0, $"{slot.Value}: {itemName.Trim()}");
+                        lines.Insert(0, $"{GearManager.GEAR_SLOT_NAMES[key]}: {itemName.Trim()}");
                     }
                 }
             }
 
             lines.Insert(0, $"Value: {TarkovDevManager.FormatNumber(player.Value)}");
-
-            DrawToolTip(canvas, string.Join("\n", lines));
-        }
-
-        /// <summary>
-        /// Draws tooltip for corpses
-        /// </summary>
-        private void DrawCorpseTooltip(SKCanvas canvas, Player player)
-        {
-            var lines = new List<string>();
-            var corpseName = $"Corpse [{player.Name}]";
-
-            lines.Insert(0, corpseName);
-
-            if (player.Lvl != 0)
-                lines.Insert(0, $"L:{player.Lvl}");
-
-            if (player.GroupID != -1)
-                lines.Insert(0, $"G:{player.GroupID}");
 
             DrawToolTip(canvas, string.Join("\n", lines));
         }
@@ -781,29 +790,12 @@ namespace eft_dma_radar
     /// <summary>
     /// Contains multiple map parameters used by the GUI.
     /// </summary>
-    public class MapParameters
+    public struct MapParameters
     {
-        /// <summary>
-        /// Contains the Skia Interface (UI) Scaling Value.
-        /// </summary>
         public float UIScale;
-        /// <summary>
-        /// Contains the 'index' of which map layer to display.
-        /// For example: Labs has 3 floors, so there is a Bitmap image for 'each' floor.
-        /// Index is dependent on LocalPlayer height.
-        /// </summary>
         public int MapLayerIndex;
-        /// <summary>
-        /// Rectangular 'zoomed' bounds of the Bitmap to display.
-        /// </summary>
         public SKRect Bounds;
-        /// <summary>
-        /// Regular -> Zoomed 'X' Scale correction.
-        /// </summary>
         public float XScale;
-        /// <summary>
-        /// Regular -> Zoomed 'Y' Scale correction.
-        /// </summary>
         public float YScale;
     }
 

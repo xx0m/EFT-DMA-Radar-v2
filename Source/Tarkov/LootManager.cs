@@ -1,15 +1,6 @@
-﻿using Offsets;
-using OpenTK.Graphics.ES20;
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
+﻿using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Drawing;
 using System.Numerics;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using static eft_dma_radar.LootFilterManager;
 
 namespace eft_dma_radar
 {
@@ -82,10 +73,12 @@ namespace eft_dma_radar
             get => Memory.QuestManager?.QuestItems ?? null;
         }
 
-        private HashSet<string> RequiredItems
+        private HashSet<string> RequiredQuestItems
         {
             get => QuestManager.RequiredItems ?? null;
         }
+
+        public Dictionary<string, PaintColor.Colors> RequiredFilterItems { get; set; }
 
         private string CurrentMapName;
         #region Constructor
@@ -383,6 +376,8 @@ namespace eft_dma_radar
                 var transformTwo = vRound7.AddEntry<ulong>(i, 23, transformOne, null, Offsets.LootGameObjectClass.To_TransformInternal[1]);
 
                 var position = vRound8.AddEntry<ulong>(i, 24, transformTwo, null, Offsets.LootGameObjectClass.To_TransformInternal[2]);
+
+                var corpsePlayerProfileIDPtr = vRound3.AddEntry<ulong>(i, 25, interactiveClass, null, Offsets.LootInteractiveClass.PlayerProfileID);
             }
 
             validScatterMap.Execute();
@@ -403,22 +398,21 @@ namespace eft_dma_radar
                     continue;
 
                 if (className.Contains("Corpse", StringComparison.OrdinalIgnoreCase))
-                {
+                {                   
                     if (!this.savedLootCorpsesInfo.Any(x => x.InteractiveClass == interactiveClass))
                     {
                         //if (!validScatterMap.Results[i][22].TryGetResult<ulong>(out var slots))
                         //    return;
+                        if (!validScatterMap.Results[i][25].TryGetResult<ulong>(out var corpsePlayerProfileIDPtr))
+                            continue;
 
                         try
                         {
                             Vector3 position = new Transform(posToTransform).GetPosition();
-
-                            var playerNameSplit = containerName.Split('(', ')');
-                            var playerName = playerNameSplit.Count() > 1 ? playerNameSplit[1] : playerNameSplit[0];
-                            playerName = Helpers.TransliterateCyrillic(playerName);
+                            var corpsePlayerProfileID = Memory.ReadUnityString(corpsePlayerProfileIDPtr);
 
                             //this.savedLootCorpsesInfo.Add(new CorpseInfo { InteractiveClass = interactiveClass, Position = position, Slots = slots, PlayerName = playerName });
-                            this.savedLootCorpsesInfo.Add(new CorpseInfo { InteractiveClass = interactiveClass, Position = position, Slots = 0, PlayerName = playerName });
+                            this.savedLootCorpsesInfo.Add(new CorpseInfo { InteractiveClass = interactiveClass, Position = position, Slots = 0, ProfileID = corpsePlayerProfileID, Name = containerName });
                         }
                         catch { }
                     }
@@ -569,7 +563,7 @@ namespace eft_dma_radar
             Parallel.ForEach(this.savedLootCorpsesInfo, Program.Config.ParallelOptions, (savedLootCorpse) =>
             {
                 if (this.validLootEntities.Any(x => x.Pointer == savedLootCorpse.InteractiveClass))
-                    loot.Add(CreateLootableCorpse(savedLootCorpse.PlayerName, savedLootCorpse.InteractiveClass, savedLootCorpse.Position, savedLootCorpse.Slots));
+                    loot.Add(CreateLootableCorpse(savedLootCorpse.ProfileID, savedLootCorpse.Name, savedLootCorpse.InteractiveClass, savedLootCorpse.Position, savedLootCorpse.Slots));
                 else
                     this.savedLootCorpsesInfo = new ConcurrentBag<CorpseInfo>(this.savedLootCorpsesInfo.Where(x => x.InteractiveClass != savedLootCorpse.InteractiveClass));
 
@@ -585,7 +579,7 @@ namespace eft_dma_radar
                 var firstContainer = savedContainerItem.First();
 
                 if (this.validLootEntities.Any(x => x.Pointer == firstContainer.InteractiveClass))
-                    loot.Add(CreateLootableContainer(firstContainer.Name, firstContainer.Position, firstContainer.Grids, firstContainer.Slots));
+                    loot.Add(CreateLootableContainer(firstContainer.Name, firstContainer.Position));
                 else
                     this.savedLootContainersInfo = new ConcurrentBag<ContainerInfo>(this.savedLootContainersInfo.Where(x => x.InteractiveClass != firstContainer.InteractiveClass));
 
@@ -603,58 +597,57 @@ namespace eft_dma_radar
             }
         }
 
-        private LootCorpse CreateLootableCorpse(string name, ulong interactiveClass, Vector3 position, ulong slots)
+        private LootCorpse CreateLootableCorpse(string profileID, string name, ulong interactiveClass, Vector3 position, ulong slots)
         {
+            var player = Memory.Players.FirstOrDefault(x => x.Value.ProfileID == profileID).Value;
+
+            var playerName = "";
+
+            var itemList = new List<GearManager.Gear>();
+
+            if (player is not null)
+                itemList = new List<GearManager.Gear>(player.Gear);
+
             var corpse = new LootCorpse
             {
                 Name = "Corpse" + (!string.IsNullOrEmpty(name) && !name.Contains("Clone") ? $" {name}" : ""),
                 Position = position,
                 InteractiveClass = interactiveClass,
                 Slots = slots,
-                Items = new List<GearItem>()
+                Items = itemList
             };
 
-            //if (corpse.Slots != 0)
-            //    this.GetItemsInSlots(corpse.Slots, corpse.Position, corpse.Items);
+            if (player is not null)
+            {
+                corpse.Name = player.Name;
+                corpse.Player = player;
+            }
+            else
+            {
+                var playerNameSplit = name.Split('(', ')');
+                playerName = playerNameSplit.Count() > 1 ? playerNameSplit[1] : playerNameSplit[0];
+                corpse.Name = playerName = Helpers.TransliterateCyrillic(playerName);
+            }
 
-            //corpse.Items = corpse.Items.Where(item => item?.TotalValue > 0).ToList();
-
-            //Parallel.ForEach(corpse.Items, Program.Config.ParallelOptions, (gearItem) =>
-            //{
-            //    int index = gearItem.Loot.FindIndex(lootItem => lootItem.ID == gearItem.ID);
-            //    if (index != -1)
-            //        gearItem.Loot.RemoveAt(index);
-            //});
-
-            //corpse.Items = corpse.Items.OrderBy(x => x.TotalValue).ToList();
-            //corpse.UpdateValue();
+            corpse.Items = corpse.Items.OrderBy(x => x.Item.TotalValue).ToList();
+            corpse.UpdateValue();
 
             return corpse;
         }
 
-        private LootContainer CreateLootableContainer(string name, Vector3 position, ulong grids, ulong slots = 0)
+        private LootContainer CreateLootableContainer(string name, Vector3 position)
         {
             var container = new LootContainer
             {
                 Name = name,
-                Position = position,
-                Grids = grids,
-                Items = new List<LootItem>()
+                Position = position
             };
 
-            if (container.Name.Contains("COLLIDER(1)"))
+            if (container.Name.Contains("COLLIDER"))
             {
                 container.Name = "AIRDROP";
                 container.AlwaysShow = true;
             }
-
-            //if (slots != 0)
-            //    this.GetItemsInSlots(slots, container.Position, container.Items);
-
-            //if (grids != 0)
-            //    this.GetItemsInGrid(grids, container.Position, container.Items);
-
-            //container.UpdateValue();
 
             return container;
         }
@@ -688,115 +681,92 @@ namespace eft_dma_radar
                 .OrderBy(filter => filter.Order)
                 .ToList();
 
-            var itemIdColorPairs = orderedActiveFilters
+            this.RequiredFilterItems = orderedActiveFilters
                 .SelectMany(filter => filter.Items.Select(itemId => new { ItemId = itemId, Color = filter.Color }))
                 .GroupBy(pair => pair.ItemId)
                 .ToDictionary(group => group.Key, group => group.FirstOrDefault().Color);
 
-
             var filteredItems = new ConcurrentBag<LootableObject>();
 
             // Add loose loot
-            foreach(var lootItem in loot.OfType<LootItem>())
+            foreach (var lootItem in loot.OfType<LootItem>())
             {
                 var isValuable = lootItem.Value > _config.MinLootValue;
                 var isImportant = lootItem.Value > _config.MinImportantLootValue;
-                var isFiltered = itemIdColorPairs.ContainsKey(lootItem.ID);
-                var isRequired = (this._config.QuestHelper && this._config.QuestLootItems && this.RequiredItems.Contains(lootItem.ID));
+                var isFiltered = this.RequiredFilterItems.ContainsKey(lootItem.ID);
+                var isRequired = (this._config.QuestHelper && this._config.QuestLootItems && this.RequiredQuestItems.Contains(lootItem.ID));
+
+                var tmpLootItem = new LootItem(lootItem);
 
                 if (isFiltered || isImportant || isRequired)
                 {
-                    lootItem.Important = true;
+                    tmpLootItem.Important = true;
 
                     if (isRequired)
-                        lootItem.RequiredByQuest = true;
+                        tmpLootItem.RequiredByQuest = true;
                     else if (isFiltered)
-                        lootItem.Color = itemIdColorPairs[lootItem.ID];
+                        tmpLootItem.Color = this.RequiredFilterItems[lootItem.ID];
                 }
 
                 if (isRequired || (_config.LooseLoot && (isFiltered || isValuable || lootItem.AlwaysShow)))
-                    filteredItems.Add(lootItem);
+                    filteredItems.Add(tmpLootItem);
             }
 
             // Add containers
-            foreach(var container in loot.OfType<LootContainer>())
+            if (_config.LootContainerSettings["Enabled"])
             {
-                var tempContainer = new LootContainer(container);
-                var hasImportantOrFilteredItems = false;
-
-                foreach (var item in tempContainer.Items)
+                foreach (var container in loot.OfType<LootContainer>())
                 {
-                    var isImportant = item.Value > _config.MinImportantLootValue;
-                    var isFiltered = itemIdColorPairs.ContainsKey(item.ID);
+                    var tmpContainer = new LootContainer(container);
+                    tmpContainer.AlwaysShow = true;
 
-                    if (isFiltered || isImportant)
-                    {
-                        item.Important = true;
-                        tempContainer.Important = true;
-                        hasImportantOrFilteredItems = true;
-
-                        if (isFiltered)
-                            item.Color = itemIdColorPairs[item.ID];
-                    }
+                    if (_config.LootContainerSettings.ContainsKey(tmpContainer.Name))
+                        if (_config.LootContainerSettings[tmpContainer.Name])
+                            filteredItems.Add(tmpContainer);
                 }
-
-                if (hasImportantOrFilteredItems)
-                {
-                    var firstMatchingItem = tempContainer.Items
-                        .FirstOrDefault(item => itemIdColorPairs.ContainsKey(item.ID));
-
-                    if (firstMatchingItem is not null)
-                        tempContainer.Color = firstMatchingItem.Color;
-                }
-
-                //if (tempContainer.Items.Any(item => item.Value > _config.MinLootValue) || tempContainer.Important || tempContainer.AlwaysShow)
-                //    filteredItems.Add(tempContainer);
-
-                if (_config.LootContainerSettings.ContainsKey(tempContainer.Name))
-                    if (_config.LootContainerSettings[tempContainer.Name])
-                        filteredItems.Add(tempContainer);
             }
 
             // Add corpses
-            foreach(var corpse in loot.OfType<LootCorpse>())
+            foreach (var corpse in loot.OfType<LootCorpse>())
             {
-                var tempCorpse = new LootCorpse(corpse);
+                var addedCorpse = false;
+                var tmpCorpse = new LootCorpse(corpse);
                 LootItem lowestOrderLootItem = null;
                 GearItem lowestOrderGearItem = null;
 
-                foreach (var gearItem in tempCorpse.Items)
+                foreach (var gearItem in tmpCorpse.Items)
                 {
-                    var isGearImportant = gearItem.TotalValue > _config.MinImportantLootValue;
-                    var isGearFiltered = itemIdColorPairs.ContainsKey(gearItem.ID);
+                    var isGearImportant = gearItem.Item.TotalValue > _config.MinImportantLootValue;
+                    var isGearFiltered = this.RequiredFilterItems.ContainsKey(gearItem.Item.ID);
 
                     if (isGearImportant || isGearFiltered)
                     {
-                        gearItem.Important = true;
-                        tempCorpse.Important = true;
+                        gearItem.Item.Important = true;
+                        tmpCorpse.Important = true;
 
                         if (isGearFiltered)
                         {
-                            gearItem.Color = itemIdColorPairs[gearItem.ID];
+                            gearItem.Item.Color = this.RequiredFilterItems[gearItem.Item.ID];
 
-                            var gearItemFilter = orderedActiveFilters.FirstOrDefault(filter => filter.Items.Contains(gearItem.ID));
+                            var gearItemFilter = orderedActiveFilters.FirstOrDefault(filter => filter.Items.Contains(gearItem.Item.ID));
                             if (gearItemFilter is not null && (lowestOrderGearItem is null || gearItemFilter.Order < orderedActiveFilters.First(filter => filter.Items.Contains(lowestOrderGearItem.ID)).Order))
-                                lowestOrderGearItem = gearItem;
+                                lowestOrderGearItem = gearItem.Item;
                         }
 
-                        foreach (var lootItem in gearItem.Loot)
+                        foreach (var lootItem in gearItem.Item.Loot)
                         {
                             var isLootImportant = lootItem.Value > _config.MinImportantLootValue;
-                            var isLootFiltered = itemIdColorPairs.ContainsKey(lootItem.ID);
+                            var isLootFiltered = this.RequiredFilterItems.ContainsKey(lootItem.ID);
 
                             if (isLootImportant || isLootFiltered)
                             {
                                 lootItem.Important = true;
-                                gearItem.Important = true;
-                                tempCorpse.Important = true;
+                                gearItem.Item.Important = true;
+                                tmpCorpse.Important = true;
 
                                 if (isLootFiltered)
                                 {
-                                    lootItem.Color = itemIdColorPairs[lootItem.ID];
+                                    lootItem.Color = this.RequiredFilterItems[lootItem.ID];
 
                                     var lootItemFilter = orderedActiveFilters.FirstOrDefault(filter => filter.Items.Contains(lootItem.ID));
                                     if (lootItemFilter is not null && (lowestOrderLootItem is null || lootItemFilter.Order < orderedActiveFilters.First(filter => filter.Items.Contains(lowestOrderLootItem.ID)).Order))
@@ -806,25 +776,29 @@ namespace eft_dma_radar
                         }
 
                         if (lowestOrderLootItem is not null)
-                            gearItem.Color = lowestOrderLootItem.Color;
+                            gearItem.Item.Color = lowestOrderLootItem.Color;
                     }
 
                     if (lowestOrderLootItem is not null && (lowestOrderGearItem is null ||
                         orderedActiveFilters.First(filter => filter.Items.Contains(lowestOrderLootItem.ID)).Order <
                         orderedActiveFilters.First(filter => filter.Items.Contains(lowestOrderGearItem.ID)).Order))
                     {
-                        tempCorpse.Color = lowestOrderLootItem.Color;
+                        tmpCorpse.Color = lowestOrderLootItem.Color;
                     }
                     else if (lowestOrderGearItem is not null)
                     {
-                        tempCorpse.Color = lowestOrderGearItem.Color;
+                        tmpCorpse.Color = lowestOrderGearItem.Color;
                     }
 
-                    //if (tempCorpse.Value > _config.MinCorpseValue || tempCorpse.Important)
-                    //    filteredItems.Add(tempCorpse);
+                    if (tmpCorpse.Value > _config.MinCorpseValue || tmpCorpse.Important)
+                    {
+                        addedCorpse = true;
+                        filteredItems.Add(tmpCorpse);
+                    }
                 }
 
-                filteredItems.Add(tempCorpse);
+                if (!addedCorpse && (_config.LooseLoot && _config.LootCorpses || !_config.LooseLoot && _config.LootCorpses))
+                    filteredItems.Add(tmpCorpse);
             }
 
             this.Filter = new(filteredItems.OrderByDescending(x => x.Important)
@@ -841,440 +815,6 @@ namespace eft_dma_radar
 
             this.Filter = new ConcurrentBag<LootableObject>(new ConcurrentBag<LootableObject>(filter));
             this.ApplyFilter();
-        }
-
-        /// <summary>
-        /// Recursively searches items within a grid
-        /// </summary>
-        private void GetItemsInGrid(ulong gridsArrayPtr, Vector3 position, List<LootItem> containerLoot, int recurseDepth = 0)
-        {
-            if (gridsArrayPtr == 0 || recurseDepth > 3)
-                return;
-
-            try
-            {
-                int currentChildrenCount = this.CalculateChildrenCount(gridsArrayPtr);
-
-                if (this.gridCache.TryGetValue(gridsArrayPtr, out var cacheEntry))
-                {
-                    if (currentChildrenCount == cacheEntry.ChildrenCount)
-                    {
-                        containerLoot.AddRange(cacheEntry.CachedLootItems);
-                        return;
-                    }
-                }
-
-                var newCachedLootItems = new List<LootItem>();
-
-                this.ProcessGrid(gridsArrayPtr, position, newCachedLootItems, recurseDepth);
-
-                this.gridCache[gridsArrayPtr] = new GridCacheEntry
-                {
-                    ChildrenCount = currentChildrenCount,
-                    CachedLootItems = newCachedLootItems
-                };
-
-                containerLoot.AddRange(newCachedLootItems);
-            }
-            catch {}
-        }
-
-        private void ProcessGrid(ulong gridsArrayPtr, Vector3 position, List<LootItem> cachedLootItems, int recurseDepth)
-        {
-            var gridsArrayCount = Memory.ReadValue<int>(gridsArrayPtr + Offsets.UnityList.Count);
-
-            if (gridsArrayCount < 0 || gridsArrayCount > 4096)
-                return;
-
-            var scatterReadMap = new ScatterReadMap(gridsArrayCount);
-            var round1 = scatterReadMap.AddRound();
-            var round2 = scatterReadMap.AddRound();
-            var round3 = scatterReadMap.AddRound();
-            var round4 = scatterReadMap.AddRound();
-
-            var gridItemBaseStart = gridsArrayPtr + Offsets.UnityListBase.Start;
-
-            for (int i = 0; i < gridsArrayCount; i++)
-            {
-                var grid = round1.AddEntry<ulong>(i, 0, gridItemBaseStart, null, (uint)i * Offsets.Slot.Size);
-                var gridEnumerableClass = round2.AddEntry<ulong>(i, 1, grid, null, Offsets.Grids.GridsEnumerableClass);
-                var itemListPtr = round3.AddEntry<ulong>(i, 2, gridEnumerableClass, null, Offsets.UnityList.Count);
-                var itemListCount = round4.AddEntry<int>(i, 3, itemListPtr, null, Offsets.UnityList.Count);
-                var arrayBase = round4.AddEntry<ulong>(i, 4, itemListPtr, null, Offsets.UnityList.Base);
-            }
-
-            scatterReadMap.Execute();
-
-            Parallel.For(0, gridsArrayCount, i =>
-            {
-                if (!scatterReadMap.Results[i][0].TryGetResult<ulong>(out var grid))
-                    return;
-                if (!scatterReadMap.Results[i][1].TryGetResult<ulong>(out var gridEnumerableClass))
-                    return;
-                if (!scatterReadMap.Results[i][2].TryGetResult<ulong>(out var itemListPtr))
-                    return;
-                if (!scatterReadMap.Results[i][3].TryGetResult<int>(out var itemListCount))
-                    return;
-                if (!scatterReadMap.Results[i][4].TryGetResult<ulong>(out var arrayBase))
-                    return;
-
-                var innerScatterReadMap = new ScatterReadMap(itemListCount);
-                var innerRound1 = innerScatterReadMap.AddRound();
-                var innerRound2 = innerScatterReadMap.AddRound();
-                var innerRound3 = innerScatterReadMap.AddRound();
-                var innerRound4 = innerScatterReadMap.AddRound();
-
-                for (int j = 0; j < itemListCount; j++)
-                {
-                    var childItem = innerRound1.AddEntry<ulong>(j, 0, arrayBase, null, Offsets.UnityListBase.Start + ((uint)j * 0x08));
-
-                    var childItemTemplate = innerRound2.AddEntry<ulong>(j, 1, childItem, null, Offsets.LootItemBase.ItemTemplate);
-                    var childGridsArrayPtr = innerRound2.AddEntry<ulong>(j, 2, childItem, null, Offsets.LootItemBase.Grids);
-
-                    var childItemMongoIdPtr = innerRound3.AddEntry<ulong>(j, 3, childItemTemplate, null, Offsets.ItemTemplate.MongoID);
-
-                    var childItemIdPtr = innerRound4.AddEntry<ulong>(j, 4, childItemTemplate, null, Offsets.MongoID.ID);
-                }
-
-                innerScatterReadMap.Execute();
-
-                Parallel.For(0, itemListCount, j =>
-                {
-                    try
-                    {
-                        if (!innerScatterReadMap.Results[j][0].TryGetResult<ulong>(out var childItem))
-                            return;
-                        if (!innerScatterReadMap.Results[j][1].TryGetResult<ulong>(out var childItemTemplate))
-                            return;
-                        if (!innerScatterReadMap.Results[j][4].TryGetResult<ulong>(out var childItemIdPtr))
-                            return;
-
-                        var childItemId = Memory.ReadUnityString(childItemIdPtr);
-
-                        if (childItemId is null)
-                            return;
-
-                        childItemId = childItemId.Replace("\\0", "");
-
-                        if (TarkovDevManager.AllItems.TryGetValue(childItemId, out var childLootItem))
-                        {
-                            var newItem = new LootItem
-                            {
-                                Name = childLootItem.Name,
-                                ID = childItemId,
-                                AlwaysShow = childLootItem.AlwaysShow,
-                                Important = childLootItem.Important,
-                                Position = position,
-                                Item = childLootItem.Item,
-                                Value = childLootItem.Value
-                            };
-
-                            cachedLootItems.Add(newItem);
-                        }
-
-                        if (!innerScatterReadMap.Results[j][2].TryGetResult<ulong>(out var childGridsArrayPtr) || childGridsArrayPtr == 0)
-                            return;
-
-                        this.GetItemsInGrid(childGridsArrayPtr, position, cachedLootItems, recurseDepth + 1);
-                    }
-                    catch { return; }
-                });
-            });
-        }
-
-        private void GetItemsInSlots(ulong slotItemBase, Vector3 position, List<GearItem> gearItems)
-        {
-            if (slotItemBase == 0)
-                return;
-
-            var slotDict = this.GetSlotDictionary(slotItemBase);
-
-            if (slotDict is null || slotDict.Count == 0)
-                return;
-
-            var scatterReadMap = new ScatterReadMap(slotDict.Count);
-            var round1 = scatterReadMap.AddRound();
-            var round2 = scatterReadMap.AddRound();
-            var round3 = scatterReadMap.AddRound();
-            var round4 = scatterReadMap.AddRound();
-
-            var slotNames = slotDict.Keys.ToList();
-            var slotPtrs = slotDict.Values.ToList();
-
-            for (int i = 0; i < slotDict.Count; i++)
-            {
-                var containedItem = round1.AddEntry<ulong>(i, 0, slotPtrs[i], null, Offsets.Slot.ContainedItem);
-
-                var inventorytemplate = round2.AddEntry<ulong>(i, 1, containedItem, null, Offsets.LootItemBase.ItemTemplate);
-                var slots = round2.AddEntry<ulong>(i, 2, containedItem, null, Offsets.Equipment.Slots);
-                var grids = round2.AddEntry<ulong>(i, 3, containedItem, null, Offsets.LootItemBase.Grids);
-
-                var mongoIdPtr = round3.AddEntry<ulong>(i, 4, inventorytemplate, null, Offsets.ItemTemplate.MongoID);
-
-                var idPtr = round4.AddEntry<ulong>(i, 5, inventorytemplate, null, Offsets.MongoID.ID);
-            }
-
-            scatterReadMap.Execute();
-
-            Parallel.For(0, slotDict.Count, i =>
-            {
-                try
-                {
-                    if (!scatterReadMap.Results[i][0].TryGetResult<ulong>(out var containedItem))
-                        return;
-                    if (!scatterReadMap.Results[i][1].TryGetResult<ulong>(out var inventorytemplate))
-                        return;
-                    if (!scatterReadMap.Results[i][5].TryGetResult<ulong>(out var idPtr))
-                        return;
-
-                    var id = Memory.ReadUnityString(idPtr);
-                    var slotName = slotNames[i];
-
-                    SlotCacheEntry cacheEntry = this.slotCache.GetOrAdd(slotItemBase, _ => new SlotCacheEntry());
-
-                    if (cacheEntry.CachedGearItems.TryGetValue(slotName, out var cachedGearItem))
-                    {
-                        if (cachedGearItem.Loot.Count > 0)
-                        {
-                            cachedGearItem.Loot.Clear();
-
-                            if (scatterReadMap.Results[i][2].TryGetResult<ulong>(out var slots))
-                                this.GetItemsInSlots(slots, position, cachedGearItem.Loot);
-
-                            if (scatterReadMap.Results[i][3].TryGetResult<ulong>(out var grids))
-                                this.GetItemsInGrid(grids, position, cachedGearItem.Loot);
-                        }
-
-                        gearItems.Add(cachedGearItem);
-                    }
-                    else
-                    {
-                        var isPocket = (slotName == "Pockets");
-
-                        if (TarkovDevManager.AllItems.TryGetValue(id, out LootItem lootItem) || isPocket)
-                        {
-                            var longName = isPocket ? "Pocket" : lootItem?.Item.name ?? "Unknown";
-                            var shortName = isPocket ? "Pocket" : lootItem?.Item.shortName ?? "Unknown";
-                            var value = isPocket || lootItem is null ? 0 : lootItem.Value;
-
-                            if (lootItem is not null)
-                                lootItem.Position = position;
-
-                            var newGearItem = new GearItem
-                            {
-                                ID = id,
-                                Long = longName,
-                                Short = shortName,
-                                Value = value,
-                                Loot = new List<LootItem>(),
-                                Item = lootItem is not null ? new LootItem(lootItem) : null,
-                                Position = position
-                            };
-
-                            if (slotName != "Scabbard")
-                            {
-                                if (scatterReadMap.Results[i][2].TryGetResult<ulong>(out var slots))
-                                    this.GetItemsInSlots(slots, position, newGearItem.Loot);
-
-                                if (scatterReadMap.Results[i][3].TryGetResult<ulong>(out var grids))
-                                    this.GetItemsInGrid(grids, position, newGearItem.Loot);
-                            }
-
-                            gearItems.Add(newGearItem);
-                            cacheEntry.CachedGearItems[slotName] = newGearItem;
-                        }
-                    }
-                } catch { return; }
-            });
-        }
-
-        private void GetItemsInSlots(ulong slotItemBase, Vector3 position, List<LootItem> loot, int recurseDepth = 0)
-        {
-            if (slotItemBase == 0 || recurseDepth > 3)
-                return;
-
-            var slotDict = this.GetSlotDictionary(slotItemBase);
-
-            if (slotDict is null || slotDict.Count == 0)
-                return;
-
-            var scatterReadMap = new ScatterReadMap(slotDict.Count);
-            var round1 = scatterReadMap.AddRound();
-            var round2 = scatterReadMap.AddRound();
-            var round3 = scatterReadMap.AddRound();
-            var round4 = scatterReadMap.AddRound();
-
-            var slotNames = slotDict.Keys.ToList();
-            var slotPtrs = slotDict.Values.ToList();
-
-            for (int i = 0; i < slotDict.Count; i++)
-            {
-                var containedItem = round1.AddEntry<ulong>(i, 0, slotPtrs[i], null, Offsets.Slot.ContainedItem);
-                
-                var inventorytemplate = round2.AddEntry<ulong>(i, 1, containedItem, null, Offsets.LootItemBase.ItemTemplate);
-                var slots = round2.AddEntry<ulong>(i, 2, containedItem, null, Offsets.Equipment.Slots);
-                var grids = round2.AddEntry<ulong>(i, 3, containedItem, null, Offsets.LootItemBase.Grids);
-
-                var mongoIdPtr = round3.AddEntry<ulong>(i, 4, inventorytemplate, null, Offsets.ItemTemplate.MongoID);
-
-                var idPtr = round4.AddEntry<ulong>(i, 5, inventorytemplate, null, Offsets.MongoID.ID);
-            }
-
-            scatterReadMap.Execute();
-
-            Parallel.For(0, slotDict.Count, i =>
-            {
-                try
-                {
-                    if (!scatterReadMap.Results[i][0].TryGetResult<ulong>(out var containedItem))
-                    return;
-                    if (!scatterReadMap.Results[i][1].TryGetResult<ulong>(out var inventorytemplate))
-                        return;
-                    if (!scatterReadMap.Results[i][5].TryGetResult<ulong>(out var idPtr))
-                        return;
-
-                    var id = Memory.ReadUnityString(idPtr);
-                    var slotName = slotNames[i];
-
-                    SlotCacheEntry cacheEntry = this.slotCache.GetOrAdd(slotItemBase, _ => new SlotCacheEntry());
-
-                    if (cacheEntry.CachedLootItems.TryGetValue(slotName, out var cachedLootItem))
-                    {
-                        loot.Add(cachedLootItem);
-                    }
-                    else
-                    {
-                        if (TarkovDevManager.AllItems.TryGetValue(id, out LootItem lootItem))
-                        {
-                            var newLootItem = new LootItem
-                            {
-                                ID = id,
-                                Name = lootItem.Item.name,
-                                AlwaysShow = lootItem.AlwaysShow,
-                                Important = lootItem.Important,
-                                Position = position,
-                                Item = lootItem.Item,
-                                Value = lootItem.Value
-                            };
-
-                            loot.Add(newLootItem);
-                            cacheEntry.CachedLootItems[slotName] = newLootItem;
-                        }
-                    }
-
-                    if (slotName != "Scabbard")
-                    {
-                        if (scatterReadMap.Results[i][2].TryGetResult<ulong>(out var slots))
-                            this.GetItemsInSlots(slots, position, loot, recurseDepth + 1);
-
-                        if (scatterReadMap.Results[i][3].TryGetResult<ulong>(out var grids))
-                            this.GetItemsInGrid(grids, position, loot);
-                    }
-                }
-                catch { return; }
-            });
-        }
-
-        private int CalculateChildrenCount(ulong gridsArrayPtr)
-        {
-            try
-            {
-                var gridsArrayCount = Memory.ReadValue<int>(gridsArrayPtr + Offsets.UnityList.Count);
-
-                if (gridsArrayCount < 0 || gridsArrayCount > 4096)
-                    return 0;
-
-                int totalChildrenCount = 0;
-
-                var scatterReadMap = new ScatterReadMap(gridsArrayCount);
-                var round1 = scatterReadMap.AddRound();
-                var round2 = scatterReadMap.AddRound();
-                var round3 = scatterReadMap.AddRound();
-                var round4 = scatterReadMap.AddRound();
-
-                var gridItemBaseStart = gridsArrayPtr + Offsets.UnityListBase.Start;
-
-                for (int i = 0; i < gridsArrayCount; i++)
-                {
-                    var grid = round1.AddEntry<ulong>(i, 0, gridItemBaseStart, null, (uint)i * Offsets.Slot.Size);
-                    var gridEnumerableClass = round2.AddEntry<ulong>(i, 1, grid, null, Offsets.Grids.GridsEnumerableClass);
-                    var itemListPtr = round3.AddEntry<ulong>(i, 2, gridEnumerableClass, null, Offsets.UnityList.Count);
-                    var itemListCount = round4.AddEntry<int>(i, 3, itemListPtr, null, Offsets.UnityList.Count);
-                }
-
-                scatterReadMap.Execute();
-
-                Parallel.For(0, gridsArrayCount, i =>
-                {
-                    if (!scatterReadMap.Results[i][0].TryGetResult<ulong>(out var grid))
-                        return;
-                    if (!scatterReadMap.Results[i][1].TryGetResult<ulong>(out var gridEnumerableClass))
-                        return;
-                    if (!scatterReadMap.Results[i][2].TryGetResult<ulong>(out var itemListPtr))
-                        return;
-                    if (!scatterReadMap.Results[i][3].TryGetResult<int>(out var itemListCount))
-                        return;
-
-                    totalChildrenCount += itemListCount;
-                });
-
-                return totalChildrenCount;
-            }
-            catch { return 0; }
-        }
-
-        private ConcurrentDictionary<string, ulong> GetSlotDictionary(ulong slotItemBase)
-        {
-            var slotDict = new ConcurrentDictionary<string, ulong>(StringComparer.OrdinalIgnoreCase);
-
-            try
-            {
-                var size = Memory.ReadValue<int>(slotItemBase + Offsets.UnityList.Count);
-
-                if (size < 1 || size > 25)
-                {
-                    size = Math.Clamp(size, 0, 25);
-                }
-
-                var scatterReadMap = new ScatterReadMap(size);
-                var round1 = scatterReadMap.AddRound();
-                var round2 = scatterReadMap.AddRound();
-
-                var slotItemBaseStart = slotItemBase + Offsets.UnityListBase.Start;
-
-                for (int i = 0; i < size; i++)
-                {
-                    var slotPtr = round1.AddEntry<ulong>(i, 0, slotItemBaseStart, null, (uint)i * Offsets.Slot.Size);
-                    var namePtr = round2.AddEntry<ulong>(i, 1, slotPtr, null, Offsets.Slot.Name);
-                }
-
-                scatterReadMap.Execute();
-
-                var task = Task.Run(() =>
-                {
-                    Parallel.For(0, size, i =>
-                    {
-                        try
-                        {
-                            if (!scatterReadMap.Results[i][0].TryGetResult<ulong>(out var slotPtr))
-                                return;
-                            if (!scatterReadMap.Results[i][1].TryGetResult<ulong>(out var namePtr))
-                                return;
-
-                            var name = Memory.ReadUnityString(namePtr);
-
-                            if (!LootManager.slotsToSkip.Contains(name, StringComparer.OrdinalIgnoreCase))
-                                slotDict[name] = slotPtr;
-                        }
-                        catch { return; }
-                    });
-                });
-
-                task.Wait();
-            }
-            catch { }
-
-            return slotDict;
         }
 
         public static List<LootItem> MergeDupelicateLootItems(List<LootItem> lootItems)
@@ -1363,8 +903,9 @@ namespace eft_dma_radar
     public class LootContainer : LootableObject
     {
         public ulong InteractiveClass { get; set; }
-        public ulong Grids;
-        public List<LootItem> Items { get; set; }
+        public bool IsWithinDistance =>
+            Memory.LocalPlayer is not null &&
+            Vector3.Distance(this.Position, Memory.LocalPlayer?.Position ?? Vector3.Zero) <= Program.Config.LootContainerDistance;
 
         public LootContainer() { }
 
@@ -1377,19 +918,14 @@ namespace eft_dma_radar
             base.Position = other.Position;
 
             this.InteractiveClass = other.InteractiveClass;
-            this.Grids = other.Grids;
-            this.Items = other.Items.Select(item => new LootItem(item)).ToList();
         }
-
-        public void UpdateValue() => this.Value = this.Items.Sum(item => item.Value);
-
     }
 
     public class LootCorpse : LootableObject
     {
         public ulong InteractiveClass { get; set; }
         public ulong Slots { get; set; }
-        public List<GearItem> Items { get; set; }
+        public List<GearManager.Gear> Items { get; set; }
         public Player Player { get; set; }
 
         public LootCorpse() { }
@@ -1405,10 +941,16 @@ namespace eft_dma_radar
 
             this.InteractiveClass = other.InteractiveClass;
             this.Slots = other.Slots;
-            this.Items = other.Items.Select(item => new GearItem(item)).ToList();
+            this.Items = other.Items.Select(item => new GearManager.Gear
+            {
+                Slot = item.Slot,
+                Item = new GearItem(item.Item),
+                Pointer = item.Pointer
+            }).ToList();
+            this.Player = other.Player;
         }
 
-        public void UpdateValue() => this.Value = this.Items.Sum(item => item.TotalValue);
+        public void UpdateValue() => this.Value = this.Items.Sum(item => item.Item.TotalValue);
     }
 
     public class GearItem : LootableObject
@@ -1420,7 +962,7 @@ namespace eft_dma_radar
         public int TotalValue { get => base.Value + this.LootValue; }
         public List<LootItem> Loot { get; set; }
         public LootItem Item { get; set; }
-        public PlayerGearInfo GearInfo { get; set; }
+        public GearManager.PlayerGearInfo GearInfo { get; set; }
 
         public GearItem() { }
 
@@ -1455,7 +997,6 @@ namespace eft_dma_radar
         public string Name;
         public ulong Grids;
         public ulong Slots;
-        public bool IsCorpse;
     }
 
     struct LootItemInfo
@@ -1471,7 +1012,8 @@ namespace eft_dma_radar
         public ulong InteractiveClass;
         public ulong Slots;
         public Vector3 Position;
-        public string PlayerName;
+        public string ProfileID;
+        public string Name;
     }
     #endregion
 }

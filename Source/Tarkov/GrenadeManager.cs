@@ -16,10 +16,10 @@ namespace eft_dma_radar
                 try
                 {
                     var count = Memory.ReadValue<int>(this._grenadeList + Offsets.UnityList.Count);
+                    
                     if (count < 0 || count > 32)
-                    {
                         return 0;
-                    }
+
                     return count;
                 }
                 catch
@@ -31,7 +31,7 @@ namespace eft_dma_radar
         /// <summary>
         /// List of "Hot" grenades in Local Game World.
         /// </summary>
-        public ReadOnlyCollection<Grenade> Grenades { get; private set; }
+        public List<Grenade> Grenades { get; private set; }
 
         public GrenadeManager(ulong localGameWorld)
         {
@@ -45,7 +45,9 @@ namespace eft_dma_radar
         /// </summary>
         public void Refresh()
         {
-            if (this._sw.ElapsedMilliseconds < 100) return;
+            if (this._sw.ElapsedMilliseconds < 100)
+                return;
+
             this._sw.Restart();
 
             try
@@ -56,9 +58,7 @@ namespace eft_dma_radar
                 if (count > 0)
                 {
                     if (this._listBase is null)
-                    {
                         this._listBase = Memory.ReadPtr(this._grenadeList + Offsets.UnityList.Base);
-                    }
 
                     var scatterReadMap = new ScatterReadMap(count);
                     var round1 = scatterReadMap.AddRound();
@@ -81,7 +81,7 @@ namespace eft_dma_radar
                     this._listBase = null;
                 }
 
-                this.Grenades = new ReadOnlyCollection<Grenade>(grenades);
+                this.Grenades = new List<Grenade>(grenades);
             }
             catch { }
         }

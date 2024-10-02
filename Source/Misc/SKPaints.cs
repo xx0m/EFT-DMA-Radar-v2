@@ -137,6 +137,14 @@ namespace eft_dma_radar
             IsAntialias = true,
             FilterQuality = SKFilterQuality.High
         };
+        public static readonly SKPaint PaintTripwires = new SKPaint()
+        {
+            Color = SKColors.OrangeRed,
+            StrokeWidth = 2,
+            Style = SKPaintStyle.Stroke,
+            IsAntialias = true,
+            FilterQuality = SKFilterQuality.High
+        };
         public static readonly SKPaint PaintExfilOpen = new SKPaint()
         {
             Color = SKColors.LimeGreen,

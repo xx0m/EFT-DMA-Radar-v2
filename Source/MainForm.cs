@@ -6,23 +6,27 @@ using SkiaSharp.Views.Desktop;
 using MaterialSkin;
 using MaterialSkin.Controls;
 using eft_dma_radar.Properties;
+using System.Collections.Concurrent;
+using System.Data;
+using System.Runtime.CompilerServices;
+using System.Globalization;
+using Offsets;
 
 namespace eft_dma_radar
 {
     public partial class frmMain : MaterialForm
     {
-        private readonly Config _config;
-        private readonly Watchlist _watchlist;
-        private readonly LootFilterManager _lootFilterManager;
-        private readonly AIFactionManager _aiFactions;
-        private readonly SKGLControl _mapCanvas;
-        private readonly Stopwatch _fpsWatch = new();
-        private readonly object _renderLock = new();
-        private readonly object _loadMapBitmapsLock = new();
-        private readonly System.Timers.Timer _mapChangeTimer = new(900);
-        private readonly List<Map> _maps = new(); // Contains all maps from \\Maps folder
-        private readonly List<string> FONTS_TO_USE = new List<string>()
-        {
+        private readonly Config config;
+        private readonly Watchlist watchlist;
+        private readonly LootFilterManager lootFilterManager;
+        private readonly AIFactionManager aiFactions;
+        private readonly SKGLControl mapCanvas;
+        private readonly Stopwatch fpsWatch = new();
+        private readonly object renderLock = new();
+        private readonly object loadMapBitmapsLock = new();
+        private readonly System.Timers.Timer mapChangeTimer = new(900);
+        private List<Map> maps = new();
+        private static readonly string[] FONTS_TO_USE = {
             "Arial",
             "Calibri",
             "Candara",
@@ -37,44 +41,91 @@ namespace eft_dma_radar
             "Trebuchet MS",
             "Verdana",
         };
+        private static readonly string[] PlayerTypeNames = {
+            "LocalPlayer",
+            "Teammate",
+            "PMC",
+            "Scav",
+            "Boss",
+            "Raider",
+            "Cultist",
+            "USEC",
+            "BEAR",
+            "PlayerScav"
+        };
 
-        private bool _isFreeMapToggled = false;
-        private float _uiScale = 1.0f;
-        private float _aimviewWindowSize = 200;
-        private Player _closestPlayerToMouse = null;
-        private LootableObject _closestItemToMouse = null;
-        private QuestItem _closestTaskItemToMouse = null;
-        private QuestZone _closestTaskZoneToMouse = null;
-        private bool _isDragging = false;
-        private Point _lastMousePosition = Point.Empty;
-        private int? _mouseOverGroup = null;
-        private int _fps = 0;
-        private int _mapSelectionIndex = 0;
-        private Map _selectedMap;
-        private SKBitmap[] _loadedBitmaps;
-        private MapPosition _mapPanPosition = new();
-        private Watchlist.Entry _lastWatchlistEntry;
-        private string _lastFactionEntry;
-        private List<Player> _watchlistMatchPlayers = new();
+        private bool isFreeMapToggled = false;
+        private float uiScale = 1.0f;
+        private float aimviewWindowSize = 200;
+        private Player closestPlayerToMouse = null;
+        private LootableObject closestItemToMouse = null;
+        private QuestItem closestTaskItemToMouse = null;
+        private QuestZone closestTaskZoneToMouse = null;
 
-        private const int ZOOM_INTERVAL = 10;
-        private int targetZoomValue = 0;
-        private System.Windows.Forms.Timer zoomTimer;
+        private Point lastMousePosition = Point.Empty;
+        private int? mouseOverGroup = null;
+        private int fps = 0;
+        private int mapSelectionIndex = 0;
+        private Map selectedMap;
+        private SKBitmap[] loadedBitmaps;
+        private MapPosition mapPanPosition = new();
+        private Watchlist.Entry lastWatchlistEntry;
+        private string lastFactionEntry;
+        private Hotkey lastHotkeyEntry;
+        private List<Player> watchlistMatchPlayers = new();
 
-        private const float DRAG_SENSITIVITY = 3.5f;
+        private bool hotkeyUpdating = false;
 
-        private const double PAN_SMOOTHNESS = 0.1;
-        private const int PAN_INTERVAL = 10;
+        private const int TARGET_FPS = 144;
+        private const int FRAME_DELAY = 1000 / TARGET_FPS;
+
+        private SKPoint currentPanPosition;
         private SKPoint targetPanPosition;
-        private System.Windows.Forms.Timer panTimer;
+
+        private float currentZoom = 1f;
+        private float targetZoom = 1f;
+        private bool isZooming = false;
+        private bool isPanning = false;
+        private bool isDragging = false;
+
+        private const float MAX_ZOOM = 0.5f;
+        private const float MIN_ZOOM = 10f;
+        private const float DRAG_SENSITIVITY = 1.5f;
+        private const float PAN_SENSITIVITY = 0.3f;
+
+        private MapParameters cachedMapParams;
+        private DateTime lastMapParamsUpdate = DateTime.MinValue;
 
         private int lastLootItemCount = -1;
 
-        private System.Windows.Forms.Timer itemAnimationTimer;
-        private bool isAnimationRunning = false;
         private List<ItemAnimation> activeItemAnimations = new List<ItemAnimation>();
         private LootItem itemToPing = null;
-        private bool _isRefreshingLootItems = false;
+
+        private bool isItemPingAnimationRunning = false;
+        private bool isRefreshingLootItems = false;
+
+        private System.Timers.Timer inputCheckTimer;
+        private System.Timers.Timer itemPingAnimationTimer;
+
+        private HashSet<Keys> previouslyPressedKeys = new HashSet<Keys>();
+        private Dictionary<HotkeyAction, Action<bool>> hotkeyActions;
+        private Dictionary<Keys, string> keyDisplayNames;
+        private readonly string[] hotkeyCboActions =
+        {
+            "Chams",
+            "Important Loot",
+            "No Recoil",
+            "No Sway",
+            "Optical Thermal",
+            "Show Containers",
+            "Show Corpses",
+            "Show Loot",
+            "Thirdperson",
+            "Thermal Vision",
+            "Time Scale",
+            "Zoom In",
+            "Zoom Out"
+        };
 
         #region Getters
         /// <summary>
@@ -133,17 +184,30 @@ namespace eft_dma_radar
         /// <summary>
         /// Contains all 'Hot' grenades in Local Game World, and their position(s).
         /// </summary>
-        private ReadOnlyCollection<Grenade> Grenades
+        private List<Grenade> Grenades
         {
             get => Memory.Grenades;
         }
 
         /// <summary>
+        /// Contains all 'Hot' grenades in Local Game World, and their position(s).
+        /// </summary>
+        private List<Tripwire> Tripwires
+        {
+            get => Memory.Tripwires;
+        }
+
+        /// <summary>
         /// Contains all 'Exfils' in Local Game World, and their status/position(s).
         /// </summary>
-        private ReadOnlyCollection<Exfil> Exfils
+        private List<Exfil> Exfils
         {
             get => Memory.Exfils;
+        }
+
+        private List<Transit> Transits
+        {
+            get => Memory.Transits;
         }
 
         /// <summary>
@@ -154,7 +218,7 @@ namespace eft_dma_radar
             get => Memory.QuestManager;
         }
 
-        private ReadOnlyCollection<PlayerCorpse> Corpses
+        private List<PlayerCorpse> Corpses
         {
             get => Memory.Corpses;
         }
@@ -166,12 +230,12 @@ namespace eft_dma_radar
         /// </summary>
         public frmMain()
         {
-            _config = Program.Config;
-            _watchlist = Program.Watchlist;
-            _lootFilterManager = Program.LootFilterManager;
-            _aiFactions = Program.AIFactionManager;
+            this.config = Program.Config;
+            this.watchlist = Program.Watchlist;
+            this.lootFilterManager = Program.LootFilterManager;
+            this.aiFactions = Program.AIFactionManager;
 
-            InitializeComponent();
+            this.InitializeComponent();
 
             var materialSkinManager = MaterialSkinManager.Instance;
             materialSkinManager.AddFormToManage(this);
@@ -179,26 +243,19 @@ namespace eft_dma_radar
             materialSkinManager.Theme = MaterialSkinManager.Themes.DARK;
             materialSkinManager.ColorScheme = new ColorScheme(Primary.Grey800, Primary.Grey800, Primary.Indigo100, Accent.Orange400, TextShade.WHITE);
 
-            LoadConfig();
-            LoadMaps();
+            this.LoadConfig();
+            this.LoadMaps();
 
-            _mapCanvas = skMapCanvas;
-            _mapCanvas.VSync = _config.VSync;
+            this.mapCanvas = skMapCanvas;
+            this.mapCanvas.VSync = this.config.VSync;
 
-            _mapChangeTimer.AutoReset = false;
-            _mapChangeTimer.Elapsed += MapChangeTimer_Elapsed;
+            this.mapChangeTimer.AutoReset = false;
+            this.mapChangeTimer.Elapsed += this.MapChangeTimer_Elapsed;
 
-            this.DoubleBuffered = true;
+            this.fpsWatch.Start();
 
-            _fpsWatch.Start();
-
-            zoomTimer = new System.Windows.Forms.Timer();
-            zoomTimer.Interval = ZOOM_INTERVAL;
-            zoomTimer.Tick += ZoomTimer_Tick;
-
-            panTimer = new System.Windows.Forms.Timer();
-            panTimer.Interval = PAN_INTERVAL;
-            panTimer.Tick += PanTimer_Tick;
+            this.InitializeInputCheckTimer();
+            this.InitializeDoubleBuffering();
         }
         #endregion
 
@@ -210,10 +267,10 @@ namespace eft_dma_radar
         {
             e.Cancel = true; // Cancel shutdown
             this.Enabled = false; // Lock window
-            Memory.Loot?.StopAutoRefresh();
+            this.Loot?.StopAutoRefresh();
             Memory.Toolbox?.StopToolbox();
 
-            Config.SaveConfig(_config); // Save Config to Config.json
+            Config.SaveConfig(this.config); // Save Config to Config.json
             Memory.Shutdown(); // Wait for Memory Thread to gracefully exit
             e.Cancel = false; // Ready to close
             base.OnFormClosing(e); // Proceed with closing
@@ -224,10 +281,10 @@ namespace eft_dma_radar
         /// </summary>
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData) => keyData switch
         {
-            Keys.F1 => ZoomIn(5),
-            Keys.F2 => ZoomOut(5),
+            Keys.F1 => this.ZoomIn(5, Cursor.Position),
+            Keys.F2 => this.ZoomOut(5),
             Keys.F4 => swAimview.Checked = !swAimview.Checked,
-            Keys.F5 => ToggleMap(),
+            Keys.F5 => this.ToggleMap(),
             Keys.Control | Keys.N => swNightVision.Checked = !swNightVision.Checked,
             Keys.Control | Keys.T => swThermalVision.Checked = !swThermalVision.Checked,
             _ => base.ProcessCmdKey(ref msg, keyData),
@@ -238,30 +295,12 @@ namespace eft_dma_radar
         /// </summary>
         protected override void OnMouseWheel(MouseEventArgs e)
         {
-            if (tabControlMain.SelectedIndex == 0) // Main Radar Tab should be open
+            if (tabControlMain.SelectedIndex == 0)
             {
-                var zoomSens = (double)_config.ZoomSensitivity / 100;
-                int zoomDelta = -(int)(e.Delta * zoomSens);
-
-                if (zoomDelta < 0)
-                    ZoomIn(-zoomDelta);
-                else if (zoomDelta > 0)
-                    ZoomOut(zoomDelta);
-
-                if (this._isFreeMapToggled && zoomDelta < 0) // Only move the zoom position when scrolling in
-                {
-                    var mousePos = this._mapCanvas.PointToClient(Cursor.Position);
-                    var mapParams = GetMapLocation();
-                    var mapMousePos = new SKPoint(
-                        mapParams.Bounds.Left + mousePos.X / mapParams.XScale,
-                        mapParams.Bounds.Top + mousePos.Y / mapParams.YScale
-                    );
-
-                    this.targetPanPosition = mapMousePos;
-
-                    if (!this.panTimer.Enabled)
-                        this.panTimer.Start();
-                }
+                if (e.Delta > 0)
+                    this.ZoomIn(5, e.Location);
+                else
+                    this.ZoomOut(5);
 
                 return;
             }
@@ -272,41 +311,118 @@ namespace eft_dma_radar
 
         #region GUI Events / Functions
         #region General Helper Functions
+        private void InitializeInputCheckTimer()
+        {
+            if (InputManager.IsManagerLoaded)
+            {
+                this.inputCheckTimer = new System.Timers.Timer(25);
+                this.inputCheckTimer.Elapsed += this.InputCheckTimer_Tick;
+                this.inputCheckTimer.Start();
+            }
+        }
+
+        private void InitializeDoubleBuffering()
+        {
+            this.DoubleBuffered = true;
+
+            this.mapCanvas.PaintSurface += (sender, e) =>
+            {
+                e.Surface.Canvas.Clear();
+                this.skMapCanvas_PaintSurface(sender, e);
+            };
+        }
+
+        private async void AnimateZoomAndPan()
+        {
+            while (Math.Abs(this.currentZoom - this.targetZoom) > 0.001f ||
+                   SKPoint.Distance(this.currentPanPosition, this.targetPanPosition) > 0.1f)
+            {
+                this.currentZoom = this.currentZoom + (targetZoom - currentZoom) * 0.1f;
+                this.currentPanPosition = new SKPoint(
+                    currentPanPosition.X + (targetPanPosition.X - currentPanPosition.X) * 0.1f,
+                    currentPanPosition.Y + (targetPanPosition.Y - currentPanPosition.Y) * 0.1f
+                );
+
+                this.config.DefaultZoom = (int)(currentZoom * 100);
+
+                this.mapPanPosition = new MapPosition()
+                {
+                    X = currentPanPosition.X,
+                    Y = currentPanPosition.Y,
+                    Height = mapPanPosition.Height
+                };
+
+                this.InvalidateMapParams();
+                await Task.Delay(FRAME_DELAY);
+                this.mapCanvas.Invalidate();
+            }
+
+            this.currentZoom = this.targetZoom;
+            this.currentPanPosition = this.targetPanPosition;
+            this.isZooming = false;
+            this.isPanning = false;
+            this.InvalidateMapParams();
+        }
+
+        private async void AdjustPanPositionForZoom(Point cursorPosition, float zoomAmount)
+        {
+            var mapParams = this.GetMapLocation();
+            var cursorMapPos = new SKPoint(
+                mapParams.Bounds.Left + cursorPosition.X / mapParams.XScale,
+                mapParams.Bounds.Top + cursorPosition.Y / mapParams.YScale
+            );
+
+            var panToCursorVector = new SKPoint(
+                cursorMapPos.X - this.currentPanPosition.X,
+                cursorMapPos.Y - this.currentPanPosition.Y
+            );
+
+            this.targetPanPosition = new SKPoint(
+                this.currentPanPosition.X + panToCursorVector.X * PAN_SENSITIVITY * Math.Abs(zoomAmount),
+                this.currentPanPosition.Y + panToCursorVector.Y * PAN_SENSITIVITY * Math.Abs(zoomAmount)
+            );
+        }
+
+        private bool IsInViewport(MapPosition mapPosition, MapParameters mapParams)
+        {
+            var zoomedPos = mapPosition.ToZoomedPos(mapParams);
+            return zoomedPos.X >= 0 && zoomedPos.X <= this.mapCanvas.Width &&
+                   zoomedPos.Y >= 0 && zoomedPos.Y <= this.mapCanvas.Height;
+        }
+
         private bool ToggleMap()
         {
             if (!btnToggleMap.Enabled)
                 return false;
 
-            if (_mapSelectionIndex == _maps.Count - 1)
-                _mapSelectionIndex = 0; // Start over when end of maps reached
+            if (this.mapSelectionIndex == this.maps.Count - 1)
+                this.mapSelectionIndex = 0; // Start over when end of maps reached
             else
-                _mapSelectionIndex++; // Move onto next map
+                this.mapSelectionIndex++; // Move onto next map
 
-            tabRadar.Text = $"Radar ({_maps[_mapSelectionIndex].Name})";
-            _mapChangeTimer.Restart(); // Start delay
+            tabRadar.Text = $"Radar ({this.maps[this.mapSelectionIndex].Name})";
+            mapChangeTimer.Restart(); // Start delay
 
             return true;
         }
 
-        private void InitiateWatchlist()
+        private void InitializeWatchlist()
         {
-            if (_watchlist.Profiles.Count == 0)
-            {
-                _watchlist.AddEmptyProfile();
-            }
+            if (this.watchlist.Profiles.Count == 0)
+                this.watchlist.AddEmptyProfile();
 
-            UpdateWatchlistProfiles();
+            this.UpdateWatchlistProfiles();
         }
 
-        private void InitiateColors()
+        private void InitializeColors()
         {
-            UpdatePaintColorControls();
-            UpdateThemeColors();
+            this.UpdatePaintColorControls();
+            this.UpdateThemeColors();
         }
 
-        private void InitiateLootFilter()
+        private void InitializeLootFilter()
         {
-            if (_config.Filters.Count == 0)
+            if (this.config.Filters.Count == 0)
             {
                 var newFilter = new LootFilterManager.Filter()
                 {
@@ -323,56 +439,56 @@ namespace eft_dma_radar
                     }
                 };
 
-                _config.Filters.Add(newFilter);
-                LootFilterManager.SaveLootFilterManager(_lootFilterManager);
+                this.config.Filters.Add(newFilter);
+                LootFilterManager.SaveLootFilterManager(this.lootFilterManager);
             }
 
             cboLootFilterItemsToAdd.Items.AddRange(TarkovDevManager.AllItems.Select(x => x.Value).OrderBy(x => x.Name).Take(25).ToArray());
             cboLootFilterItemsToAdd.DisplayMember = "Name";
 
-            UpdateLootFilters();
+            this.UpdateLootFilters();
         }
 
-        private void InitiateFactions()
+        private void InitializeFactions()
         {
-            if (_aiFactions.Factions.Count == 0)
-                _aiFactions.AddEmptyFaction();
+            if (this.aiFactions.Factions.Count == 0)
+                this.aiFactions.AddEmptyFaction();
 
-            UpdateFactionPlayerTypes();
-            UpdateFactions();
+            this.UpdateFactionPlayerTypes();
+            this.UpdateFactions();
         }
 
-        private void InitiateAutoMapRefreshItems()
+        private void InitializeAutoMapRefreshItems()
         {
-            cboAutoRefreshMap.Items.AddRange(_config.LootItemRefreshSettings.Keys.ToArray());
-            cboAutoRefreshMap.SelectedIndex = _selectedMap is not null ? cboAutoRefreshMap.FindStringExact(_selectedMap.Name) : 0;
+            cboAutoRefreshMap.Items.AddRange(this.config.LootItemRefreshSettings.Keys.ToArray());
+            cboAutoRefreshMap.SelectedIndex = this.selectedMap is not null ? cboAutoRefreshMap.FindStringExact(this.selectedMap.Name) : 0;
         }
 
-        private void InitiateUIScaling()
+        private void InitializeUIScaling()
         {
-            _uiScale = (.01f * _config.UIScale);
+            this.uiScale = (.01f * this.config.UIScale);
 
             #region Update Paints/Text
-            SKPaints.TextBaseOutline.StrokeWidth = 2 * _uiScale;
-            SKPaints.TextRadarStatus.TextSize = 48 * _uiScale;
-            SKPaints.PaintBase.StrokeWidth = 3 * _uiScale;
-            SKPaints.PaintMouseoverGroup.StrokeWidth = 3 * _uiScale;
-            SKPaints.PaintDeathMarker.StrokeWidth = 3 * _uiScale;
-            SKPaints.LootPaint.StrokeWidth = 3 * _uiScale;
-            SKPaints.PaintTransparentBacker.StrokeWidth = 1 * _uiScale;
-            SKPaints.PaintAimviewCrosshair.StrokeWidth = 1 * _uiScale;
-            SKPaints.PaintGrenades.StrokeWidth = 3 * _uiScale;
-            SKPaints.PaintExfilOpen.StrokeWidth = 1 * _uiScale;
-            SKPaints.PaintExfilPending.StrokeWidth = 1 * _uiScale;
-            SKPaints.PaintExfilClosed.StrokeWidth = 1 * _uiScale;
+            SKPaints.TextBaseOutline.StrokeWidth = 2 * this.uiScale;
+            SKPaints.TextRadarStatus.TextSize = 48 * this.uiScale;
+            SKPaints.PaintBase.StrokeWidth = 3 * this.uiScale;
+            SKPaints.PaintMouseoverGroup.StrokeWidth = 3 * this.uiScale;
+            SKPaints.PaintDeathMarker.StrokeWidth = 3 * this.uiScale;
+            SKPaints.LootPaint.StrokeWidth = 3 * this.uiScale;
+            SKPaints.PaintTransparentBacker.StrokeWidth = 1 * this.uiScale;
+            SKPaints.PaintAimviewCrosshair.StrokeWidth = 1 * this.uiScale;
+            SKPaints.PaintGrenades.StrokeWidth = 3 * this.uiScale;
+            SKPaints.PaintExfilOpen.StrokeWidth = 1 * this.uiScale;
+            SKPaints.PaintExfilPending.StrokeWidth = 1 * this.uiScale;
+            SKPaints.PaintExfilClosed.StrokeWidth = 1 * this.uiScale;
             #endregion
 
-            _aimviewWindowSize = 200 * _uiScale;
+            this.aimviewWindowSize = 200 * this.uiScale;
 
-            InitiateFontSizes();
+            this.InitializeFontSizes();
         }
 
-        private void InitiateFonts()
+        private void InitializeFonts()
         {
             var fontToUse = SKTypeface.FromFamilyName(cboGlobalFont.Text);
             SKPaints.TextMouseoverGroup.Typeface = fontToUse;
@@ -382,9 +498,9 @@ namespace eft_dma_radar
             SKPaints.TextRadarStatus.Typeface = fontToUse;
         }
 
-        private void InitiateSKColors()
+        private void InitializeSKColors()
         {
-            foreach (var paintColor in _config.PaintColors)
+            foreach (var paintColor in this.config.PaintColors)
             {
                 var value = paintColor.Value;
                 var color = new SKColor(value.R, value.G, value.B, value.A);
@@ -393,21 +509,127 @@ namespace eft_dma_radar
             }
         }
 
-        private void InitiateFontSizes()
+        private void InitializeFontSizes()
         {
-            SKPaints.TextMouseoverGroup.TextSize = _config.GlobalFontSize * _uiScale;
-            SKPaints.TextBase.TextSize = _config.GlobalFontSize * _uiScale;
-            SKPaints.LootText.TextSize = _config.GlobalFontSize * _uiScale;
-            SKPaints.TextBaseOutline.TextSize = _config.GlobalFontSize * _uiScale;
+            SKPaints.TextMouseoverGroup.TextSize = this.config.GlobalFontSize * this.uiScale;
+            SKPaints.TextBase.TextSize = this.config.GlobalFontSize * this.uiScale;
+            SKPaints.LootText.TextSize = this.config.GlobalFontSize * this.uiScale;
+            SKPaints.TextBaseOutline.TextSize = this.config.GlobalFontSize * this.uiScale;
 
-            foreach (var setting in _config.PlayerInformationSettings)
+            foreach (var setting in this.config.PlayerInformationSettings)
             {
                 var key = setting.Key;
                 var value = setting.Value;
 
-                Extensions.PlayerTypeTextPaints[key].TextSize = value.FontSize * _uiScale;
-                Extensions.PlayerTypeFlagTextPaints[key].TextSize = value.FlagsFontSize * _uiScale;
+                Extensions.PlayerTypeTextPaints[key].TextSize = value.FontSize * this.uiScale;
+                Extensions.PlayerTypeFlagTextPaints[key].TextSize = value.FlagsFontSize * this.uiScale;
             }
+        }
+
+        private void InitializeHotkeys()
+        {
+            cboHotkeyAction.Items.AddRange(this.hotkeyCboActions);
+            this.InitializeHotkeyKeys();
+            this.UpdateHotkeyEntriesList();
+        }
+
+        private void InitializeHotkeyKeys()
+        {
+            var keyItems = new List<HotkeyKey>();
+            this.keyDisplayNames = new Dictionary<Keys, string>();
+
+            for (int i = 0; i <= 9; i++)
+            {
+                var key = (Keys)(48 + i);
+                var displayName = i.ToString();
+                keyItems.Add(new HotkeyKey(displayName, key));
+                this.keyDisplayNames[key] = displayName;
+            }
+
+            for (int i = 1; i <= 12; i++)
+            {
+                var key = (Keys)(111 + i);
+                var displayName = $"F{i}";
+                keyItems.Add(new HotkeyKey(displayName, key));
+                this.keyDisplayNames[key] = displayName;
+            }
+
+            for (char c = 'A'; c <= 'Z'; c++)
+            {
+                var key = (Keys)c;
+                var displayName = c.ToString();
+                keyItems.Add(new HotkeyKey(displayName, key));
+                this.keyDisplayNames[key] = displayName;
+            }
+
+            var specialKeys = new[]
+            {
+                new HotkeyKey("Space", Keys.Space),
+                new HotkeyKey("Enter", Keys.Enter),
+                new HotkeyKey("Shift", Keys.Shift),
+                new HotkeyKey("Ctrl", Keys.Control),
+                new HotkeyKey("Alt", Keys.Menu),
+                new HotkeyKey("Mouse1", Keys.LButton),
+                new HotkeyKey("Mouse2", Keys.RButton),
+                new HotkeyKey("Mouse3", Keys.MButton),
+                new HotkeyKey("Mouse4", Keys.XButton1),
+                new HotkeyKey("Mouse5", Keys.XButton2),
+                new HotkeyKey("Left", Keys.Left),
+                new HotkeyKey("Right", Keys.Right),
+                new HotkeyKey("Up", Keys.Up),
+                new HotkeyKey("Down", Keys.Down),
+                new HotkeyKey("Insert", Keys.Insert),
+                new HotkeyKey("Home", Keys.Home),
+                new HotkeyKey("Page Up", Keys.PageUp),
+                new HotkeyKey("Page Down", Keys.PageDown),
+                new HotkeyKey("Delete", Keys.Delete),
+                new HotkeyKey("End", Keys.End),
+                new HotkeyKey("Num 0", Keys.NumPad0),
+                new HotkeyKey("Num 1", Keys.NumPad1),
+                new HotkeyKey("Num 2", Keys.NumPad2),
+                new HotkeyKey("Num 3", Keys.NumPad3),
+                new HotkeyKey("Num 4", Keys.NumPad4),
+                new HotkeyKey("Num 5", Keys.NumPad5),
+                new HotkeyKey("Num 6", Keys.NumPad6),
+                new HotkeyKey("Num 7", Keys.NumPad7),
+                new HotkeyKey("Num 8", Keys.NumPad8),
+                new HotkeyKey("Num 9", Keys.NumPad9),
+                new HotkeyKey("Num .", Keys.Decimal),
+                new HotkeyKey("Num +", Keys.Add),
+                new HotkeyKey("Num -", Keys.Subtract),
+                new HotkeyKey("Num *", Keys.Multiply),
+                new HotkeyKey("Num /", Keys.Divide)
+            };
+
+            keyItems.AddRange(specialKeys);
+
+            foreach (var item in specialKeys)
+            {
+                this.keyDisplayNames[item.Key] = item.Name;
+            }
+
+            cboHotkeyKey.DataSource = keyItems.ToList();
+            cboHotkeyKey.DisplayMember = "Name";
+            cboHotkeyKey.ValueMember = "Key";
+            cboHotkeyKey.SelectedIndex = -1;
+        }
+
+        private void InitializeHotkeyActions()
+        {
+            this.hotkeyActions = new Dictionary<HotkeyAction, Action<bool>>
+            {
+                { HotkeyAction.Chams, this.SetChams },
+                { HotkeyAction.ImportantLoot, this.SetImportantLootOnly },
+                { HotkeyAction.NoRecoil, this.SetNoRecoil },
+                { HotkeyAction.NoSway, this.SetNoSway },
+                { HotkeyAction.OpticalThermal, this.SetOpticalThermal },
+                { HotkeyAction.ShowContainers, this.SetShowContainers },
+                { HotkeyAction.ShowCorpses, this.SetShowCorpses },
+                { HotkeyAction.ShowLoot, this.SetShowLoot },
+                { HotkeyAction.Thirdperson, this.SetThirdperson },
+                { HotkeyAction.ThermalVision, this.SetThermalVision },
+                { HotkeyAction.TimeScale, this.SetTimescale }
+            };
         }
 
         private DialogResult ShowErrorDialog(string message)
@@ -427,37 +649,29 @@ namespace eft_dma_radar
                 dir.Create();
 
             var configs = dir.GetFiles("*.json");
-            //Debug.WriteLine($"Found {configs.Length} .json map configs.");
             if (configs.Length == 0)
                 throw new IOException("No .json map configs found!");
 
-            foreach (var config in configs)
+            this.maps = configs.AsParallel().Select(config =>
             {
                 var name = Path.GetFileNameWithoutExtension(config.Name);
-                //Debug.WriteLine($"Loading Map: {name}");
-                var mapConfig = MapConfig.LoadFromFile(config.FullName); // Assuming LoadFromFile is updated to handle new JSON format
-                //Add map ID to map config
+                var mapConfig = MapConfig.LoadFromFile(config.FullName);
                 var mapID = mapConfig.MapID[0];
                 var map = new Map(name.ToUpper(), mapConfig, config.FullName, mapID);
-                // Assuming map.ConfigFile now has a 'mapLayers' property that is a List of a new type matching the JSON structure
-                map.ConfigFile.MapLayers = map.ConfigFile
-                    .MapLayers
-                    .OrderBy(x => x.MinHeight)
-                    .ToList();
-
-                _maps.Add(map);
-            }
+                map.ConfigFile.MapLayers = map.ConfigFile.MapLayers.OrderBy(x => x.MinHeight).ToList();
+                return map;
+            }).ToList();
         }
 
         private void CheckConfigDictionaries()
         {
-            UpdateDictionary(_config.PaintColors, _config.DefaultPaintColors);
-            UpdateDictionary(_config.LootItemRefreshSettings, _config.DefaultAutoRefreshSettings);
-            UpdateDictionary(_config.Chams, _config.DefaultChamsSettings);
-            UpdateDictionary(_config.LootContainerSettings, _config.DefaultContainerSettings);
-            UpdateDictionary(_config.LootPing, _config.DefaultLootPingSettings);
-            UpdateDictionary(_config.MaxSkills, _config.DefaultMaxSkillsSettings);
-            UpdateDictionary(_config.PlayerInformationSettings, _config.DefaultPlayerInformationSettings);
+            this.UpdateDictionary(this.config.PaintColors, this.config.DefaultPaintColors);
+            this.UpdateDictionary(this.config.LootItemRefreshSettings, this.config.DefaultAutoRefreshSettings);
+            this.UpdateDictionary(this.config.Chams, this.config.DefaultChamsSettings);
+            this.UpdateDictionary(this.config.LootContainerSettings, this.config.DefaultContainerSettings);
+            this.UpdateDictionary(this.config.LootPing, this.config.DefaultLootPingSettings);
+            this.UpdateDictionary(this.config.MaxSkills, this.config.DefaultMaxSkillsSettings);
+            this.UpdateDictionary(this.config.PlayerInformationSettings, this.config.DefaultPlayerInformationSettings);
         }
 
         private void UpdateDictionary<TKey, TValue>(Dictionary<TKey, TValue> dictionary, Dictionary<TKey, TValue> defaultDictionary)
@@ -475,183 +689,212 @@ namespace eft_dma_radar
         private void LoadConfig()
         {
             this.CheckConfigDictionaries();
-            this.InitiateSKColors();
+            this.InitializeSKColors();
             this.SetupFonts();
 
             #region Settings
             #region General
             // Radar
-            swRadarStats.Checked = _config.RadarStats;
-            mcRadarStats.Visible = _config.RadarStats;
-            swRadarVsync.Checked = _config.VSync;
-            swRadarEnemyCount.Checked = _config.EnemyCount;
-            mcRadarEnemyStats.Visible = _config.EnemyCount;
-            mcRadarLootItemViewer.Visible = _config.LootItemViewer;
-            swPvEMode.Checked = _config.PvEMode;
+            swRadarStats.Checked = this.config.RadarStats;
+            mcRadarStats.Visible = this.config.RadarStats;
+            swRadarVsync.Checked = this.config.VSync;
+            swRadarEnemyCount.Checked = this.config.EnemyCount;
+            mcRadarEnemyStats.Visible = this.config.EnemyCount;
+            mcRadarLootItemViewer.Visible = this.config.LootItemViewer;
+            swPvEMode.Checked = this.config.PvEMode;
 
-            btnTriggerUnityCrash.Visible = _config.PvEMode;
+            btnTriggerUnityCrash.Visible = this.config.PvEMode;
 
             // User Interface
-            swLooseLoot.Checked = _config.LooseLoot;
-            swAimview.Checked = _config.Aimview;
-            swExfilNames.Checked = _config.ExfilNames;
-            swHoverArmor.Checked = _config.HoverArmor;
-            txtTeammateID.Text = _config.PrimaryTeammateId;
-            sldrZoomSensitivity.Value = _config.ZoomSensitivity;
+            swAimview.Checked = this.config.Aimview;
+            swExfilNames.Checked = this.config.ExfilNames;
+            swHoverArmor.Checked = this.config.HoverArmor;
+            txtTeammateID.Text = this.config.PrimaryTeammateId;
+            sldrZoomSensitivity.Value = this.config.ZoomSensitivity;
 
-            sldrUIScale.Value = _config.UIScale;
-            cboGlobalFont.SelectedIndex = _config.GlobalFont;
-            sldrFontSize.Value = _config.GlobalFontSize;
+            sldrUIScale.Value = this.config.UIScale;
+            cboGlobalFont.SelectedIndex = this.config.GlobalFont;
+            sldrFontSize.Value = this.config.GlobalFontSize;
             #endregion
 
             #region Memory Writing
-            swMasterSwitch.Checked = _config.MasterSwitch;
+            swMasterSwitch.Checked = this.config.MasterSwitch;
 
             // Global Features
-            mcSettingsMemoryWritingGlobal.Enabled = _config.MasterSwitch;
-            swThirdperson.Checked = _config.Thirdperson;
-            swFreezeTime.Checked = _config.FreezeTimeOfDay;
-            sldrTimeOfDay.Enabled = _config.FreezeTimeOfDay;
-            sldrTimeOfDay.Value = (int)_config.TimeOfDay;
-            swInfiniteStamina.Checked = _config.InfiniteStamina;
-            swTimeScale.Checked = _config.TimeScale;
-            sldrTimeScaleFactor.Enabled = _config.TimeScale;
-            sldrTimeScaleFactor.Value = (int)(_config.TimeScaleFactor * 10);
-            lblSettingsMemoryWritingTimeScaleFactor.Text = $"x{(_config.TimeScaleFactor)}";
-            lblSettingsMemoryWritingTimeScaleFactor.Enabled = _config.TimeScale;
-
-            swLootThroughWalls.Checked = _config.LootThroughWalls;
-            sldrLootThroughWallsDistance.Enabled = _config.LootThroughWalls;
-
-            swExtendedReach.Checked = _config.ExtendedReach;
-            sldrExtendedReachDistance.Enabled = _config.ExtendedReach;
+            mcSettingsMemoryWritingGlobal.Enabled = this.config.MasterSwitch;
+            swThirdperson.Checked = this.config.Thirdperson;
+            swFreezeTime.Checked = this.config.FreezeTimeOfDay;
+            sldrTimeOfDay.Enabled = this.config.FreezeTimeOfDay;
+            sldrTimeOfDay.Value = (int)this.config.TimeOfDay;
+            swInfiniteStamina.Checked = this.config.InfiniteStamina;
+            swTimeScale.Checked = this.config.TimeScale;
+            sldrTimeScaleFactor.Enabled = this.config.TimeScale;
+            sldrTimeScaleFactor.Value = (int)(this.config.TimeScaleFactor * 10);
+            lblSettingsMemoryWritingTimeScaleFactor.Text = $"x{(this.config.TimeScaleFactor)}";
+            lblSettingsMemoryWritingTimeScaleFactor.Enabled = this.config.TimeScale;
+            swLootThroughWalls.Checked = this.config.LootThroughWalls;
+            sldrLootThroughWallsDistance.Enabled = this.config.LootThroughWalls;
+            swExtendedReach.Checked = this.config.ExtendedReach;
+            sldrExtendedReachDistance.Enabled = this.config.ExtendedReach;
+            sldrFOV.Value = this.config.FOV;
+            swInventoryBlur.Checked = this.config.InventoryBlur;
+            swMedPanel.Checked = this.config.MedInfoPanel;
 
             // Gear Features
-            mcSettingsMemoryWritingGear.Enabled = _config.MasterSwitch;
-            swNoRecoilSway.Checked = _config.NoRecoilSway;
-            swInstantADS.Checked = _config.InstantADS;
-            swNoVisor.Checked = _config.NoVisor;
-            swThermalVision.Checked = _config.ThermalVision;
-            swOpticalThermal.Checked = _config.OpticThermalVision;
-            swNightVision.Checked = _config.NightVision;
-            swNoWeaponMalfunctions.Checked = _config.NoWeaponMalfunctions;
+            mcSettingsMemoryWritingGear.Enabled = this.config.MasterSwitch;
+            swNoRecoil.Checked = this.config.NoRecoil;
+            swNoSway.Checked = this.config.NoSway;
+            swInstantADS.Checked = this.config.InstantADS;
+            swNoVisor.Checked = this.config.NoVisor;
+            swThermalVision.Checked = this.config.ThermalVision;
+            swOpticalThermal.Checked = this.config.OpticThermalVision;
+            swNightVision.Checked = this.config.NightVision;
+            swNoWeaponMalfunctions.Checked = this.config.NoWeaponMalfunctions;
+            swJuggernaut.Checked = this.config.Juggernaut;
 
             // Max Skill Buff Management
-            mcSettingsMemoryWritingSkillBuffs.Enabled = _config.MasterSwitch;
-            swMaxEndurance.Checked = _config.MaxSkills["Endurance"];
-            swMaxStrength.Checked = _config.MaxSkills["Strength"];
-            swMaxVitality.Checked = _config.MaxSkills["Vitality"];
-            swMaxHealth.Checked = _config.MaxSkills["Health"];
-            swMaxStressResistance.Checked = _config.MaxSkills["Stress Resistance"];
-            swMaxMetabolism.Checked = _config.MaxSkills["Metabolism"];
-            swMaxImmunity.Checked = _config.MaxSkills["Immunity"];
-            swMaxPerception.Checked = _config.MaxSkills["Perception"];
-            swMaxIntellect.Checked = _config.MaxSkills["Intellect"];
-            swMaxAttention.Checked = _config.MaxSkills["Attention"];
-            swMaxCovertMovement.Checked = _config.MaxSkills["Covert Movement"];
-            swMaxThrowables.Checked = _config.MaxSkills["Throwables"];
-            swMaxSurgery.Checked = _config.MaxSkills["Surgery"];
-            swMaxSearch.Checked = _config.MaxSkills["Search"];
-            swMaxMagDrills.Checked = _config.MaxSkills["Mag Drills"];
-            swMaxLightVests.Checked = _config.MaxSkills["Light Vests"];
-            swMaxHeavyVests.Checked = _config.MaxSkills["Heavy Vests"];
+            mcSettingsMemoryWritingSkillBuffs.Enabled = this.config.MasterSwitch;
+            swMaxEndurance.Checked = this.config.MaxSkills["Endurance"];
+            swMaxStrength.Checked = this.config.MaxSkills["Strength"];
+            swMaxVitality.Checked = this.config.MaxSkills["Vitality"];
+            swMaxHealth.Checked = this.config.MaxSkills["Health"];
+            swMaxStressResistance.Checked = this.config.MaxSkills["Stress Resistance"];
+            swMaxMetabolism.Checked = this.config.MaxSkills["Metabolism"];
+            swMaxImmunity.Checked = this.config.MaxSkills["Immunity"];
+            swMaxPerception.Checked = this.config.MaxSkills["Perception"];
+            swMaxIntellect.Checked = this.config.MaxSkills["Intellect"];
+            swMaxAttention.Checked = this.config.MaxSkills["Attention"];
+            swMaxCovertMovement.Checked = this.config.MaxSkills["Covert Movement"];
+            swMaxThrowables.Checked = this.config.MaxSkills["Throwables"];
+            swMaxSurgery.Checked = this.config.MaxSkills["Surgery"];
+            swMaxSearch.Checked = this.config.MaxSkills["Search"];
+            swMaxMagDrills.Checked = this.config.MaxSkills["Mag Drills"];
+            swMaxLightVests.Checked = this.config.MaxSkills["Light Vests"];
+            swMaxHeavyVests.Checked = this.config.MaxSkills["Heavy Vests"];
 
-            sldrMagDrillsSpeed.Enabled = _config.MaxSkills["Mag Drills"];
-            sldrMagDrillsSpeed.Value = _config.MagDrillSpeed;
-            sldrThrowStrength.Enabled = _config.MaxSkills["Strength"];
-            sldrThrowStrength.Value = _config.ThrowPowerStrength;
+            sldrMagDrillsSpeed.Enabled = this.config.MaxSkills["Mag Drills"];
+            sldrMagDrillsSpeed.Value = this.config.MagDrillSpeed;
+            sldrThrowStrength.Enabled = this.config.MaxSkills["Strength"];
+            sldrThrowStrength.Value = this.config.ThrowPowerStrength;
 
             // Thermal Features
-            mcSettingsMemoryWritingThermal.Enabled = _config.MasterSwitch;
-            mcSettingsMemoryWritingThermal.Enabled = (_config.ThermalVision || _config.OpticThermalVision);
-            cboThermalType.SelectedIndex = _config.ThermalVision ? 0 : (_config.OpticThermalVision ? 1 : 0);
-            cboThermalColorScheme.SelectedIndex = _config.ThermalVision ? _config.MainThermalSetting.ColorScheme : (_config.OpticThermalVision ? _config.OpticThermalSetting.ColorScheme : 0);
-            sldrThermalColorCoefficient.Value = (int)(_config.MainThermalSetting.ColorCoefficient * 100);
-            sldrMinTemperature.Value = (int)((_config.MainThermalSetting.MinTemperature - 0.001f) / (0.01f - 0.001f) * 100.0f);
-            sldrThermalRampShift.Value = (int)((_config.MainThermalSetting.RampShift + 1.0f) * 100.0f);
+            mcSettingsMemoryWritingThermal.Enabled = this.config.MasterSwitch;
+            mcSettingsMemoryWritingThermal.Enabled = (this.config.ThermalVision || this.config.OpticThermalVision);
+            cboThermalType.SelectedIndex = this.config.ThermalVision ? 0 : (this.config.OpticThermalVision ? 1 : 0);
+            cboThermalColorScheme.SelectedIndex = this.config.ThermalVision ? this.config.MainThermalSetting.ColorScheme : (this.config.OpticThermalVision ? this.config.OpticThermalSetting.ColorScheme : 0);
+            sldrThermalColorCoefficient.Value = (int)(this.config.MainThermalSetting.ColorCoefficient * 100);
+            sldrMinTemperature.Value = (int)((this.config.MainThermalSetting.MinTemperature - 0.001f) / (0.01f - 0.001f) * 100.0f);
+            sldrThermalRampShift.Value = (int)((this.config.MainThermalSetting.RampShift + 1.0f) * 100.0f);
 
             // Chams
-            mcSettingsMemoryWritingChams.Enabled = _config.MasterSwitch;
-            var enabled = _config.Chams["Enabled"];
+            mcSettingsMemoryWritingChams.Enabled = this.config.MasterSwitch;
+            var enabled = this.config.Chams["Enabled"];
             swChams.Checked = enabled;
-            swChamsPMCs.Checked = _config.Chams["PMCs"];
-            swChamsPlayerScavs.Checked = _config.Chams["PlayerScavs"];
-            swChamsBosses.Checked = _config.Chams["Bosses"];
-            swChamsRogues.Checked = _config.Chams["Rogues"];
-            swChamsCultists.Checked = _config.Chams["Cultists"];
-            swChamsScavs.Checked = _config.Chams["Scavs"];
-            swChamsTeammates.Checked = _config.Chams["Teammates"];
-            swChamsCorpses.Checked = _config.Chams["Corpses"];
-            swChamsRevert.Checked = _config.Chams["RevertOnClose"];
+            swChamsPMCs.Checked = this.config.Chams["PMCs"];
+            swChamsPlayerScavs.Checked = this.config.Chams["PlayerScavs"];
+            swChamsBosses.Checked = this.config.Chams["Bosses"];
+            swChamsRogues.Checked = this.config.Chams["Rogues"];
+            swChamsCultists.Checked = this.config.Chams["Cultists"];
+            swChamsScavs.Checked = this.config.Chams["Scavs"];
+            swChamsTeammates.Checked = this.config.Chams["Teammates"];
+            swChamsCorpses.Checked = this.config.Chams["Corpses"];
+            swChamsRevert.Checked = this.config.Chams["RevertOnClose"];
 
             this.ToggleChamsControls();
             #endregion
 
             #region Loot
             // General
-            var processLootEnabled = _config.ProcessLoot;
+            var processLootEnabled = this.config.ProcessLoot;
             swProcessLoot.Checked = processLootEnabled;
             this.UpdateLootControls();
-            swFilteredOnly.Checked = _config.ImportantLootOnly;
-            swSubItems.Checked = _config.SubItems;
-            swItemValue.Checked = _config.LootValue;
-            swLooseLoot.Checked = _config.LooseLoot;
-            swCorpses.Checked = _config.LootCorpses;
-            swAutoLootRefresh.Checked = _config.LootItemRefresh;
+            swFilteredOnly.Checked = this.config.ImportantLootOnly;
+            swItemValue.Checked = this.config.LootValue;
+            swLooseLoot.Checked = this.config.LooseLoot;
+            swCorpses.Checked = this.config.LootCorpses;
+            swSubItems.Checked = this.config.SubItems;
+            swAutoLootRefresh.Checked = this.config.LootItemRefresh;
 
             // Quest Helper
-            var questHelperEnabled = _config.QuestHelper;
+            var questHelperEnabled = this.config.QuestHelper;
             swQuestHelper.Checked = questHelperEnabled;
             this.UpdateQuestControls();
-            swUnknownQuestItems.Checked = _config.UnknownQuestItems;
-            swQuestItems.Checked = _config.QuestItems;
-            swQuestLootItems.Checked = _config.QuestLootItems;
-            swQuestLocations.Checked = _config.QuestLocations;
-            swAutoTaskRefresh.Checked = _config.QuestTaskRefresh;
-            sldrAutoTaskRefreshDelay.Value = _config.QuestTaskRefreshDelay;
+            swUnknownQuestItems.Checked = this.config.UnknownQuestItems;
+            swQuestItems.Checked = this.config.QuestItems;
+            swQuestLootItems.Checked = this.config.QuestLootItems;
+            swQuestLocations.Checked = this.config.QuestLocations;
+            swAutoTaskRefresh.Checked = this.config.QuestTaskRefresh;
+            sldrAutoTaskRefreshDelay.Value = this.config.QuestTaskRefreshDelay;
 
             // Minimum Loot Value
-            sldrMinRegularLoot.Value = _config.MinLootValue / 1000;
-            sldrMinImportantLoot.Value = _config.MinImportantLootValue / 1000;
-            sldrMinCorpse.Value = _config.MinCorpseValue / 1000;
-            sldrMinSubItems.Value = _config.MinSubItemValue / 1000;
+            sldrMinRegularLoot.Value = this.config.MinLootValue / 1000;
+            sldrMinImportantLoot.Value = this.config.MinImportantLootValue / 1000;
+            sldrMinCorpse.Value = this.config.MinCorpseValue / 1000;
+            sldrMinSubItems.Value = this.config.MinSubItemValue / 1000;
 
             // Loot Ping
-            sldrLootPingAnimationSpeed.Value = _config.LootPing["AnimationSpeed"];
-            sldrLootPingMaxRadius.Value = _config.LootPing["Radius"];
-            sldrLootPingRepetition.Value = _config.LootPing["Repetition"];
+            sldrLootPingAnimationSpeed.Value = this.config.LootPing["AnimationSpeed"];
+            sldrLootPingMaxRadius.Value = this.config.LootPing["Radius"];
+            sldrLootPingRepetition.Value = this.config.LootPing["Repetition"];
 
             // Container settings
-            swContainers.Checked = _config.LootContainerSettings["Enabled"];
-            lstContainers.Enabled = _config.LootContainerSettings["Enabled"];
+            swContainers.Checked = this.config.LootContainerSettings["Enabled"];
+            lstContainers.Enabled = this.config.LootContainerSettings["Enabled"];
             #endregion
             #endregion
 
             this.InitiateContainerList();
             this.UpdatePlayerInformationSettings();
             this.UpdatePvEControls();
-            this.InitiateAutoMapRefreshItems();
-            this.InitiateFactions();
-            this.InitiateLootFilter();
-            this.InitiateWatchlist();
-            this.InitiateColors();
-            this.InitiateFonts();
-            this.InitiateUIScaling();
+            this.InitializeAutoMapRefreshItems();
+            this.InitializeFactions();
+            this.InitializeLootFilter();
+            this.InitializeWatchlist();
+            this.InitializeColors();
+            this.InitializeFonts();
+            this.InitializeUIScaling();
+            this.InitializeHotkeys();
+            this.InitializeHotkeyActions();
+        }
+
+        private void InputCheckTimer_Tick(object sender, EventArgs e)
+        {
+            if (!this.InGame)
+                return;
+
+            this.CheckHotkeys();
+
+            foreach (var hotkey in this.config.Hotkeys)
+            {
+                if (this.previouslyPressedKeys.Contains(hotkey.Key) && !InputManager.IsKeyDown(hotkey.Key))
+                {
+                    this.HandleKeyUp(hotkey.Key);
+                    this.previouslyPressedKeys.Remove(hotkey.Key);
+                }
+            }
         }
         #endregion
 
         #region General Event Handlers
         private async void frmMain_Shown(object sender, EventArgs e)
         {
-            while (_mapCanvas.GRContext is null)
+            while (this.mapCanvas.GRContext is null)
                 await Task.Delay(1);
 
-            _mapCanvas.GRContext.SetResourceCacheLimit(503316480); // Fixes low FPS on big maps
+            this.mapCanvas.GRContext.SetResourceCacheLimit(1500000000); // Fixes low FPS on big maps
 
             while (true)
             {
-                await Task.Run(() => Thread.SpinWait(50000)); // High performance async delay
-                _mapCanvas.Refresh(); // draw next frame
+                if (config.VSync)
+                {
+                    await Task.Delay(1);
+                    this.mapCanvas.Invalidate();
+                }
+                else
+                {
+                    await Task.Run(() => Thread.SpinWait(50000));
+                    this.mapCanvas.Invalidate();
+                }
             }
         }
 
@@ -667,36 +910,36 @@ namespace eft_dma_radar
                 )
             );
 
-            lock (_renderLock)
+            lock (this.renderLock)
             {
                 try
                 {
-                    _selectedMap = _maps[_mapSelectionIndex]; // Swap map
+                    this.selectedMap = this.maps[this.mapSelectionIndex]; // Swap map
 
-                    if (_loadedBitmaps is not null)
+                    if (this.loadedBitmaps is not null)
                     {
-                        foreach (var bitmap in _loadedBitmaps)
+                        foreach (var bitmap in this.loadedBitmaps)
                             bitmap?.Dispose(); // Cleanup resources
                     }
 
-                    _loadedBitmaps = new SKBitmap[_selectedMap.ConfigFile.MapLayers.Count];
+                    this.loadedBitmaps = new SKBitmap[this.selectedMap.ConfigFile.MapLayers.Count];
 
-                    for (int i = 0; i < _loadedBitmaps.Length; i++)
+                    for (int i = 0; i < this.loadedBitmaps.Length; i++)
                     {
                         using (
                             var stream = File.Open(
-                                _selectedMap.ConfigFile.MapLayers[i].Filename,
+                                this.selectedMap.ConfigFile.MapLayers[i].Filename,
                                 FileMode.Open,
                                 FileAccess.Read))
                         {
-                            _loadedBitmaps[i] = SKBitmap.Decode(stream); // Load new bitmap(s)
+                            this.loadedBitmaps[i] = SKBitmap.Decode(stream); // Load new bitmap(s)
                         }
                     }
                 }
                 catch (Exception ex)
                 {
                     throw new Exception(
-                        $"ERROR loading {_selectedMap.ConfigFile.MapLayers[0].Filename}: {ex}"
+                        $"ERROR loading {this.selectedMap.ConfigFile.MapLayers[0].Filename}: {ex}"
                     );
                 }
                 finally
@@ -718,9 +961,9 @@ namespace eft_dma_radar
         {
             if (tabControlMain.SelectedIndex == 2)
             {
-                GenerateCards(flpPlayerLoadoutsPlayers, x => x.IsHumanHostileActive, x => x.IsPMC, x => x.Value);
-                GenerateCards(flpPlayerLoadoutsBosses, x => x.IsHostileActive && !x.IsHuman && x.IsBossRaider, x => x.Type == PlayerType.Boss, x => x.IsBossRaider, x => x.Value);
-                GenerateCards(flpPlayerLoadoutsAI, x => x.IsHostileActive && !x.IsHuman && !x.IsBossRaider, x => x.Value);
+                this.GenerateCards(flpPlayerLoadoutsPlayers, x => x.IsHumanHostileActive, x => x.IsPMC, x => x.Value);
+                this.GenerateCards(flpPlayerLoadoutsBosses, x => x.IsHostileActive && !x.IsHuman && x.IsBossRaider, x => x.Type == PlayerType.Boss, x => x.IsBossRaider, x => x.Value);
+                this.GenerateCards(flpPlayerLoadoutsAI, x => x.IsHostileActive && !x.IsHuman && !x.IsBossRaider, x => x.Value);
             }
         }
 
@@ -770,13 +1013,13 @@ namespace eft_dma_radar
 
                 if (player.Gear is not null)
                 {
-                    foreach (var slot in player.Gear)
+                    foreach (var gear in player.Gear)
                     {
-                        var gearItem = slot.Value;
+                        var gearItem = gear.Item;
                         var gearName = gearItem.Long;
 
                         if (!string.IsNullOrEmpty(gearItem.GearInfo.AmmoType))
-                            gearName += $" ({gearItem.GearInfo.AmmoType})";
+                            gearName += $" ({gearItem.GearInfo.AmmoType}/{gearItem.GearInfo.AmmoCount})";
 
                         if (!string.IsNullOrEmpty(gearItem.GearInfo.Thermal))
                             gearName += $" ({gearItem.GearInfo.Thermal})";
@@ -785,7 +1028,7 @@ namespace eft_dma_radar
                             gearName += $" ({gearItem.GearInfo.NightVision})";
 
                         var gearLabel = new MaterialLabel();
-                        gearLabel.Text = $"{GearManager.GetGearSlotName(slot.Key)}: {gearName.Trim()}";
+                        gearLabel.Text = $"{GearManager.GetGearSlotName(gear.Slot.Key)}: {gearName.Trim()}";
                         gearLabel.Margin = new Padding(0, 5, 0, 0);
                         gearLabel.AutoSize = true;
                         gearLabel.FontType = MaterialSkinManager.fontType.Body2;
@@ -812,9 +1055,40 @@ namespace eft_dma_radar
 
         #region Radar Tab
         #region Helper Functions
+        private int GetPlayerTypeIndex(PlayerType type)
+        {
+            switch (type)
+            {
+                case PlayerType.LocalPlayer:
+                    return 0;
+                case PlayerType.Teammate:
+                    return 1;
+                case PlayerType.USEC:
+                case PlayerType.BEAR:
+                    return 2;
+                case PlayerType.Scav:
+                    return 3;
+                case PlayerType.Boss:
+                    return 4;
+                case PlayerType.Raider:
+                    return 5;
+                case PlayerType.Cultist:
+                    return 6;
+                case PlayerType.PlayerScav:
+                    return 7;
+                default:
+                    return 3;
+            }
+        }
+
+        private void InvalidateMapParams()
+        {
+            this.lastMapParamsUpdate = DateTime.MinValue;
+        }
+
         private void ResetVariables()
         {
-            this._selectedMap = null;
+            this.selectedMap = null;
 
             lblRadarFPSValue.Text = "0";
             lblRadarMemSValue.Text = "0";
@@ -838,262 +1112,220 @@ namespace eft_dma_radar
             lblRadarBossesValue.UseAccent = false;
             lblRadarBossesValue.HighEmphasis = false;
 
-            lastLootItemCount = 0;
-            itemToPing = null;
+            this.lastLootItemCount = 0;
+            this.itemToPing = null;
             lstLootItems.Items.Clear();
 
-            ClearItemRefs();
-            ClearPlayerRefs();
-            ClearTaskItemRefs();
-            ClearTaskZoneRefs();
+            this.ClearItemRefs();
+            this.ClearPlayerRefs();
+            this.ClearTaskItemRefs();
+            this.ClearTaskZoneRefs();
         }
 
         private void UpdateWindowTitle()
         {
-            bool inGame = this.InGame;
-            var localPlayer = this.LocalPlayer;
-
-            if (inGame && localPlayer is not null)
+            if (!this.InGame || this.LocalPlayer == null)
             {
-                UpdateSelectedMap();
+                this.ResetVariables();
+                return;
+            }
 
-                if (_fpsWatch.ElapsedMilliseconds >= 1000)
-                {
-                    // RE-ENABLE & EXPLORE WHAT THIS DOES
-                    //_mapCanvas.GRContext.PurgeResources(); // Seems to fix mem leak issue on increasing resource cache
+            this.UpdateSelectedMap();
 
-                    #region Radar Stats
-                    var fps = _fps;
-                    var memTicks = Memory.Ticks;
-                    var looseLoot = Loot?.TotalLooseLoot ?? 0;
-                    var containers = Loot?.TotalContainers ?? 0;
-                    var corpses = Loot?.TotalCorpses ?? 0;
+            if (this.fpsWatch.ElapsedMilliseconds >= 1000)
+            {
+                this.UpdateRadarStats();
+                this.UpdateEnemyStats();
+                this.fpsWatch.Restart();
+                this.fps = 0;
+            }
+            else
+            {
+                this.fps++;
+            }
+        }
 
-                    if (lblRadarFPSValue.Text != fps.ToString())
-                        lblRadarFPSValue.Text = $"{fps}";
+        private void UpdateRadarStats()
+        {
+            lblRadarFPSValue.Text = $"{this.fps}";
+            lblRadarMemSValue.Text = $"{Memory.Ticks}";
+            lblRadarLooseLootValue.Text = $"{this.Loot?.TotalLooseLoot ?? 0}";
+            lblRadarContainersValue.Text = $"{this.Loot?.TotalContainers ?? 0}";
+            lblRadarCorpsesValue.Text = $"{this.Loot?.TotalCorpses ?? 0}";
+        }
 
-                    if (lblRadarMemSValue.Text != memTicks.ToString())
-                        lblRadarMemSValue.Text = $"{memTicks}";
+        private void UpdateEnemyStats()
+        {
+            var playerCounts = this.AllPlayers
+                .Where(x => x.Value.IsAlive && x.Value.IsActive)
+                .GroupBy(x => x.Value.Type)
+                .ToDictionary(g => g.Key, g => g.Count());
 
-                    if (lblRadarLooseLootValue.Text != looseLoot.ToString())
-                        lblRadarLooseLootValue.Text = $"{looseLoot}";
+            this.UpdateEnemyStatLabel(lblRadarPMCsValue, playerCounts.GetValueOrDefault(PlayerType.USEC, 0) + playerCounts.GetValueOrDefault(PlayerType.BEAR, 0));
+            this.UpdateEnemyStatLabel(lblRadarPlayerScavsValue, playerCounts.GetValueOrDefault(PlayerType.PlayerScav, 0));
+            this.UpdateEnemyStatLabel(lblRadarAIScavsValue, playerCounts.GetValueOrDefault(PlayerType.Scav, 0));
+            this.UpdateEnemyStatLabel(lblRadarRoguesValue, playerCounts.GetValueOrDefault(PlayerType.Raider) +
+                                                      playerCounts.GetValueOrDefault(PlayerType.Rogue) +
+                                                      playerCounts.GetValueOrDefault(PlayerType.BossFollower) +
+                                                      playerCounts.GetValueOrDefault(PlayerType.BossGuard) +
+                                                      playerCounts.GetValueOrDefault(PlayerType.Cultist));
+            this.UpdateEnemyStatLabel(lblRadarBossesValue, playerCounts.GetValueOrDefault(PlayerType.Boss, 0));
+        }
 
-                    if (lblRadarContainersValue.Text != containers.ToString())
-                        lblRadarContainersValue.Text = $"{containers}";
-
-                    if (lblRadarCorpsesValue.Text != corpses.ToString())
-                        lblRadarCorpsesValue.Text = $"{corpses}";
-                    #endregion
-
-                    #region Enemy Stats
-                    var playerCounts = AllPlayers
-                        .Where(x => x.Value.IsAlive && x.Value.IsActive)
-                        .GroupBy(x => x.Value.Type)
-                        .ToDictionary(g => g.Key, g => g.Count());
-
-                    var enemyPMCs = playerCounts.GetValueOrDefault(PlayerType.USEC, 0) + playerCounts.GetValueOrDefault(PlayerType.BEAR, 0);
-                    var playerScavs = playerCounts.GetValueOrDefault(PlayerType.PlayerScav, 0);
-                    var aiScavs = playerCounts.GetValueOrDefault(PlayerType.Scav, 0);
-                    var rogues = playerCounts.GetValueOrDefault(PlayerType.Raider) +
-                                 playerCounts.GetValueOrDefault(PlayerType.Rogue) +
-                                 playerCounts.GetValueOrDefault(PlayerType.BossFollower) +
-                                 playerCounts.GetValueOrDefault(PlayerType.BossGuard) +
-                                 playerCounts.GetValueOrDefault(PlayerType.Cultist);
-
-                    var bosses = playerCounts.GetValueOrDefault(PlayerType.Boss, 0);
-
-                    if (lblRadarPMCsValue.Text != enemyPMCs.ToString())
-                    {
-                        lblRadarPMCsValue.Text = $"{enemyPMCs}";
-                        lblRadarPMCsValue.UseAccent = enemyPMCs > 0;
-                        lblRadarPMCsValue.HighEmphasis = enemyPMCs > 0;
-                    }
-
-                    if (lblRadarPlayerScavsValue.Text != playerScavs.ToString())
-                    {
-                        lblRadarPlayerScavsValue.Text = $"{playerScavs}";
-                        lblRadarPlayerScavsValue.UseAccent = playerScavs > 0;
-                        lblRadarPlayerScavsValue.HighEmphasis = playerScavs > 0;
-                    }
-
-
-                    if (lblRadarAIScavsValue.Text != aiScavs.ToString())
-                    {
-                        lblRadarAIScavsValue.Text = $"{aiScavs}";
-                        lblRadarAIScavsValue.UseAccent = aiScavs > 0;
-                        lblRadarAIScavsValue.HighEmphasis = aiScavs > 0;
-                    }
-
-
-                    if (lblRadarRoguesValue.Text != rogues.ToString())
-                    {
-                        lblRadarRoguesValue.Text = $"{rogues}";
-                        lblRadarRoguesValue.UseAccent = rogues > 0;
-                        lblRadarRoguesValue.HighEmphasis = rogues > 0;
-                    }
-
-                    if (lblRadarBossesValue.Text != bosses.ToString())
-                    {
-                        lblRadarBossesValue.Text = $"{bosses}";
-                        lblRadarBossesValue.UseAccent = bosses > 0;
-                        lblRadarBossesValue.HighEmphasis = bosses > 0;
-                    }
-
-                    #endregion
-
-                    _fpsWatch.Restart();
-                    _fps = 0;
-                }
-                else
-                {
-                    _fps++;
-                }
+        private void UpdateEnemyStatLabel(MaterialLabel label, int count)
+        {
+            if (label.Text != count.ToString())
+            {
+                label.Text = $"{count}";
+                label.UseAccent = count > 0;
+                label.HighEmphasis = count > 0;
             }
         }
 
         private void UpdateSelectedMap()
         {
-            string currentMap = this.MapName;
-            string currentMapPrefix = currentMap.ToLower().Substring(0, Math.Min(4, currentMap.Length));
+            var currentMap = this.MapName;
+            var currentMapPrefix = currentMap.ToLower().Substring(0, Math.Min(4, currentMap.Length));
 
-            if (_selectedMap is null || !_selectedMap.MapID.ToLower().StartsWith(currentMapPrefix))
+            if (this.selectedMap is null || !this.selectedMap.MapID.ToLower().StartsWith(currentMapPrefix))
             {
-                var selectedMapName = _maps.FirstOrDefault(x => x.MapID.ToLower().StartsWith(currentMapPrefix) || x.MapID.ToLower() == currentMap.ToLower());
+                this.selectedMap = this.maps.FirstOrDefault(x =>
+                    x.MapID.ToLower().StartsWith(currentMapPrefix) ||
+                    x.MapID.ToLower() == currentMap.ToLower());
 
-                if (selectedMapName is not null)
+                if (this.selectedMap is not null)
                 {
-                    _selectedMap = selectedMapName;
+                    this.CleanupLoadedBitmaps();
+                    this.LoadMapBitmaps();
 
-                    // Init map
-                    CleanupLoadedBitmaps();
-                    LoadMapBitmaps();
-
-                    int selectedIndex = cboAutoRefreshMap.FindString(this.MapNameFormatted);
-                    cboAutoRefreshMap.SelectedIndex = selectedIndex != 0 ? selectedIndex : 0;
+                    var selectedIndex = cboAutoRefreshMap.FindString(this.MapNameFormatted);
+                    cboAutoRefreshMap.SelectedIndex = selectedIndex != -1 ? selectedIndex : 0;
                 }
             }
         }
 
         private void CleanupLoadedBitmaps()
         {
-            if (_loadedBitmaps is not null)
+            if (this.loadedBitmaps is not null)
             {
-                Parallel.ForEach(_loadedBitmaps, bitmap =>
+                Parallel.ForEach(this.loadedBitmaps, bitmap =>
                 {
                     bitmap?.Dispose();
                 });
 
-                _loadedBitmaps = null;
+                this.loadedBitmaps = null;
             }
         }
 
         private void LoadMapBitmaps()
         {
-            var mapLayers = _selectedMap.ConfigFile.MapLayers;
-            _loadedBitmaps = new SKBitmap[mapLayers.Count];
+            var mapLayers = this.selectedMap.ConfigFile.MapLayers;
+            this.loadedBitmaps = new SKBitmap[mapLayers.Count];
 
-            Parallel.ForEach(mapLayers, (mapLayer, _, _) =>
+            Parallel.For(0, mapLayers.Count, i =>
             {
-                lock (_loadMapBitmapsLock)
+                try
                 {
-                    using (var stream = File.Open(mapLayer.Filename, FileMode.Open, FileAccess.Read))
+                    using (var stream = new FileStream(mapLayers[i].Filename, FileMode.Open, FileAccess.Read, FileShare.Read))
                     {
-                        _loadedBitmaps[mapLayers.IndexOf(mapLayer)] = SKBitmap.Decode(stream);
-                        _loadedBitmaps[mapLayers.IndexOf(mapLayer)].SetImmutable();
+                        this.loadedBitmaps[i] = SKBitmap.Decode(stream);
+                        this.loadedBitmaps[i].SetImmutable();
                     }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Error loading bitmap for layer {i}: {ex.Message}");
                 }
             });
         }
 
         private bool IsReadyToRender()
         {
-            bool isReady = this.Ready;
-            bool inGame = this.InGame;
-            bool isAtHideout = this.IsAtHideout;
-            bool localPlayerExists = this.LocalPlayer is not null;
-            bool selectedMapLoaded = this._selectedMap is not null;
-
-            if (!isReady)
-                return false; // Game process not running
-
-            if (isAtHideout)
-                return false; // Main menu or hideout
-
-            if (!inGame)
-                return false; // Waiting for raid start
-
-            if (!localPlayerExists)
-                return false; // Cannot find local player
-
-            if (!selectedMapLoaded)
-                return false; // Map not loaded
-
-            return true; // Ready to render
+            return this.Ready &&
+                   this.InGame &&
+                   !this.IsAtHideout &&
+                   this.LocalPlayer is not null &&
+                   this.selectedMap is not null;
         }
 
         private int GetMapLayerIndex(float playerHeight)
         {
-            for (int i = _loadedBitmaps.Length - 1; i >= 0; i--)
-            {
-                if (playerHeight > _selectedMap.ConfigFile.MapLayers[i].MinHeight)
-                {
-                    return i;
-                }
-            }
-
-            return 0; // Default to the first layer if no match is found
+            return this.loadedBitmaps
+                .Select((bitmap, index) => new { Index = index, MinHeight = this.selectedMap.ConfigFile.MapLayers[index].MinHeight })
+                .LastOrDefault(x => playerHeight > x.MinHeight)?.Index ?? 0;
         }
 
-        private MapParameters GetMapParameters(MapPosition localPlayerPos)
+        private MapParameters GetMapParameters(MapPosition position)
         {
-            int mapLayerIndex = GetMapLayerIndex(localPlayerPos.Height);
-
-            var bitmap = _loadedBitmaps[mapLayerIndex];
-            float zoomFactor = 0.01f * _config.DefaultZoom;
-            float zoomWidth = bitmap.Width * zoomFactor;
-            float zoomHeight = bitmap.Height * zoomFactor;
+            var mapLayerIndex = this.GetMapLayerIndex(position.Height);
+            var bitmap = this.loadedBitmaps[mapLayerIndex];
+            var zoomFactor = this.currentZoom;
+            var zoomWidth = bitmap.Width / zoomFactor;
+            var zoomHeight = bitmap.Height / zoomFactor;
 
             var bounds = new SKRect(
-                localPlayerPos.X - zoomWidth / 2,
-                localPlayerPos.Y - zoomHeight / 2,
-                localPlayerPos.X + zoomWidth / 2,
-                localPlayerPos.Y + zoomHeight / 2
-            ).AspectFill(_mapCanvas.CanvasSize);
+                position.X - zoomWidth / 2,
+                position.Y - zoomHeight / 2,
+                position.X + zoomWidth / 2,
+                position.Y + zoomHeight / 2
+            ).AspectFill(this.mapCanvas.CanvasSize);
 
             return new MapParameters
             {
-                UIScale = _uiScale,
+                UIScale = this.uiScale,
                 MapLayerIndex = mapLayerIndex,
                 Bounds = bounds,
-                XScale = (float)_mapCanvas.Width / bounds.Width, // Set scale for this frame
-                YScale = (float)_mapCanvas.Height / bounds.Height // Set scale for this frame
+                XScale = (float)this.mapCanvas.Width / bounds.Width,
+                YScale = (float)this.mapCanvas.Height / bounds.Height
             };
         }
 
         private MapParameters GetMapLocation()
         {
+            var now = DateTime.Now;
+            if ((now - this.lastMapParamsUpdate).TotalMilliseconds < FRAME_DELAY)
+                return this.cachedMapParams;
+
             var localPlayer = this.LocalPlayer;
             if (localPlayer is not null)
             {
                 var localPlayerPos = localPlayer.Position;
-                var localPlayerMapPos = localPlayerPos.ToMapPos(_selectedMap);
+                var localPlayerMapPos = localPlayerPos.ToMapPos(this.selectedMap);
 
-                if (_isFreeMapToggled)
+                MapParameters calculatedParams;
+                if (this.isFreeMapToggled)
                 {
-                    _mapPanPosition.Height = localPlayerMapPos.Height;
-                    return GetMapParameters(_mapPanPosition);
+                    calculatedParams = this.GetMapParameters(new MapPosition()
+                    {
+                        X = this.currentPanPosition.X,
+                        Y = this.currentPanPosition.Y,
+                        Height = localPlayerMapPos.Height
+                    });
                 }
                 else
                 {
-                    _lastMousePosition = Point.Empty;
-                    _mapPanPosition = localPlayerMapPos;
-                    targetPanPosition = localPlayerMapPos.GetPoint();
-                    return GetMapParameters(localPlayerMapPos);
+                    this.lastMousePosition = Point.Empty;
+                    this.currentPanPosition = new SKPoint(localPlayerMapPos.X, localPlayerMapPos.Y);
+                    this.targetPanPosition = this.currentPanPosition;
+                    calculatedParams = this.GetMapParameters(localPlayerMapPos);
                 }
+
+                this.cachedMapParams = calculatedParams;
+                this.lastMapParamsUpdate = now;
+                return calculatedParams;
             }
             else
             {
-                return GetMapParameters(_mapPanPosition);
+                var calculatedParams = this.GetMapParameters(new MapPosition()
+                {
+                    X = this.currentPanPosition.X,
+                    Y = this.currentPanPosition.Y,
+                    Height = this.mapPanPosition.Height
+                });
+
+                this.cachedMapParams = calculatedParams;
+                this.lastMapParamsUpdate = now;
+                return calculatedParams;
             }
         }
 
@@ -1128,19 +1360,19 @@ namespace eft_dma_radar
             }
 
             // Prepare to draw Game Map
-            var mapParams = GetMapLocation();
+            var mapParams = this.GetMapLocation();
 
             var mapCanvasBounds = new SKRect() // Drawing Destination
             {
-                Left = _mapCanvas.Left,
-                Right = _mapCanvas.Right,
-                Top = _mapCanvas.Top,
-                Bottom = _mapCanvas.Bottom
+                Left = this.mapCanvas.Left,
+                Right = this.mapCanvas.Right,
+                Top = this.mapCanvas.Top,
+                Bottom = this.mapCanvas.Bottom
             };
 
             // Draw Game Map
             canvas.DrawBitmap(
-                _loadedBitmaps[mapParams.MapLayerIndex],
+                this.loadedBitmaps[mapParams.MapLayerIndex],
                 mapParams.Bounds,
                 mapCanvasBounds,
                 SKPaints.PaintBitmap
@@ -1154,54 +1386,52 @@ namespace eft_dma_radar
             if (this.InGame && localPlayer is not null)
             {
                 var allPlayers = this.AllPlayers
-                    ?.Select(x => x.Value)
-                    .Where(x => x.IsActive && x.IsAlive && !x.HasExfild); // Skip exfil'd players
+                        .Select(x => x.Value)
+                        .Where(x => x.IsActive && x.IsAlive && !x.HasExfild);
 
-                if (allPlayers is not null)
+                if (allPlayers.Any())
                 {
-                    var friendlies = allPlayers?.Where(x => x.IsFriendlyActive);
+                    var friendlies = allPlayers.Where(x => x.IsFriendlyActive).ToList();
                     var localPlayerPos = localPlayer.Position;
-                    var localPlayerMapPos = localPlayerPos.ToMapPos(_selectedMap);
-                    var mouseOverGroup = _mouseOverGroup;
-                    var mapParams = GetMapLocation();
+                    var localPlayerMapPos = localPlayerPos.ToMapPos(this.selectedMap);
+                    var mouseOverGroup = this.mouseOverGroup;
+                    var mapParams = this.GetMapLocation();
 
-                    foreach (var player in allPlayers) // Draw PMCs
+                    foreach (var player in allPlayers)
                     {
                         var playerPos = player.Position;
-                        var playerMapPos = playerPos.ToMapPos(_selectedMap);
+                        var playerMapPos = playerPos.ToMapPos(this.selectedMap);
+
+                        if (!this.IsInViewport(playerMapPos, mapParams))
+                            continue;
+
                         var playerZoomedPos = playerMapPos.ToZoomedPos(mapParams);
 
-                        player.ZoomedPosition = new Vector2() // Cache Position as Vec2 for MouseMove event
-                        {
-                            X = playerZoomedPos.X,
-                            Y = playerZoomedPos.Y
-                        };
+                        player.ZoomedPosition = new Vector2(playerZoomedPos.X, playerZoomedPos.Y);
 
-                        int aimlineLength = 15;
+                        var aimlineLength = 15;
 
-                        if (player.Type is not PlayerType.Teammate && !player.IsLocalPlayer)
+                        if (player.Type != PlayerType.Teammate && !player.IsLocalPlayer)
                         {
-                            if (friendlies is not null)
-                                foreach (var friendly in friendlies)
+                            foreach (var friendly in friendlies)
+                            {
+                                var friendlyPos = friendly.Position;
+                                var friendlyDist = Vector3.Distance(playerPos, friendlyPos);
+
+                                if (friendlyDist > this.config.MaxDistance)
+                                    continue;
+
+                                var friendlyMapPos = friendlyPos.ToMapPos(this.selectedMap);
+
+                                if (IsAggressorFacingTarget(playerMapPos.GetPoint(), player.Rotation.X, friendlyMapPos.GetPoint(), friendlyDist))
                                 {
-                                    var friendlyPos = friendly.Position;
-                                    var friendlyDist = Vector3.Distance(playerPos, friendlyPos);
-
-                                    if (friendlyDist > _config.MaxDistance)
-                                        continue; // max range, no lines across entire map
-
-                                    var friendlyMapPos = friendlyPos.ToMapPos(_selectedMap);
-
-                                    if (IsAggressorFacingTarget(playerMapPos.GetPoint(), player.Rotation.X, friendlyMapPos.GetPoint(), friendlyDist))
-                                    {
-                                        aimlineLength = 1000; // Lengthen aimline
-                                        break;
-                                    }
+                                    aimlineLength = 1000;
+                                    break;
                                 }
+                            }
                         }
 
-                        // Draw Player
-                        DrawPlayer(canvas, player, playerZoomedPos, aimlineLength, mouseOverGroup, localPlayerMapPos);
+                        this.DrawPlayer(canvas, player, playerZoomedPos, aimlineLength, mouseOverGroup, localPlayerMapPos);
                     }
                 }
             }
@@ -1209,104 +1439,97 @@ namespace eft_dma_radar
 
         private void DrawPlayer(SKCanvas canvas, Player player, MapPosition playerZoomedPos, int aimlineLength, int? mouseOverGrp, MapPosition localPlayerMapPos)
         {
-            if (this.InGame && this.LocalPlayer is not null)
+            if (!this.InGame || this.LocalPlayer is null)
+                return;
+
+            var typeIndex = this.GetPlayerTypeIndex(player.Type);
+            var type = PlayerTypeNames[typeIndex];
+
+            var playerSettings = this.config.PlayerInformationSettings[type];
+            var height = playerZoomedPos.Height - localPlayerMapPos.Height;
+            var dist = Vector3.Distance(this.LocalPlayer.Position, player.Position);
+            var aimlineSettings = new AimlineSettings
             {
-                var type = player.Type.ToString();
+                Enabled = playerSettings.Aimline,
+                Length = aimlineLength,
+                Opacity = playerSettings.AimlineOpacity
+            };
 
-                if (player.IsPMC && player.Type is not PlayerType.Teammate && !player.IsLocalPlayer)
-                    type = "PMC";
+            List<string> aboveLines = new List<string>();
+            List<string> belowLines = new List<string>();
+            List<string> rightLines = new List<string>();
+            List<string> leftLines = new List<string>();
 
-                var playerSettings = _config.PlayerInformationSettings[type];
-                var height = playerZoomedPos.Height - localPlayerMapPos.Height;
-                var dist = Vector3.Distance(this.LocalPlayer.Position, player.Position);
-                var aimlineSettings = new AimlineSettings
+            if (playerSettings.Name)
+                aboveLines.Add(player.ErrorCount > 10 ? "ERROR" : player.Name);
+
+            if (playerSettings.Height)
+                leftLines.Add($"{Math.Round(height)}");
+
+            if (playerSettings.Distance)
+                belowLines.Add($"{Math.Round(dist)}");
+
+            if (playerSettings.Flags)
+            {
+                if (playerSettings.Health && player.Health != -1)
+                    rightLines.Add(player.HealthStatus);
+
+                if (player.ItemInHands.Item is not null)
                 {
-                    Enabled = playerSettings.Aimline,
-                    Length = aimlineLength,
-                    Opacity = playerSettings.AimlineOpacity
-                };
+                    if (playerSettings.ActiveWeapon && !string.IsNullOrEmpty(player.ItemInHands.Item.Short))
+                        rightLines.Add(player.ItemInHands.Item.Short);
 
-                List<string> aboveLines = new List<string>();
-                List<string> belowLines = new List<string>();
-                List<string> rightLines = new List<string>();
-                List<string> leftLines = new List<string>();
-
-                if (playerSettings.Name)
-                {
-                    string name = player.ErrorCount > 10 ? "ERROR" : player.Name;
-                    aboveLines.Add(name);
+                    if (playerSettings.AmmoType && !string.IsNullOrEmpty(player.ItemInHands.Item.GearInfo.AmmoType))
+                        rightLines.Add($"{player.ItemInHands.Item.GearInfo.AmmoType}/{player.ItemInHands.Item.GearInfo.AmmoCount}");
                 }
 
-                if (playerSettings.Height)
-                    leftLines.Add($"{Math.Round(height)}");
+                if (playerSettings.Thermal && player.HasThermal)
+                    rightLines.Add("T");
 
-                if (playerSettings.Distance)
-                    belowLines.Add($"{Math.Round(dist)}");
+                if (playerSettings.NightVision && player.HasNVG)
+                    rightLines.Add("NVG");
 
-                if (playerSettings.Flags)
-                {
-                    if (playerSettings.Health && player.Health != -1)
-                        rightLines.Add(player.HealthStatus);
+                if (playerSettings.Gear && player.HasRequiredGear)
+                    rightLines.Add("GEAR");
 
-                    if (playerSettings.ActiveWeapon)
-                        if (!string.IsNullOrEmpty(player.WeaponInfo.Name))
-                            rightLines.Add(player.WeaponInfo.Name ?? "N/A");
+                if (playerSettings.Value)
+                    rightLines.Add($"${TarkovDevManager.FormatNumber(player.Value)}");
 
-                    if (playerSettings.AmmoType)
-                        if (!string.IsNullOrEmpty(player.WeaponInfo.AmmoType))
-                            rightLines.Add(player.WeaponInfo.AmmoType ?? "N/A");
+                if (playerSettings.Group && player.GroupID != -1)
+                    rightLines.Add(player.GroupID.ToString());
 
-                    if (playerSettings.Thermal)
-                        if (player.HasThermal)
-                            rightLines.Add("T");
-
-                    if (playerSettings.NightVision)
-                        if (player.HasNVG)
-                            rightLines.Add("NVG");
-
-                    if (true)
-                        if (player.HasRequiredGear)
-                            rightLines.Add("GEAR");
-
-                    if (playerSettings.Value)
-                        rightLines.Add($"${TarkovDevManager.FormatNumber(player.Value)}");
-
-                    if (playerSettings.Group && player.GroupID != -1)
-                        rightLines.Add(player.GroupID.ToString());
-
-                    if (playerSettings.Tag && !string.IsNullOrEmpty(player.Tag))
-                        rightLines.Add(player.Tag);
-                }
-
-                if (aimlineSettings.Length == 15)
-                    aimlineSettings.Length = playerSettings.AimlineLength;
-
-                if (player.ErrorCount > 10)
-                {
-                    aboveLines.Clear();
-                    belowLines.Clear();
-                    rightLines.Clear();
-                    leftLines.Clear();
-                    belowLines.Add("ERROR");
-                }
-
-                playerZoomedPos.DrawPlayerText(
-                    canvas,
-                    player,
-                    aboveLines.ToArray(),
-                    belowLines.ToArray(),
-                    rightLines.ToArray(),
-                    leftLines.ToArray(),
-                    mouseOverGrp
-                );
-
-                playerZoomedPos.DrawPlayerMarker(
-                    canvas,
-                    player,
-                    aimlineSettings,
-                    mouseOverGrp
-                );
+                if (playerSettings.Tag && !string.IsNullOrEmpty(player.Tag))
+                    rightLines.Add(player.Tag);
             }
+
+            if (aimlineSettings.Length == 15)
+                aimlineSettings.Length = playerSettings.AimlineLength;
+
+            if (player.ErrorCount > 10)
+            {
+                aboveLines.Clear();
+                belowLines.Clear();
+                rightLines.Clear();
+                leftLines.Clear();
+                belowLines.Add("ERROR");
+            }
+
+            playerZoomedPos.DrawPlayerText(
+                canvas,
+                player,
+                aboveLines.ToArray(),
+                belowLines.ToArray(),
+                rightLines.ToArray(),
+                leftLines.ToArray(),
+                mouseOverGrp
+            );
+
+            playerZoomedPos.DrawPlayerMarker(
+                canvas,
+                player,
+                aimlineSettings,
+                mouseOverGrp
+            );
         }
 
         private void DrawItemAnimations(SKCanvas canvas)
@@ -1314,16 +1537,16 @@ namespace eft_dma_radar
             var localPlayer = this.LocalPlayer;
             if (localPlayer is not null)
             {
-                var mapParams = GetMapLocation();
+                var mapParams = this.GetMapLocation();
 
                 foreach (var animation in activeItemAnimations)
                 {
                     var itemZoomedPos = animation.Item.Position
-                                            .ToMapPos(_selectedMap)
+                                            .ToMapPos(this.selectedMap)
                                             .ToZoomedPos(mapParams);
 
                     var animationTime = animation.AnimationTime % animation.MaxAnimationTime;
-                    var maxRadius = _config.LootPing["Radius"];
+                    var maxRadius = this.config.LootPing["Radius"];
 
                     var cycleScale = Lerp(0f, 1f, animationTime / (animation.MaxAnimationTime / 2f));
                     if (animationTime > animation.MaxAnimationTime / 2f)
@@ -1348,53 +1571,49 @@ namespace eft_dma_radar
             var localPlayer = this.LocalPlayer;
             if (this.InGame && localPlayer is not null)
             {
-                if (_config.ProcessLoot) // Draw loot (if enabled)
+                var loot = this.Loot;
+                if (loot is not null)
                 {
-                    var loot = this.Loot;
-                    if (loot is not null)
+                    if (loot.Filter is null)
+                        loot.ApplyFilter();
+
+                    var filter = loot.Filter;
+
+                    if (filter is not null)
                     {
-                        if (loot.Filter is null)
-                            loot.ApplyFilter();
+                        var localPlayerMapPos = localPlayer.Position.ToMapPos(this.selectedMap);
+                        var mapParams = this.GetMapLocation();
 
-                        var filter = loot.Filter;
-
-                        if (filter is not null)
+                        if (loot.HasCachedItems && loot.Loot?.Count != this.lastLootItemCount)
                         {
-                            var localPlayerMapPos = localPlayer.Position.ToMapPos(_selectedMap);
-                            var mapParams = GetMapLocation();
+                            this.lastLootItemCount = loot.Loot.Count;
 
-                            // ghetto auto refresh but works
-                            if (loot.HasCachedItems && loot.Loot?.Count != lastLootItemCount)
-                            {
-                                lastLootItemCount = loot.Loot.Count;
+                            if (lstLootItems.Items.Count != this.lastLootItemCount)
+                                this.RefreshLootListItems();
+                        }
 
-                                if (lstLootItems.Items.Count != lastLootItemCount)
-                                    RefreshLootListItems();
-                            }
+                        foreach (var item in filter)
+                        {
+                            if (item is null || (this.config.ImportantLootOnly && !item.Important && !item.AlwaysShow))
+                                continue;
 
-                            foreach (var item in filter)
-                            {
-                                if (item is null || (this._config.ImportantLootOnly && !item.Important && !item.AlwaysShow))
-                                    continue;
+                            if (item is LootContainer container && !container.IsWithinDistance)
+                                continue;
 
-                                float position = item.Position.Z - localPlayerMapPos.Height;
+                            var position = item.Position.Z - localPlayerMapPos.Height;
+                            var itemMapPos = item.Position.ToMapPos(this.selectedMap);
 
-                                var itemZoomedPos = item.Position
-                                                        .ToMapPos(_selectedMap)
-                                                        .ToZoomedPos(mapParams);
+                            if (!this.IsInViewport(itemMapPos, mapParams))
+                                continue;
 
-                                item.ZoomedPosition = new Vector2() // Cache Position as Vec2 for MouseMove event
-                                {
-                                    X = itemZoomedPos.X,
-                                    Y = itemZoomedPos.Y
-                                };
+                            var itemZoomedPos = itemMapPos.ToZoomedPos(mapParams);
+                            item.ZoomedPosition = new Vector2(itemZoomedPos.X, itemZoomedPos.Y);
 
-                                itemZoomedPos.DrawLootableObject(
-                                    canvas,
-                                    item,
-                                    position
-                                );
-                            }
+                            itemZoomedPos.DrawLootableObject(
+                                canvas,
+                                item,
+                                position
+                            );
                         }
                     }
                 }
@@ -1406,17 +1625,17 @@ namespace eft_dma_radar
             var localPlayer = this.LocalPlayer;
             if (this.InGame && localPlayer is not null)
             {
-                if (_config.QuestHelper && !Memory.IsScav) // Draw quest items (if enabled)
+                if (this.config.QuestHelper && !Memory.IsScav) // Draw quest items (if enabled)
                 {
                     if (this.QuestManager is not null)
                     {
-                        var localPlayerMapPos = localPlayer.Position.ToMapPos(_selectedMap);
-                        var mapParams = GetMapLocation();
+                        var localPlayerMapPos = localPlayer.Position.ToMapPos(this.selectedMap);
+                        var mapParams = this.GetMapLocation();
 
                         var questItems = this.QuestManager.QuestItems;
-                        if (_config.QuestItems && questItems is not null)
+                        if (this.config.QuestItems && questItems is not null)
                         {
-                            var items = _config.UnknownQuestItems ?
+                            var items = this.config.UnknownQuestItems ?
                                 questItems.Where(x => x?.Position.X != 0 && x?.Name == "????") :
                                 questItems.Where(x => x?.Position.X != 0 && x?.Name != "????");
 
@@ -1425,16 +1644,15 @@ namespace eft_dma_radar
                                 if (item is null || item.Complete)
                                     continue;
 
-                                float position = item.Position.Z - localPlayerMapPos.Height;
-                                var itemZoomedPos = item.Position
-                                                        .ToMapPos(_selectedMap)
-                                                        .ToZoomedPos(mapParams);
+                                var position = item.Position.Z - localPlayerMapPos.Height;
+                                var itemMapPos = item.Position.ToMapPos(this.selectedMap);
 
-                                item.ZoomedPosition = new Vector2() // Cache Position as Vec2 for MouseMove event
-                                {
-                                    X = itemZoomedPos.X,
-                                    Y = itemZoomedPos.Y
-                                };
+                                if (!this.IsInViewport(itemMapPos, mapParams))
+                                    continue;
+
+                                var itemZoomedPos = itemMapPos.ToZoomedPos(mapParams);
+
+                                item.ZoomedPosition = new Vector2(itemZoomedPos.X, itemZoomedPos.Y);
 
                                 itemZoomedPos.DrawQuestItem(
                                     canvas,
@@ -1445,20 +1663,19 @@ namespace eft_dma_radar
                         }
 
                         var questZones = this.QuestManager.QuestZones;
-                        if (_config.QuestLocations && questZones is not null)
+                        if (this.config.QuestLocations && questZones is not null)
                         {
                             foreach (var zone in questZones.Where(x => x.MapName.ToLower() == Memory.MapNameFormatted.ToLower() && !x.Complete))
                             {
-                                float position = zone.Position.Z - localPlayerMapPos.Height;
-                                var questZoneZoomedPos = zone.Position
-                                                        .ToMapPos(_selectedMap)
-                                                        .ToZoomedPos(mapParams);
+                                var position = zone.Position.Z - localPlayerMapPos.Height;
+                                var questZoneMapPos = zone.Position.ToMapPos(this.selectedMap);
 
-                                zone.ZoomedPosition = new Vector2() // Cache Position as Vec2 for MouseMove event
-                                {
-                                    X = questZoneZoomedPos.X,
-                                    Y = questZoneZoomedPos.Y
-                                };
+                                if (!this.IsInViewport(questZoneMapPos, mapParams))
+                                    continue;
+
+                                var questZoneZoomedPos = questZoneMapPos.ToZoomedPos(mapParams);
+
+                                zone.ZoomedPosition = new Vector2(questZoneZoomedPos.X, questZoneZoomedPos.Y);
 
                                 questZoneZoomedPos.DrawTaskZone(
                                     canvas,
@@ -1480,16 +1697,52 @@ namespace eft_dma_radar
                 var grenades = this.Grenades;
                 if (grenades is not null)
                 {
-                    var mapParams = GetMapLocation();
+                    var mapParams = this.GetMapLocation();
 
                     foreach (var grenade in grenades)
                     {
                         var grenadeZoomedPos = grenade
                             .Position
-                            .ToMapPos(_selectedMap)
+                            .ToMapPos(this.selectedMap)
                             .ToZoomedPos(mapParams);
 
-                        grenadeZoomedPos.DrawGrenade(canvas);
+                        grenadeZoomedPos.DrawGrenade(canvas, grenade);
+                    }
+                }
+            }
+        }
+
+        private void DrawTripwires(SKCanvas canvas)
+        {
+            var localPlayer = this.LocalPlayer;
+            if (this.InGame && localPlayer is not null)
+            {
+                var tripwires = this.Tripwires;
+                if (tripwires is not null)
+                {
+                    var mapParams = this.GetMapLocation();
+
+                    foreach (var tripwire in tripwires)
+                    {
+                        var tripwireMapPos = tripwire.FromPos.ToMapPos(this.selectedMap);
+
+                        if (!this.IsInViewport(tripwireMapPos, mapParams))
+                            continue;
+
+                        var fromPosZoomedPos = tripwireMapPos.ToZoomedPos(mapParams);
+
+                        var toPosZoomedPos = tripwire.ToPos
+                            .ToMapPos(this.selectedMap)
+                            .ToZoomedPos(mapParams);
+
+                        var localPlayerMapPos = this.LocalPlayer.Position.
+                            ToMapPos(this.selectedMap);
+
+                        fromPosZoomedPos.DrawTripwire(
+                            canvas,
+                            toPosZoomedPos,
+                            tripwire,
+                            localPlayerMapPos.Height);
                     }
                 }
             }
@@ -1503,14 +1756,16 @@ namespace eft_dma_radar
                 var corpses = this.Corpses;
                 if (corpses is not null)
                 {
-                    var mapParams = GetMapLocation();
+                    var mapParams = this.GetMapLocation();
 
                     foreach (var corpse in corpses)
                     {
-                        var corpseZoomedPos = corpse
-                            .Position
-                            .ToMapPos(_selectedMap)
-                            .ToZoomedPos(mapParams);
+                        var corpseMapPos = corpse.Position.ToMapPos(this.selectedMap);
+
+                        if (!this.IsInViewport(corpseMapPos, mapParams))
+                            continue;
+
+                        var corpseZoomedPos = corpseMapPos.ToZoomedPos(mapParams);
 
                         corpseZoomedPos.DrawDeathMarker(canvas);
                     }
@@ -1526,15 +1781,17 @@ namespace eft_dma_radar
                 var exfils = this.Exfils;
                 if (exfils is not null)
                 {
-                    var localPlayerMapPos = this.LocalPlayer.Position.ToMapPos(_selectedMap);
-                    var mapParams = GetMapLocation();
+                    var localPlayerMapPos = this.LocalPlayer.Position.ToMapPos(this.selectedMap);
+                    var mapParams = this.GetMapLocation();
 
                     foreach (var exfil in exfils)
                     {
-                        var exfilZoomedPos = exfil
-                            .Position
-                            .ToMapPos(_selectedMap)
-                            .ToZoomedPos(mapParams);
+                        var exfilMapPos = exfil.Position.ToMapPos(this.selectedMap);
+
+                        if (!this.IsInViewport(exfilMapPos, mapParams))
+                            continue;
+
+                        var exfilZoomedPos = exfilMapPos.ToZoomedPos(mapParams);
 
                         exfilZoomedPos.DrawExfil(
                             canvas,
@@ -1546,117 +1803,111 @@ namespace eft_dma_radar
             }
         }
 
-        private void DrawAimview(SKCanvas canvas)
+        private void DrawTransits(SKCanvas canvas)
         {
-            if (_config.Aimview)
+            var localPlayer = this.LocalPlayer;
+            if (this.InGame && localPlayer is not null)
             {
-                var aimviewPlayers = this.AllPlayers?
-                    .Select(x => x.Value)
-                    .Where(x => x.IsActive && x.IsAlive);
-
-                if (aimviewPlayers is not null)
+                var transits = this.Transits;
+                if (transits is not null)
                 {
-                    var isItemListVisible = lstLootItems.Visible;
-                    var localPlayerAimviewBoundsX = mcRadarLootItemViewer.Location.X;
-                    var localPlayerAimviewBoundsY = mcRadarLootItemViewer.Location.Y - _aimviewWindowSize - 5;
+                    var localPlayerMapPos = this.LocalPlayer.Position.ToMapPos(this.selectedMap);
+                    var mapParams = this.GetMapLocation();
 
-                    var localPlayerAimviewBounds = new SKRect()
+                    foreach (var transit in transits)
                     {
-                        Left = (isItemListVisible ? localPlayerAimviewBoundsX : _mapCanvas.Left),
-                        Right = (isItemListVisible ? localPlayerAimviewBoundsX : _mapCanvas.Left) + _aimviewWindowSize,
-                        Bottom = (isItemListVisible ? localPlayerAimviewBoundsY + _aimviewWindowSize : _mapCanvas.Bottom),
-                        Top = (isItemListVisible ? localPlayerAimviewBoundsY : _mapCanvas.Bottom - _aimviewWindowSize)
-                    };
+                        var transitMapPos = transit.Position.ToMapPos(this.selectedMap);
 
-                    var isRadarStatsVisible = mcRadarStats.Visible || mcRadarEnemyStats.Visible;
-                    var primaryTeammateAimviewBoundsX = mcRadarStats.Location.X - mcRadarStats.Width;
-                    var primaryTeammateAimviewBoundsY = mcRadarStats.Location.Y - _aimviewWindowSize - 5;
+                        if (!this.IsInViewport(transitMapPos, mapParams))
+                            continue;
 
-                    var primaryTeammateAimviewBounds = new SKRect()
-                    {
-                        Left = (isRadarStatsVisible ? primaryTeammateAimviewBoundsX : _mapCanvas.Right - _aimviewWindowSize),
-                        Right = (isRadarStatsVisible ? primaryTeammateAimviewBoundsX + _aimviewWindowSize : _mapCanvas.Right),
-                        Bottom = (isRadarStatsVisible ? primaryTeammateAimviewBoundsY + _aimviewWindowSize : _mapCanvas.Bottom),
-                        Top = (isRadarStatsVisible ? primaryTeammateAimviewBoundsY : _mapCanvas.Bottom - _aimviewWindowSize)
-                    };
+                        var transitZoomedPos = transitMapPos.ToZoomedPos(mapParams);
 
-                    var primaryTeammate = this.AllPlayers?
-                        .Select(x => x.Value)
-                        .FirstOrDefault(x => x.AccountID == txtTeammateID.Text);
-
-                    // Draw LocalPlayer Aimview
-                    RenderAimview(
-                        canvas,
-                        localPlayerAimviewBounds,
-                        this.LocalPlayer,
-                        aimviewPlayers
-                    );
-
-                    // Draw Primary Teammate Aimview
-                    RenderAimview(
-                        canvas,
-                        primaryTeammateAimviewBounds,
-                        primaryTeammate,
-                        aimviewPlayers
-                    );
+                        transitZoomedPos.DrawTransit(
+                            canvas,
+                            transit,
+                            localPlayerMapPos.Height
+                        );
+                    }
                 }
             }
+        }
+
+        private void DrawAimview(SKCanvas canvas)
+        {
+            if (!this.config.Aimview || this.AllPlayers is null)
+                return;
+
+            var aimviewPlayers = this.AllPlayers.Values.Where(x => x.IsActive && x.IsAlive).ToList();
+            if (!aimviewPlayers.Any())
+                return;
+
+            var isItemListVisible = lstLootItems.Visible;
+            var localPlayerAimviewBounds = this.CalculateAimviewBounds(isItemListVisible, mcRadarLootItemViewer);
+            var primaryTeammateAimviewBounds = this.CalculateAimviewBounds(mcRadarStats.Visible || mcRadarEnemyStats.Visible, mcRadarStats);
+
+            var primaryTeammate = this.AllPlayers.Values.FirstOrDefault(x => x.AccountID == txtTeammateID.Text);
+
+            this.RenderAimview(canvas, localPlayerAimviewBounds, this.LocalPlayer, aimviewPlayers);
+            this.RenderAimview(canvas, primaryTeammateAimviewBounds, primaryTeammate, aimviewPlayers);
         }
 
         private void DrawToolTips(SKCanvas canvas)
         {
             var localPlayer = this.LocalPlayer;
-            var mapParams = GetMapLocation();
+            var mapParams = this.GetMapLocation();
 
             if (localPlayer is not null)
             {
-                if (_closestPlayerToMouse is not null)
+                if (this.closestPlayerToMouse is not null)
                 {
-                    var playerZoomedPos = _closestPlayerToMouse
+                    var playerZoomedPos = this.closestPlayerToMouse
                         .Position
-                        .ToMapPos(_selectedMap)
+                        .ToMapPos(this.selectedMap)
                         .ToZoomedPos(mapParams);
-                    playerZoomedPos.DrawToolTip(canvas, _closestPlayerToMouse);
+
+                    playerZoomedPos.DrawToolTip(canvas, this.closestPlayerToMouse);
                 }
             }
 
-            if (_closestItemToMouse is not null)
+            if (this.closestItemToMouse is not null)
             {
-                var itemZoomedPos = _closestItemToMouse
+                var itemZoomedPos = this.closestItemToMouse
                     .Position
-                    .ToMapPos(_selectedMap)
+                    .ToMapPos(this.selectedMap)
                     .ToZoomedPos(mapParams);
-                itemZoomedPos.DrawLootableObjectToolTip(canvas, _closestItemToMouse);
+                itemZoomedPos.DrawLootableObjectToolTip(canvas, this.closestItemToMouse);
             }
 
-            if (_closestTaskZoneToMouse is not null)
+            if (this.closestTaskZoneToMouse is not null)
             {
-                var taskZoneZoomedPos = _closestTaskZoneToMouse
+                var taskZoneZoomedPos = this.closestTaskZoneToMouse
                     .Position
-                    .ToMapPos(_selectedMap)
+                    .ToMapPos(this.selectedMap)
                     .ToZoomedPos(mapParams);
-                taskZoneZoomedPos.DrawToolTip(canvas, _closestTaskZoneToMouse);
+                taskZoneZoomedPos.DrawToolTip(canvas, this.closestTaskZoneToMouse);
             }
 
-            if (_closestTaskItemToMouse is not null)
+            if (this.closestTaskItemToMouse is not null)
             {
-                var taskItemZoomedPos = _closestTaskItemToMouse
+                var taskItemZoomedPos = this.closestTaskItemToMouse
                     .Position
-                    .ToMapPos(_selectedMap)
+                    .ToMapPos(this.selectedMap)
                     .ToZoomedPos(mapParams);
-                taskItemZoomedPos.DrawToolTip(canvas, _closestTaskItemToMouse);
+                taskItemZoomedPos.DrawToolTip(canvas, this.closestTaskItemToMouse);
             }
         }
 
         private void DrawStatusText(SKCanvas canvas)
         {
-            bool isReady = this.Ready;
-            bool inGame = this.InGame;
-            bool isAtHideout = this.IsAtHideout;
+            var isReady = this.Ready;
+            var inGame = this.InGame;
+            var isAtHideout = this.IsAtHideout;
             var localPlayer = this.LocalPlayer;
-            var selectedMap = this._selectedMap;
+            var selectedMap = this.selectedMap;
 
             string statusText;
+
             if (!isReady)
             {
                 statusText = "Game Process Not Running";
@@ -1670,7 +1921,7 @@ namespace eft_dma_radar
                 statusText = "Waiting for Raid Start...";
 
                 if (selectedMap is not null)
-                    ResetVariables();
+                    this.ResetVariables();
             }
             else if (localPlayer is null)
             {
@@ -1685,8 +1936,8 @@ namespace eft_dma_radar
                 return; // No status text to draw
             }
 
-            var centerX = _mapCanvas.Width / 2;
-            var centerY = _mapCanvas.Height / 2;
+            var centerX = this.mapCanvas.Width / 2;
+            var centerY = this.mapCanvas.Height / 2;
 
             canvas.DrawText(statusText, centerX, centerY, SKPaints.TextRadarStatus);
         }
@@ -1700,10 +1951,10 @@ namespace eft_dma_radar
 
             var myPosition = sourcePlayer.Position;
             var myRotation = sourcePlayer.Rotation;
-            var normalizedDirection = NormalizeDirection(myRotation.X);
-            var pitch = CalculatePitch(myRotation.Y);
+            var normalizedDirection = this.NormalizeDirection(myRotation.X);
+            var pitch = this.CalculatePitch(myRotation.Y);
 
-            DrawCrosshair(canvas, drawingLocation);
+            this.DrawCrosshair(canvas, drawingLocation);
 
             if (aimviewPlayers is not null)
             {
@@ -1712,8 +1963,8 @@ namespace eft_dma_radar
                     if (player == sourcePlayer)
                         continue; // don't draw self
 
-                    if (ShouldDrawPlayer(myPosition, player.Position, _config.MaxDistance))
-                        DrawPlayer(canvas, drawingLocation, myPosition, player, normalizedDirection, pitch);
+                    if (this.ShouldDrawPlayer(myPosition, player.Position, this.config.MaxDistance))
+                        this.DrawPlayer(canvas, drawingLocation, myPosition, player, normalizedDirection, pitch);
                 }
             }
 
@@ -1724,7 +1975,7 @@ namespace eft_dma_radar
             //{
             //    foreach (var item in loot.Filter)
             //    {
-            //        if (ShouldDrawLootObject(myPosition, item.Position, _config.MaxDistance))
+            //        if (ShouldDrawLootObject(myPosition, item.Position, this.config.MaxDistance))
             //            DrawLootableObject(canvas, drawingLocation, myPosition, sourcePlayer.ZoomedPosition, item, normalizedDirection, pitch);
             //    }
             //}
@@ -1762,12 +2013,12 @@ namespace eft_dma_radar
 
         private void HandleSplitPlanes(ref float angleX, float normalizedDirection)
         {
-            if (angleX >= 360 - _config.AimViewFOV && normalizedDirection <= _config.AimViewFOV)
+            if (angleX >= 360 - this.config.AimViewFOV && normalizedDirection <= this.config.AimViewFOV)
             {
                 var diff = 360 + normalizedDirection;
                 angleX -= diff;
             }
-            else if (angleX <= _config.AimViewFOV && normalizedDirection >= 360 - _config.AimViewFOV)
+            else if (angleX <= this.config.AimViewFOV && normalizedDirection >= 360 - this.config.AimViewFOV)
             {
                 var diff = 360 - normalizedDirection;
                 angleX += diff;
@@ -1789,7 +2040,7 @@ namespace eft_dma_radar
 
         private float CalculateYPosition(float angleY, float windowSize)
         {
-            return angleY / _config.AimViewFOV * windowSize + windowSize / 2;
+            return angleY / this.config.AimViewFOV * windowSize + windowSize / 2;
         }
 
         private float CalculateAngleX(float opposite, float adjacent, float normalizedDirection)
@@ -1803,7 +2054,7 @@ namespace eft_dma_radar
             else if (adjacent > 0 && opposite < 0)
                 angleX += 360;
 
-            HandleSplitPlanes(ref angleX, normalizedDirection);
+            this.HandleSplitPlanes(ref angleX, normalizedDirection);
 
             angleX -= normalizedDirection;
             return angleX;
@@ -1811,7 +2062,7 @@ namespace eft_dma_radar
 
         private float CalculateXPosition(float angleX, float windowSize)
         {
-            return angleX / _config.AimViewFOV * windowSize + windowSize / 2;
+            return angleX / this.config.AimViewFOV * windowSize + windowSize / 2;
         }
 
         private float CalculateCircleSize(float dist)
@@ -1819,20 +2070,30 @@ namespace eft_dma_radar
             return (float)(31.6437 - 5.09664 * Math.Log(0.591394 * dist + 70.0756));
         }
 
+        private SKRect CalculateAimviewBounds(bool isVisible, Control control)
+        {
+            float left = isVisible ? control.Location.X : this.mapCanvas.Left;
+            float right = left + this.aimviewWindowSize;
+            float bottom = isVisible ? control.Location.Y - this.aimviewWindowSize - 5 + this.aimviewWindowSize : this.mapCanvas.Bottom;
+            float top = bottom - this.aimviewWindowSize;
+
+            return new SKRect(left, top, right, bottom);
+        }
+
         private void DrawCrosshair(SKCanvas canvas, SKRect drawingLocation)
         {
             canvas.DrawLine(
                 drawingLocation.Left,
-                drawingLocation.Bottom - (_aimviewWindowSize / 2),
+                drawingLocation.Bottom - (this.aimviewWindowSize / 2),
                 drawingLocation.Right,
-                drawingLocation.Bottom - (_aimviewWindowSize / 2),
+                drawingLocation.Bottom - (this.aimviewWindowSize / 2),
                 SKPaints.PaintAimviewCrosshair
             );
 
             canvas.DrawLine(
-                drawingLocation.Right - (_aimviewWindowSize / 2),
+                drawingLocation.Right - (this.aimviewWindowSize / 2),
                 drawingLocation.Top,
-                drawingLocation.Right - (_aimviewWindowSize / 2),
+                drawingLocation.Right - (this.aimviewWindowSize / 2),
                 drawingLocation.Bottom,
                 SKPaints.PaintAimviewCrosshair
             );
@@ -1843,21 +2104,21 @@ namespace eft_dma_radar
             var playerPos = player.Position;
             float dist = Vector3.Distance(myPosition, playerPos);
             float heightDiff = playerPos.Z - myPosition.Z;
-            float angleY = CalculateAngleY(heightDiff, dist, pitch);
-            float y = CalculateYPosition(angleY, _aimviewWindowSize);
+            float angleY = this.CalculateAngleY(heightDiff, dist, pitch);
+            float y = this.CalculateYPosition(angleY, this.aimviewWindowSize);
 
             float opposite = playerPos.Y - myPosition.Y;
             float adjacent = playerPos.X - myPosition.X;
-            float angleX = CalculateAngleX(opposite, adjacent, normalizedDirection);
-            float x = CalculateXPosition(angleX, _aimviewWindowSize);
+            float angleX = this.CalculateAngleX(opposite, adjacent, normalizedDirection);
+            float x = this.CalculateXPosition(angleX, this.aimviewWindowSize);
 
             float drawX = drawingLocation.Right - x;
             float drawY = drawingLocation.Bottom - y;
 
-            if (IsInFOV(drawX, drawY, drawingLocation))
+            if (this.IsInFOV(drawX, drawY, drawingLocation))
             {
-                float circleSize = CalculateCircleSize(dist);
-                canvas.DrawCircle(drawX, drawY, circleSize * _uiScale, player.GetAimviewPaint());
+                float circleSize = this.CalculateCircleSize(dist);
+                canvas.DrawCircle(drawX, drawY, circleSize * this.uiScale, player.GetAimviewPaint());
             }
         }
 
@@ -1866,12 +2127,12 @@ namespace eft_dma_radar
             float dist = Vector3.Distance(myPosition, bonePosition);
             float heightDiff = bonePosition.Z - myPosition.Z;
             float angleY = CalculateAngleY(heightDiff, dist, pitch);
-            float y = CalculateYPosition(angleY, _aimviewWindowSize);
+            float y = CalculateYPosition(angleY, this.aimviewWindowSize);
 
             float opposite = bonePosition.Y - myPosition.Y;
             float adjacent = bonePosition.X - myPosition.X;
             float angleX = CalculateAngleX(opposite, adjacent, normalizedDirection);
-            float x = CalculateXPosition(angleX, _aimviewWindowSize);
+            float x = CalculateXPosition(angleX, this.aimviewWindowSize);
 
             float drawX = drawingLocation.Right - x;
             float drawY = drawingLocation.Bottom - y;
@@ -1925,112 +2186,88 @@ namespace eft_dma_radar
             var lootableObjectPos = lootableObject.Position;
             float dist = Vector3.Distance(myPosition, lootableObjectPos);
             float heightDiff = lootableObjectPos.Z - myPosition.Z;
-            float angleY = CalculateAngleY(heightDiff, dist, pitch);
-            float y = CalculateYPosition(angleY, _aimviewWindowSize);
+            float angleY = this.CalculateAngleY(heightDiff, dist, pitch);
+            float y = this.CalculateYPosition(angleY, this.aimviewWindowSize);
 
             float opposite = lootableObjectPos.Y - myPosition.Y;
             float adjacent = lootableObjectPos.X - myPosition.X;
-            float angleX = CalculateAngleX(opposite, adjacent, normalizedDirection);
-            float x = CalculateXPosition(angleX, _aimviewWindowSize);
+            float angleX = this.CalculateAngleX(opposite, adjacent, normalizedDirection);
+            float x = this.CalculateXPosition(angleX, this.aimviewWindowSize);
 
             float drawX = drawingLocation.Right - x;
             float drawY = drawingLocation.Bottom - y;
 
-            if (IsInFOV(drawX, drawY, drawingLocation))
+            if (this.IsInFOV(drawX, drawY, drawingLocation))
             {
-                float circleSize = CalculateCircleSize(dist);
-                canvas.DrawCircle(drawX, drawY, circleSize * _uiScale, SKPaints.LootPaint);
+                float circleSize = this.CalculateCircleSize(dist);
+                canvas.DrawCircle(drawX, drawY, circleSize * this.uiScale, SKPaints.LootPaint);
             }
         }
 
         private void ClearPlayerRefs()
         {
-            _closestPlayerToMouse = null;
-            _mouseOverGroup = null;
+            this.closestPlayerToMouse = null;
+            this.mouseOverGroup = null;
         }
 
         private void ClearItemRefs()
         {
-            _closestItemToMouse = null;
+            this.closestItemToMouse = null;
         }
 
         private void ClearTaskItemRefs()
         {
-            _closestTaskItemToMouse = null;
+            this.closestTaskItemToMouse = null;
         }
 
         private void ClearTaskZoneRefs()
         {
-            _closestTaskZoneToMouse = null;
+            this.closestTaskZoneToMouse = null;
         }
 
         private T FindClosestObject<T>(IEnumerable<T> objects, Vector2 position, Func<T, Vector2> positionSelector, float threshold)
             where T : class
         {
-            if (objects is null || !objects.Any())
+            if (objects == null || !objects.Any())
                 return null;
 
-            var closestObject = objects.Aggregate(
-                (x1, x2) =>
-                    x2 == null || Vector2.Distance(positionSelector(x1), position)
-                    < Vector2.Distance(positionSelector(x2), position)
-                        ? x1
-                        : x2
-            );
-
-            if (closestObject is not null && Vector2.Distance(positionSelector(closestObject), position) < threshold)
-                return closestObject;
-
-            return null;
+            return objects.AsParallel()
+                .Select(obj => new { Object = obj, Distance = Vector2.Distance(positionSelector(obj), position) })
+                .Where(x => x.Distance < threshold)
+                .OrderBy(x => x.Distance)
+                .Select(x => x.Object)
+                .FirstOrDefault();
         }
 
-        private void PanTimer_Tick(object sender, EventArgs e)
+        private bool ZoomIn(int amt, Point cursorPosition)
         {
-            var panDifference = new SKPoint(
-                this.targetPanPosition.X - this._mapPanPosition.X,
-                this.targetPanPosition.Y - this._mapPanPosition.Y
-            );
+            var zoomFactor = 1 + (this.config.ZoomSensitivity * amt / 1000f);
+            this.targetZoom = Math.Clamp(this.targetZoom * zoomFactor, MAX_ZOOM, MIN_ZOOM);
 
-            if (panDifference.Length > 0.1)
-            {
-                this._mapPanPosition.X += (float)(panDifference.X * PAN_SMOOTHNESS);
-                this._mapPanPosition.Y += (float)(panDifference.Y * PAN_SMOOTHNESS);
-            }
-            else
-            {
-                this.panTimer.Stop();
-            }
-        }
+            if (this.isFreeMapToggled)
+                this.AdjustPanPositionForZoom(cursorPosition, zoomFactor);
 
-        private void ZoomTimer_Tick(object sender, EventArgs e)
-        {
-            int zoomDifference = this.targetZoomValue - _config.DefaultZoom;
-
-            if (zoomDifference != 0)
+            if (!this.isZooming)
             {
-                int zoomStep = Math.Sign(zoomDifference);
-                _config.DefaultZoom += zoomStep;
+                this.isZooming = true;
+                this.AnimateZoomAndPan();
             }
-            else
-            {
-                this.zoomTimer.Stop();
-            }
-        }
-
-        private bool ZoomIn(int amt)
-        {
-            this.targetZoomValue = Math.Max(10, _config.DefaultZoom - amt);
-            this.zoomTimer.Start();
 
             return true;
         }
 
         private bool ZoomOut(int amt)
         {
-            this.targetZoomValue = Math.Min(200, _config.DefaultZoom + amt);
-            this.zoomTimer.Start();
+            var zoomFactor = 1 + (this.config.ZoomSensitivity * amt / 1000f);
+            this.targetZoom = Math.Clamp(this.targetZoom / zoomFactor, MAX_ZOOM, MIN_ZOOM);
 
-            return false;
+            if (!this.isZooming)
+            {
+                this.isZooming = true;
+                this.AnimateZoomAndPan();
+            }
+
+            return true;
         }
 
         private float Lerp(float a, float b, float t)
@@ -2042,7 +2279,7 @@ namespace eft_dma_radar
         {
             var shouldStopAnimation = true;
 
-            foreach (var animation in activeItemAnimations)
+            foreach (var animation in this.activeItemAnimations)
             {
                 animation.AnimationTime += 0.016f;
 
@@ -2058,44 +2295,29 @@ namespace eft_dma_radar
 
             if (shouldStopAnimation)
             {
-                itemAnimationTimer.Stop();
-                itemAnimationTimer.Dispose();
-                isAnimationRunning = false;
+                this.itemPingAnimationTimer.Stop();
+                this.itemPingAnimationTimer.Dispose();
+                this.isItemPingAnimationRunning = false;
             }
 
-            activeItemAnimations.RemoveAll(animation => animation.RepetitionCount >= animation.MaxRepetitions);
+            this.activeItemAnimations.RemoveAll(animation => animation.RepetitionCount >= animation.MaxRepetitions);
 
-            _mapCanvas.Invalidate();
+            this.mapCanvas.Invalidate();
         }
 
         private List<LootItem> GetLootAndContainerItems()
         {
-            var lootItems = new List<LootItem>();
-
             if (this.Loot?.Loot is null)
-                return lootItems;
+                return new List<LootItem>();
 
-            lootItems.AddRange(this.Loot.Loot.OfType<LootItem>());
-
-            foreach (var container in this.Loot.Loot.OfType<LootContainer>())
-            {
-                lootItems.AddRange(container.Items);
-            }
+            var lootItems = new List<LootItem>(this.Loot.Loot.OfType<LootItem>());
 
             foreach (var corpse in this.Loot.Loot.OfType<LootCorpse>())
             {
-                foreach (var gearItem in corpse.Items)
-                {
-                    var itemToAdd = gearItem.Item;
-                    var itemsToAdd = gearItem.Loot;
-
-                    if (itemToAdd?.Item is not null)
-                        lootItems.Add(itemToAdd);
-
-
-                    if (itemsToAdd.Count > 0)
-                        lootItems.AddRange(itemsToAdd);
-                }
+                lootItems.AddRange(corpse.Items
+                    .Select(gearItem => gearItem.Item.Item)
+                    .Where(item => item?.Item is not null)
+                    .Concat(corpse.Items.SelectMany(gearItem => gearItem.Item.Loot)));
             }
 
             return lootItems;
@@ -2103,112 +2325,146 @@ namespace eft_dma_radar
 
         private void RefreshLootListItems()
         {
-            if (_isRefreshingLootItems)
+            if (this.isRefreshingLootItems)
                 return;
 
-            _isRefreshingLootItems = true;
+            this.isRefreshingLootItems = true;
 
-            if (this.Loot?.Loot?.Count < 1 || !_config.LootItemViewer)
+            try
             {
-                _isRefreshingLootItems = false;
-                return;
-            }
+                if (!this.config.ProcessLoot || this.Loot?.Loot?.Count < 1 || !this.config.LootItemViewer)
+                {
+                    lstLootItems.Items.Clear();
+                    return;
+                }
 
-            lstLootItems.Items.Clear();
+                var lootItems = this.GetLootAndContainerItems();
+                var itemToFind = txtLootItemFilter.Text.Trim();
 
-            var lootItems = this.GetLootAndContainerItems();
-
-            if (lootItems.Count < 1)
-            {
-                _isRefreshingLootItems = false;
-                return;
-            }
-
-            var itemToFind = txtLootItemFilter.Text.Trim();
-
-            var mergedLootItems = lootItems
-                 .GroupBy(lootItem => lootItem.ID)
-                 .Select(group =>
-                 {
-                     var count = group.Count();
-                     var firstItem = group.First();
-
-                     return new
-                     {
-                         LootItem = new LootItem
-                         {
-                             ID = firstItem.ID,
-                             Name = firstItem.Name,
-                             Position = firstItem.Position,
-                             Important = firstItem.Important,
-                             AlwaysShow = firstItem.AlwaysShow,
-                             Value = firstItem.Value,
-                             Color = firstItem.Color
-                         },
-                         Quantity = count
-                     };
-                 })
-                 .OrderByDescending(x => x.LootItem.Value)
-                 .ToList();
-
-            if (!string.IsNullOrEmpty(itemToFind))
-            {
-                mergedLootItems = mergedLootItems
-                    .Where(item => item.LootItem.Name.IndexOf(itemToFind, StringComparison.OrdinalIgnoreCase) != -1)
+                var mergedLootItems = lootItems
+                    .GroupBy(lootItem => lootItem.ID)
+                    .Select(group => new
+                    {
+                        LootItem = new LootItem
+                        {
+                            ID = group.First().ID,
+                            Name = group.First().Name,
+                            Position = group.First().Position,
+                            Important = group.First().Important,
+                            AlwaysShow = group.First().AlwaysShow,
+                            Value = group.First().Value,
+                            Color = group.First().Color
+                        },
+                        Quantity = group.Count()
+                    })
+                    .Where(item => string.IsNullOrEmpty(itemToFind) ||
+                                   item.LootItem.Name.IndexOf(itemToFind, StringComparison.OrdinalIgnoreCase) != -1)
+                    .OrderByDescending(x => x.LootItem.Value)
                     .ToList();
-            }
 
-            if (mergedLootItems.Count < 1)
-            {
-                _isRefreshingLootItems = false;
-                return;
-            }
-
-            var listViewItems = mergedLootItems.Select(item => new ListViewItem
-            {
-                Text = item.Quantity.ToString(),
-                Tag = item.LootItem,
-                SubItems =
+                lstLootItems.BeginUpdate();
+                lstLootItems.Items.Clear();
+                lstLootItems.Items.AddRange(mergedLootItems.Select(item => new ListViewItem
                 {
-                    item.LootItem.Name,
-                    TarkovDevManager.FormatNumber(item.LootItem.Value)
-                }
-            }).ToArray();
+                    Text = item.Quantity.ToString(),
+                    Tag = item.LootItem,
+                    SubItems = { item.LootItem.Name, TarkovDevManager.FormatNumber(item.LootItem.Value) }
+                }).ToArray());
+                lstLootItems.EndUpdate();
 
-            lstLootItems.Items.AddRange(listViewItems);
-
-            if (itemToPing is not null)
-            {
-                int itemIndex = lstLootItems.Items.Cast<ListViewItem>()
-                                                  .ToList()
-                                                  .FindIndex(item => item.SubItems[1].Text == itemToPing.Name);
-
-                if (itemIndex != -1)
+                if (this.itemToPing is not null)
                 {
-                    lstLootItems.SelectedIndices.Clear();
-                    lstLootItems.SelectedIndices.Add(itemIndex);
+                    int itemIndex = lstLootItems.Items.Cast<ListViewItem>()
+                        .ToList()
+                        .FindIndex(item => item.SubItems[1].Text == this.itemToPing.Name);
+
+                    if (itemIndex != -1)
+                    {
+                        lstLootItems.SelectedIndices.Clear();
+                        lstLootItems.SelectedIndices.Add(itemIndex);
+                    }
                 }
             }
+            finally
+            {
+                this.isRefreshingLootItems = false;
+            }
+        }
 
-            _isRefreshingLootItems = false;
+        private void HandleMapDragging(MouseEventArgs e)
+        {
+            this.InvalidateMapParams();
+
+            if (!this.lastMousePosition.IsEmpty)
+            {
+                var dx = (e.X - this.lastMousePosition.X) * DRAG_SENSITIVITY;
+                var dy = (e.Y - this.lastMousePosition.Y) * DRAG_SENSITIVITY;
+
+                this.targetPanPosition = new SKPoint(
+                    targetPanPosition.X - dx,
+                    targetPanPosition.Y - dy
+                );
+
+                if (!this.isPanning)
+                {
+                    this.isPanning = true;
+                    this.AnimateZoomAndPan();
+                }
+            }
+
+            this.lastMousePosition = e.Location;
+        }
+
+        private void UpdateClosestObjects(Vector2 mouse, float threshold)
+        {
+            var players = this.AllPlayers?.Values.Where(x => x.Type != PlayerType.LocalPlayer && !x.HasExfild).ToList();
+            this.closestPlayerToMouse = this.FindClosestObject(players, mouse, x => x.ZoomedPosition, threshold);
+
+            this.mouseOverGroup = this.closestPlayerToMouse?.IsHumanHostile == true && this.closestPlayerToMouse.GroupID != -1
+                ? this.closestPlayerToMouse.GroupID
+                : -100;
+
+            if (this.config.ProcessLoot)
+            {
+                var loot = this.Loot?.Filter?.ToList();
+                this.closestItemToMouse = this.FindClosestObject(loot, mouse, x => x.ZoomedPosition, threshold);
+            }
+            else
+            {
+                this.ClearItemRefs();
+            }
+
+            var tasksItems = this.QuestManager?.QuestItems?.ToList();
+            this.closestTaskItemToMouse = this.FindClosestObject(tasksItems, mouse, x => x.ZoomedPosition, threshold);
+
+            var tasksZones = this.QuestManager?.QuestZones?.ToList();
+            this.closestTaskZoneToMouse = this.FindClosestObject(tasksZones, mouse, x => x.ZoomedPosition, threshold);
+        }
+
+        private void ClearAllRefs()
+        {
+            this.ClearPlayerRefs();
+            this.ClearItemRefs();
+            this.ClearTaskItemRefs();
+            this.ClearTaskZoneRefs();
         }
         #endregion
 
         #region Event Handlers
         private void btnToggleMapFree_Click(object sender, EventArgs e)
         {
-            if (_isFreeMapToggled)
+            if (this.isFreeMapToggled)
             {
                 btnToggleMapFree.Icon = Resources.tick;
-                _isFreeMapToggled = false;
+                this.isFreeMapToggled = false;
 
-                lock (_renderLock)
+                lock (this.renderLock)
                 {
                     var localPlayer = this.LocalPlayer;
                     if (localPlayer is not null)
                     {
-                        var localPlayerMapPos = localPlayer.Position.ToMapPos(_selectedMap);
-                        _mapPanPosition = new MapPosition()
+                        var localPlayerMapPos = localPlayer.Position.ToMapPos(this.selectedMap);
+                        this.mapPanPosition = new MapPosition()
                         {
                             X = localPlayerMapPos.X,
                             Y = localPlayerMapPos.Y,
@@ -2220,8 +2476,10 @@ namespace eft_dma_radar
             else
             {
                 btnToggleMapFree.Icon = Resources.cross;
-                _isFreeMapToggled = true;
+                this.isFreeMapToggled = true;
             }
+
+            this.InvalidateMapParams();
         }
 
         private void btnMapSetupApply_Click(object sender, EventArgs e)
@@ -2230,196 +2488,147 @@ namespace eft_dma_radar
                 && float.TryParse(txtMapSetupY.Text, out float y)
                 && float.TryParse(txtMapSetupScale.Text, out float scale))
             {
-                lock (_renderLock)
+                lock (this.renderLock)
                 {
-                    if (_selectedMap is not null)
+                    if (this.selectedMap is not null)
                     {
-                        _selectedMap.ConfigFile.X = x;
-                        _selectedMap.ConfigFile.Y = y;
-                        _selectedMap.ConfigFile.Scale = scale;
-                        _selectedMap.ConfigFile.Save(_selectedMap);
+                        this.selectedMap.ConfigFile.X = x;
+                        this.selectedMap.ConfigFile.Y = y;
+                        this.selectedMap.ConfigFile.Scale = scale;
+                        this.selectedMap.ConfigFile.Save(this.selectedMap);
                     }
                 }
             }
             else
-                ShowErrorDialog("Invalid value(s) provided in the map setup textboxes.");
+                this.ShowErrorDialog("Invalid value(s) provided in the map setup textboxes.");
         }
 
         private void skMapCanvas_MouseMovePlayer(object sender, MouseEventArgs e)
         {
-            if (this.InGame && this.LocalPlayer is not null) // Must be in-game
+            if (!this.InGame || this.LocalPlayer == null)
             {
-                var mouse = new Vector2(e.X, e.Y);
-
-                var players = this.AllPlayers
-                    ?.Select(x => x.Value)
-                    .Where(x => x.Type is not PlayerType.LocalPlayer && !x.HasExfild); // Get all players except LocalPlayer & Exfil'd Players
-
-                var loot = this.Loot?.Filter?.Select(x => x);
-                var tasksItems = this.QuestManager?.QuestItems?.Select(x => x);
-                var tasksZones = this.QuestManager?.QuestZones?.Select(x => x);
-
-                _closestPlayerToMouse = FindClosestObject(players, mouse, x => x.ZoomedPosition, 12 * _uiScale);
-                if (_closestPlayerToMouse is not null)
-                {
-                    if (_closestPlayerToMouse.IsHumanHostile && _closestPlayerToMouse.GroupID != -1)
-                        _mouseOverGroup = _closestPlayerToMouse.GroupID;
-                    else
-                        _mouseOverGroup = null;
-                }
-                else
-                    ClearPlayerRefs();
-
-                if (_config.ProcessLoot)
-                    _closestItemToMouse = FindClosestObject(loot, mouse, x => x.ZoomedPosition, 12 * _uiScale);
-                else
-                    ClearItemRefs();
-
-                _closestTaskItemToMouse = FindClosestObject(tasksItems, mouse, x => x.ZoomedPosition, 12 * _uiScale);
-                if (_closestTaskItemToMouse == null)
-                    ClearTaskItemRefs();
-
-                _closestTaskZoneToMouse = FindClosestObject(tasksZones, mouse, x => x.ZoomedPosition, 12);
-                if (_closestTaskZoneToMouse == null)
-                    ClearTaskZoneRefs();
-
-                if (this._isDragging && this._isFreeMapToggled)
-                {
-                    if (!this._lastMousePosition.IsEmpty)
-                    {
-                        int dx = e.X - this._lastMousePosition.X;
-                        int dy = e.Y - this._lastMousePosition.Y;
-
-                        dx = (int)(dx * DRAG_SENSITIVITY);
-                        dy = (int)(dy * DRAG_SENSITIVITY);
-
-                        this.targetPanPosition.X -= dx;
-                        this.targetPanPosition.Y -= dy;
-
-                        if (!this.panTimer.Enabled)
-                            this.panTimer.Start();
-                    }
-
-                    this._lastMousePosition = e.Location;
-                }
+                this.ClearAllRefs();
+                return;
             }
-            else if (this.InGame && Memory.LocalPlayer is null)
+
+            var mouse = new Vector2(e.X, e.Y);
+            var threshold = 12 * this.uiScale;
+
+            this.UpdateClosestObjects(mouse, threshold);
+
+            if (this.isFreeMapToggled && this.isDragging)
             {
-                ClearPlayerRefs();
-                ClearItemRefs();
-                ClearTaskItemRefs();
-                ClearTaskZoneRefs();
+                this.HandleMapDragging(e);
             }
         }
 
         private void skMapCanvas_MouseDown(object sender, MouseEventArgs e)
         {
-            if (e.Button == MouseButtons.Left && this._isFreeMapToggled)
+            if (e.Button == MouseButtons.Left && this.isFreeMapToggled)
             {
-                this._isDragging = true;
-                this._lastMousePosition = e.Location;
+                this.isDragging = true;
+                this.lastMousePosition = e.Location;
             }
         }
 
         private void skMapCanvas_MouseUp(object sender, MouseEventArgs e)
         {
-            if (this._isDragging)
+            if (this.isDragging)
             {
-                this._isDragging = false;
-                this._lastMousePosition = e.Location;
+                this.isDragging = false;
+                this.lastMousePosition = Point.Empty;
             }
         }
 
         private void skMapCanvas_PaintSurface(object sender, SKPaintGLSurfaceEventArgs e)
         {
-            try
+            var canvas = e.Surface.Canvas;
+
+            this.UpdateWindowTitle();
+
+            if (!this.IsReadyToRender())
             {
-                SKCanvas canvas = e.Surface.Canvas;
-                canvas.Clear();
+                this.DrawStatusText(canvas);
+                return;
+            }
 
-                UpdateWindowTitle();
+            lock (this.renderLock)
+            {
+                this.DrawMap(canvas);
 
-                if (IsReadyToRender())
+                if (this.config.ProcessLoot)
                 {
-                    lock (_renderLock)
+                    if (this.config.LooseLoot ||
+                        this.config.LootCorpses ||
+                        this.config.LootContainerSettings["Enabled"] ||
+                        (this.config.QuestHelper && this.config.QuestLootItems))
                     {
-                        DrawMap(canvas);
-
-                        if (!_config.ProcessLoot && _config.LootCorpses)
-                            DrawCorpses(canvas);
-
-                        if (_config.ProcessLoot && (_config.LooseLoot ||
-                            _config.LootCorpses ||
-                            _config.LootContainerSettings["Enabled"] ||
-                            (_config.QuestHelper && _config.QuestLootItems)))
-                        {
-                            DrawItemAnimations(canvas);
-                            DrawLoot(canvas);
-                        }
-
-                        if (_config.QuestHelper)
-                            DrawQuestItems(canvas);
-
-                        DrawGrenades(canvas);
-
-                        DrawExfils(canvas);
-
-                        DrawPlayers(canvas);
-
-                        if (_config.Aimview)
-                            DrawAimview(canvas);
-
-                        DrawToolTips(canvas);
+                        this.DrawItemAnimations(canvas);
+                        this.DrawLoot(canvas);
                     }
                 }
-                else
-                    DrawStatusText(canvas);
+                else if (this.config.LootCorpses)
+                {
+                    this.DrawCorpses(canvas);
+                }
 
-                canvas.Flush();
+                if (this.config.QuestHelper)
+                    this.DrawQuestItems(canvas);
+
+                this.DrawGrenades(canvas);
+                this.DrawTripwires(canvas);
+                this.DrawExfils(canvas);
+                this.DrawTransits(canvas);
+                this.DrawPlayers(canvas);
+
+                if (this.config.Aimview)
+                    this.DrawAimview(canvas);
+
+                this.DrawToolTips(canvas);
             }
-            catch { }
+
+            canvas.Flush();
         }
 
         private void btnToggleMap_Click(object sender, EventArgs e)
         {
-            ToggleMap();
+            this.ToggleMap();
         }
 
         private void swRadarStats_CheckedChanged(object sender, EventArgs e)
         {
             var enabled = swRadarStats.Checked;
-            _config.RadarStats = enabled;
+            this.config.RadarStats = enabled;
             mcRadarStats.Visible = enabled;
         }
 
         private void btnPingSelectedItem_Click(object sender, EventArgs e)
         {
-            if (itemToPing is null)
+            if (this.itemToPing is null)
                 return;
 
             var lootItems = this.GetLootAndContainerItems();
             var itemsToPing = lootItems.Where(item => item.ID == itemToPing.ID).ToList();
 
-            activeItemAnimations.Clear();
+            this.activeItemAnimations.Clear();
 
             foreach (var item in itemsToPing)
             {
-                activeItemAnimations.Add(new ItemAnimation(item)
+                this.activeItemAnimations.Add(new ItemAnimation(item)
                 {
-                    MaxAnimationTime = ((float)_config.LootPing["AnimationSpeed"] / 1000),
-                    MaxRepetitions = _config.LootPing["Repetition"]
+                    MaxAnimationTime = ((float)this.config.LootPing["AnimationSpeed"] / 1000),
+                    MaxRepetitions = this.config.LootPing["Repetition"]
                 });
             }
 
-            isAnimationRunning = false;
-            itemAnimationTimer?.Stop();
-            itemAnimationTimer?.Dispose();
+            this.isItemPingAnimationRunning = false;
+            this.itemPingAnimationTimer?.Stop();
+            this.itemPingAnimationTimer?.Dispose();
 
-            itemAnimationTimer = new System.Windows.Forms.Timer();
-            itemAnimationTimer.Interval = 16;
-            itemAnimationTimer.Tick += AnimationTimer_Tick;
-            itemAnimationTimer.Start();
-            isAnimationRunning = true;
+            this.itemPingAnimationTimer = new System.Timers.Timer(16);
+            this.itemPingAnimationTimer.Elapsed += AnimationTimer_Tick;
+            this.itemPingAnimationTimer.Start();
+            this.isItemPingAnimationRunning = true;
         }
 
         private void txtLootItemFilter_TextChanged(object sender, EventArgs e)
@@ -2429,16 +2638,15 @@ namespace eft_dma_radar
 
         private void btnToggleLootItemViewer_Click(object sender, EventArgs e)
         {
-            mcRadarLootItemViewer.Visible = _config.LootItemViewer = !_config.LootItemViewer;
-            if (_config.LootItemViewer)
+            mcRadarLootItemViewer.Visible = this.config.LootItemViewer = !this.config.LootItemViewer;
+
+            if (this.config.LootItemViewer)
                 this.RefreshLootListItems();
         }
 
         private void lstLootItems_SelectedIndexChanged(object sender, EventArgs e)
         {
-            var selectedItem = lstLootItems.SelectedItems.Count > 0 ? lstLootItems.SelectedItems[0]?.Tag as LootItem : null;
-
-            itemToPing = selectedItem;
+            this.itemToPing = lstLootItems.SelectedItems.Count > 0 ? lstLootItems.SelectedItems[0]?.Tag as LootItem : null; ;
         }
         #endregion
         #endregion
@@ -2451,8 +2659,8 @@ namespace eft_dma_radar
             var pveMode = Memory.IsPvEMode;
             var maxLTWDistance = (pveMode ? 250 : 40);
             var maxReachDistance = (pveMode ? 250 : 40);
-            var LTWDistance = (pveMode ? _config.LootThroughWallsDistancePvE : _config.LootThroughWallsDistance) * 10;
-            var reachDistance = (pveMode ? _config.ExtendedReachDistancePvE : _config.ExtendedReachDistance) * 10;
+            var LTWDistance = (pveMode ? this.config.LootThroughWallsDistancePvE : this.config.LootThroughWallsDistance) * 10;
+            var reachDistance = (pveMode ? this.config.ExtendedReachDistancePvE : this.config.ExtendedReachDistance) * 10;
 
             btnTriggerUnityCrash.Visible = pveMode;
 
@@ -2465,10 +2673,10 @@ namespace eft_dma_radar
             sldrLootThroughWallsDistance.Value = (int)LTWDistance;
             sldrExtendedReachDistance.Value = (int)reachDistance;
 
-            lblSettingsMemoryWritingLootThroughWallsDistance.Enabled = _config.LootThroughWalls;
+            lblSettingsMemoryWritingLootThroughWallsDistance.Enabled = this.config.LootThroughWalls;
             lblSettingsMemoryWritingLootThroughWallsDistance.Text = $"x{(LTWDistance / 10)}";
 
-            lblSettingsMemoryWritingExtendedReachDistance.Enabled = _config.ExtendedReach;
+            lblSettingsMemoryWritingExtendedReachDistance.Enabled = this.config.ExtendedReach;
             lblSettingsMemoryWritingExtendedReachDistance.Text = $"x{(reachDistance / 10)}";
 
             if (Memory.LocalPlayer is not null)
@@ -2499,7 +2707,7 @@ namespace eft_dma_radar
         {
             var playerType = this.GetActivePlayerType();
             var playerText = Extensions.PlayerTypeTextPaints[playerType];
-            playerText.TextSize = playerInfoSettings.FontSize * _uiScale;
+            playerText.TextSize = playerInfoSettings.FontSize * this.uiScale;
 
             Extensions.PlayerTypeTextPaints[playerType] = playerText;
         }
@@ -2517,7 +2725,7 @@ namespace eft_dma_radar
         {
             var playerType = this.GetActivePlayerType();
             var playerText = Extensions.PlayerTypeFlagTextPaints[playerType];
-            playerText.TextSize = playerInfoSettings.FlagsFontSize * _uiScale;
+            playerText.TextSize = playerInfoSettings.FlagsFontSize * this.uiScale;
 
             Extensions.PlayerTypeFlagTextPaints[playerType] = playerText;
         }
@@ -2535,16 +2743,16 @@ namespace eft_dma_radar
                 cboPlayerInfoFlagsFont.Items.Add(font);
             }
 
-            foreach (var playerSetting in _config.PlayerInformationSettings)
+            foreach (var playerSetting in this.config.PlayerInformationSettings)
             {
                 var settings = playerSetting.Value;
                 var textPaint = SKPaints.TextBase.Clone();
                 textPaint.Typeface = SKTypeface.FromFamilyName(FONTS_TO_USE[settings.Font]);
-                textPaint.TextSize = settings.FontSize * _uiScale;
+                textPaint.TextSize = settings.FontSize * this.uiScale;
 
                 var flagsTextPaint = SKPaints.TextBase.Clone();
                 flagsTextPaint.Typeface = SKTypeface.FromFamilyName(FONTS_TO_USE[settings.FlagsFont]);
-                flagsTextPaint.TextSize = settings.FlagsFontSize * _uiScale;
+                flagsTextPaint.TextSize = settings.FlagsFontSize * this.uiScale;
 
                 Extensions.PlayerTypeTextPaints.Add(playerSetting.Key, textPaint);
                 Extensions.PlayerTypeFlagTextPaints.Add(playerSetting.Key, flagsTextPaint);
@@ -2554,7 +2762,7 @@ namespace eft_dma_radar
         private PlayerInformationSettings GetPlayerInfoSettings()
         {
             var playerType = this.GetActivePlayerType();
-            return !string.IsNullOrEmpty(playerType) && _config.PlayerInformationSettings.TryGetValue(playerType, out var settings) ? settings : null;
+            return !string.IsNullOrEmpty(playerType) && this.config.PlayerInformationSettings.TryGetValue(playerType, out var settings) ? settings : null;
         }
 
         private bool TryGetPlayerInfoSettings(out PlayerInformationSettings settings)
@@ -2600,6 +2808,7 @@ namespace eft_dma_radar
             swPlayerInfoActiveWeapon.Checked = playerInfoSettings.ActiveWeapon;
             swPlayerInfoThermal.Checked = playerInfoSettings.Thermal;
             swPlayerInfoNightVision.Checked = playerInfoSettings.NightVision;
+            swPlayerInfoGear.Checked = playerInfoSettings.Gear;
             swPlayerInfoAmmoType.Checked = playerInfoSettings.AmmoType;
             swPlayerInfoGroup.Checked = playerInfoSettings.Group;
             swPlayerInfoValue.Checked = playerInfoSettings.Value;
@@ -2609,6 +2818,7 @@ namespace eft_dma_radar
             swPlayerInfoActiveWeapon.Enabled = flagsChecked;
             swPlayerInfoThermal.Enabled = flagsChecked;
             swPlayerInfoNightVision.Enabled = flagsChecked;
+            swPlayerInfoGear.Enabled = flagsChecked;
             swPlayerInfoAmmoType.Enabled = flagsChecked;
             swPlayerInfoGroup.Enabled = flagsChecked;
             swPlayerInfoValue.Enabled = flagsChecked;
@@ -2628,9 +2838,9 @@ namespace eft_dma_radar
             if (swMapHelper.Checked)
             {
                 mcRadarMapSetup.Visible = true;
-                txtMapSetupX.Text = _selectedMap?.ConfigFile.X.ToString() ?? "0";
-                txtMapSetupY.Text = _selectedMap?.ConfigFile.Y.ToString() ?? "0";
-                txtMapSetupScale.Text = _selectedMap?.ConfigFile.Scale.ToString() ?? "0";
+                txtMapSetupX.Text = this.selectedMap?.ConfigFile.X.ToString() ?? "0";
+                txtMapSetupY.Text = this.selectedMap?.ConfigFile.Y.ToString() ?? "0";
+                txtMapSetupScale.Text = this.selectedMap?.ConfigFile.Scale.ToString() ?? "0";
             }
             else
                 mcRadarMapSetup.Visible = false;
@@ -2638,25 +2848,25 @@ namespace eft_dma_radar
 
         private void swAimview_CheckedChanged(object sender, EventArgs e)
         {
-            _config.Aimview = swAimview.Checked;
+            this.config.Aimview = swAimview.Checked;
         }
 
         private void swExfilNames_CheckedChanged(object sender, EventArgs e)
         {
-            _config.ExfilNames = swExfilNames.Checked;
+            this.config.ExfilNames = swExfilNames.Checked;
         }
 
         private void swHoverArmor_CheckedChanged(object sender, EventArgs e)
         {
-            _config.HoverArmor = swHoverArmor.Checked;
+            this.config.HoverArmor = swHoverArmor.Checked;
         }
 
         private void sldrUIScale_onValueChanged(object sender, int newValue)
         {
-            _config.UIScale = newValue;
-            _uiScale = (.01f * newValue);
+            this.config.UIScale = newValue;
+            this.uiScale = (.01f * newValue);
 
-            InitiateUIScaling();
+            this.InitializeUIScaling();
         }
 
         private void btnRestartRadar_Click(object sender, EventArgs e)
@@ -2667,44 +2877,44 @@ namespace eft_dma_radar
         private void swRadarVsync_CheckedChanged(object sender, EventArgs e)
         {
             var enabled = swRadarVsync.Checked;
-            _config.VSync = enabled;
+            this.config.VSync = enabled;
 
-            if (_mapCanvas is not null)
-                _mapCanvas.VSync = enabled;
+            if (this.mapCanvas is not null)
+                this.mapCanvas.VSync = enabled;
         }
 
         private void swPvEMode_CheckedChanged(object sender, EventArgs e)
         {
-            _config.PvEMode = swPvEMode.Checked;
+            this.config.PvEMode = swPvEMode.Checked;
 
-            UpdatePvEControls();
+            this.UpdatePvEControls();
         }
 
         private void swRadarEnemyCount_CheckedChanged(object sender, EventArgs e)
         {
             var enabled = swRadarEnemyCount.Checked;
 
-            _config.EnemyCount = enabled;
+            this.config.EnemyCount = enabled;
             mcRadarEnemyStats.Visible = enabled;
         }
 
         private void cboFont_SelectedIndexChanged(object sender, EventArgs e)
         {
-            _config.GlobalFont = cboGlobalFont.SelectedIndex;
+            this.config.GlobalFont = cboGlobalFont.SelectedIndex;
 
-            InitiateFonts();
+            this.InitializeFonts();
         }
 
         private void sldrFontSize_onValueChanged(object sender, int newValue)
         {
-            _config.GlobalFontSize = newValue;
+            this.config.GlobalFontSize = newValue;
 
-            InitiateFontSizes();
+            this.InitializeFontSizes();
         }
 
         private void sldrZoomSensitivity_onValueChanged(object sender, int newValue)
         {
-            _config.ZoomSensitivity = newValue;
+            this.config.ZoomSensitivity = newValue;
         }
 
         private void cboPlayerInfoType_SelectedIndexChanged(object sender, EventArgs e)
@@ -2839,6 +3049,14 @@ namespace eft_dma_radar
             playerInfoSettings.NightVision = swPlayerInfoNightVision.Checked;
         }
 
+        private void swPlayerInfoGear_CheckedChanged(object sender, EventArgs e)
+        {
+            if (!this.TryGetPlayerInfoSettings(out var playerInfoSettings))
+                return;
+
+            playerInfoSettings.Gear = swPlayerInfoGear.Checked;
+        }
+
         private void swPlayerInfoAmmoType_CheckedChanged(object sender, EventArgs e)
         {
             if (!this.TryGetPlayerInfoSettings(out var playerInfoSettings))
@@ -2901,8 +3119,304 @@ namespace eft_dma_radar
 
         private void btnTriggerUnityCrash_Click(object sender, EventArgs e)
         {
-            if (Memory.IsOfflinePvE && Memory.InGame && Memory.LocalPlayer is not null)
+            if (Memory.InGame && Memory.LocalPlayer is not null)
                 Memory.Chams.TriggerUnityCrash(Memory.LocalPlayer, 100UL);
+        }
+        #endregion
+        #endregion
+
+        #region Hotkeys
+        #region Helper Functions
+        private void SetChams(bool enabled)
+        {
+            this.config.Chams["Enabled"] = enabled;
+            swChams.Checked = enabled;
+        }
+
+        private void SetImportantLootOnly(bool enabled)
+        {
+            this.config.ImportantLootOnly = enabled;
+            swFilteredOnly.Checked = enabled;
+        }
+
+        private void SetNoRecoil(bool enabled)
+        {
+            this.config.NoRecoil = enabled;
+            swNoRecoil.Checked = enabled;
+        }
+
+        private void SetNoSway(bool enabled)
+        {
+            this.config.NoSway = enabled;
+            swNoSway.Checked = enabled;
+        }
+
+        private void SetOpticalThermal(bool enabled)
+        {
+            this.config.OpticThermalVision = enabled;
+            swOpticalThermal.Checked = enabled;
+        }
+
+        private void SetThermalVision(bool enabled)
+        {
+            this.config.ThermalVision = enabled;
+            swThermalVision.Checked = enabled;
+        }
+
+        private void SetShowContainers(bool enabled)
+        {
+            this.config.LootContainerSettings["Enabled"] = enabled;
+            swContainers.Checked = enabled;
+        }
+
+        private void SetShowCorpses(bool enabled)
+        {
+            this.config.LootCorpses = enabled;
+            swCorpses.Checked = enabled;
+        }
+
+        private void SetShowLoot(bool enabled)
+        {
+            this.config.LooseLoot = enabled;
+            swLooseLoot.Checked = enabled;
+        }
+
+        private void SetTimescale(bool enabled)
+        {
+            this.config.TimeScale = enabled;
+            swTimeScale.Checked = enabled;
+        }
+
+        private void SetThirdperson(bool enabled)
+        {
+            this.config.Thirdperson = enabled;
+            swThirdperson.Checked = enabled;
+        }
+
+        private void UpdateHotkeyEntryData()
+        {
+            this.hotkeyUpdating = true;
+
+            if (this.lastHotkeyEntry?.Key is not null)
+                cboHotkeyKey.SelectedItem = cboHotkeyKey.Items.Cast<HotkeyKey>().FirstOrDefault(k => k.Key == this.lastHotkeyEntry.Key);
+            else
+                cboHotkeyKey.SelectedIndex = -1;
+
+            rdbToggleKey.Checked = this.lastHotkeyEntry?.Type == HotkeyType.Toggle;
+            rdbOnKey.Checked = !rdbToggleKey.Checked;
+
+
+            if (!string.IsNullOrEmpty(this.lastHotkeyEntry?.Action))
+                cboHotkeyAction.SelectedItem = this.lastHotkeyEntry.Action;
+            else
+                cboHotkeyAction.SelectedIndex = -1;
+
+            cboHotkeyKey.Refresh();
+            cboHotkeyAction.Refresh();
+
+            this.hotkeyUpdating = false;
+        }
+
+        private void UpdateHotkeyEntriesList()
+        {
+            lstHotkeys.Items.Clear();
+
+            foreach (var hotkey in this.config.Hotkeys)
+            {
+                var item = new ListViewItem(new[] {
+                    hotkey.Action,
+                    this.GetDisplayNameForKey(hotkey.Key),
+                    hotkey.Type.ToString()
+                });
+                item.Tag = hotkey;
+                lstHotkeys.Items.Add(item);
+            }
+        }
+
+        private bool HasUnsavedHotkeyChanges()
+        {
+            var selectedAction = cboHotkeyAction.SelectedItem;
+            var selectedKey = cboHotkeyKey.SelectedItem as HotkeyKey;
+
+            if (this.lastHotkeyEntry is null || selectedAction is null || selectedKey is null)
+                return false;
+
+            return selectedAction.ToString() != this.lastHotkeyEntry.Action ||
+                    selectedKey.Key != this.lastHotkeyEntry.Key ||
+                    (rdbOnKey.Checked ? HotkeyType.OnKey : HotkeyType.Toggle) != this.lastHotkeyEntry.Type;
+        }
+
+        private void SaveHotkeyEntry()
+        {
+            if (this.hotkeyUpdating)
+                return;
+
+            if (this.HasUnsavedHotkeyChanges())
+            {
+                if (cboHotkeyKey.SelectedItem is null ||
+                    cboHotkeyAction.SelectedItem is null ||
+                    string.IsNullOrEmpty(cboHotkeyAction.SelectedItem.ToString()))
+                {
+                    this.ShowErrorDialog("Select a valid key & action.");
+                    return;
+                }
+
+                var selectedKey = (HotkeyKey)cboHotkeyKey.SelectedItem;
+
+                var hotkey = new Hotkey
+                {
+                    Action = cboHotkeyAction.SelectedItem.ToString(),
+                    Key = selectedKey.Key,
+                    Type = rdbOnKey.Checked ? HotkeyType.OnKey : HotkeyType.Toggle
+                };
+
+                var exists = this.config.Hotkeys.Any(h =>
+                                                        h.Action == hotkey.Action &&
+                                                        h != this.lastHotkeyEntry);
+
+                if (exists)
+                {
+                    this.ShowErrorDialog("Selected action is already in use");
+                    return;
+                }
+
+                var index = this.config.Hotkeys.IndexOf(this.lastHotkeyEntry);
+
+                if (index != -1)
+                    this.config.Hotkeys[index] = hotkey;
+                else
+                    this.config.Hotkeys.Add(hotkey);
+
+                this.lastHotkeyEntry = hotkey;
+
+                this.UpdateHotkeyEntriesList();
+            }
+        }
+
+        private void CheckHotkeys()
+        {
+            foreach (var hotkey in this.config.Hotkeys)
+            {
+                var onKeyDown = hotkey.Type == HotkeyType.OnKey;
+                var isTriggered = onKeyDown
+                    ? InputManager.IsKeyDown(hotkey.Key)
+                    : InputManager.IsKeyPressed(hotkey.Key);
+
+                if (isTriggered)
+                {
+                    if (onKeyDown)
+                        this.previouslyPressedKeys.Add(hotkey.Key);
+
+                    this.PerformAction(hotkey.Action, hotkey.Type);
+                }
+            }
+        }
+
+        private void PerformAction(string action, HotkeyType hotkeyType)
+        {
+            var actionWithoutSpaces = action.Replace(" ", "");
+
+            if (Enum.TryParse(actionWithoutSpaces, out HotkeyAction parsedAction) && hotkeyActions.TryGetValue(parsedAction, out var actionHandler))
+            {
+                this.BeginInvoke(new Action(() =>
+                {
+                    var enabled = hotkeyType == HotkeyType.OnKey || !this.config.GetConfigValue(action);
+                    actionHandler(enabled);
+                }));
+            }
+            else
+            {
+                switch (action)
+                {
+                    case "Zoom In":
+                        this.ZoomIn(2, Cursor.Position);
+                        break;
+                    case "Zoom Out":
+                        this.ZoomOut(2);
+                        break;
+                }
+            }
+        }
+
+        private void HandleKeyUp(Keys key)
+        {
+            var relevantHotkeys = this.config.Hotkeys.Where(h => h.Type == HotkeyType.OnKey && h.Key == key);
+            foreach (var hotkey in relevantHotkeys)
+            {
+                var actionWithoutSpaces = hotkey.Action.Replace(" ", "");
+
+                if (Enum.TryParse(actionWithoutSpaces, out HotkeyAction action) && hotkeyActions.TryGetValue(action, out var actionHandler))
+                    this.BeginInvoke(new Action(() => actionHandler(false)));
+            }
+        }
+
+        private string GetDisplayNameForKey(Keys key)
+        {
+            return this.keyDisplayNames.TryGetValue(key, out string displayName) ? displayName : key.ToString();
+        }
+        #endregion
+
+        #region Event Handlers
+        private void btnAddHotkey_Click(object sender, EventArgs e)
+        {
+            var blankHotkey = new Hotkey { Action = "", Key = Keys.None, Type = HotkeyType.OnKey };
+            var exists = this.config.Hotkeys.Any(h => h.Action == blankHotkey.Action && h.Key == blankHotkey.Key && h.Type == blankHotkey.Type);
+
+            if (exists)
+            {
+                this.ShowErrorDialog("A blank hotkey already exists.");
+                return;
+            }
+
+            this.config.Hotkeys.Add(blankHotkey);
+            this.UpdateHotkeyEntriesList();
+
+            var index = this.config.Hotkeys.IndexOf(blankHotkey);
+
+            lstHotkeys.Items[index].Selected = true;
+        }
+
+        private void btnRemoveHotkey_Click(object sender, EventArgs e)
+        {
+            if (lstHotkeys.SelectedItems.Count < 1)
+                return;
+
+            var hotkeyToRemove = (Hotkey)lstHotkeys.SelectedItems[0].Tag;
+            this.config.Hotkeys.Remove(hotkeyToRemove);
+
+            this.lastHotkeyEntry = null;
+
+            this.UpdateHotkeyEntriesList();
+        }
+
+        private void lstHotkeys_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            this.lastHotkeyEntry = lstHotkeys.SelectedItems.Count > 0 ? (Hotkey)lstHotkeys.SelectedItems[0].Tag : null;
+            this.UpdateHotkeyEntryData();
+        }
+
+        private void cboHotkeyKey_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (!this.hotkeyUpdating)
+                this.SaveHotkeyEntry();
+        }
+
+        private void cboHotkeyAction_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (!this.hotkeyUpdating)
+                this.SaveHotkeyEntry();
+        }
+
+        private void rdbOnKey_CheckedChanged(object sender, EventArgs e)
+        {
+            if (!this.hotkeyUpdating && rdbOnKey.Checked)
+                this.SaveHotkeyEntry();
+        }
+
+        private void rdbToggleKey_CheckedChanged(object sender, EventArgs e)
+        {
+            if (!this.hotkeyUpdating && rdbToggleKey.Checked)
+                this.SaveHotkeyEntry();
         }
         #endregion
         #endregion
@@ -2911,38 +3425,48 @@ namespace eft_dma_radar
         #region Helper Functions
         private ThermalSettings GetSelectedThermalSetting()
         {
-            return cboThermalType.SelectedItem?.ToString() == "Main" ? _config.MainThermalSetting : _config.OpticThermalSetting;
+            return cboThermalType.SelectedItem?.ToString() == "Main"
+                ? this.config.MainThermalSetting
+                : this.config.OpticThermalSetting;
         }
 
-        private void RefreshChams()
+        private async Task RefreshChamsAsync()
         {
-            Memory.Chams?.ChamsDisable();
-            Memory.Chams?.ChamsEnable();
+            await Task.Run(() =>
+            {
+                Memory.Chams?.ChamsDisable();
+                Memory.Chams?.ChamsEnable();
+            });
         }
         #endregion
         #region Event Handlers
         private void swThirdperson_CheckedChanged(object sender, EventArgs e)
         {
-            _config.Thirdperson = swThirdperson.Checked;
+            this.config.Thirdperson = swThirdperson.Checked;
+        }
+
+        private void swJuggernaut_CheckedChanged(object sender, EventArgs e)
+        {
+            this.config.Juggernaut = swJuggernaut.Checked;
         }
 
         private void swFreezeTime_CheckedChanged(object sender, EventArgs e)
         {
             var enabled = swFreezeTime.Checked;
-            _config.FreezeTimeOfDay = enabled;
+            this.config.FreezeTimeOfDay = enabled;
 
             sldrTimeOfDay.Enabled = enabled;
         }
 
         private void sldrTimeOfDay_onValueChanged(object sender, int newValue)
         {
-            _config.TimeOfDay = (float)sldrTimeOfDay.Value;
+            this.config.TimeOfDay = (float)sldrTimeOfDay.Value;
         }
 
         private void swTimeScale_CheckedChanged(object sender, EventArgs e)
         {
             var enabled = swTimeScale.Checked;
-            _config.TimeScale = enabled;
+            this.config.TimeScale = enabled;
             sldrTimeScaleFactor.Enabled = enabled;
 
             lblSettingsMemoryWritingTimeScaleFactor.Enabled = enabled;
@@ -2955,14 +3479,14 @@ namespace eft_dma_radar
             else if (newValue > 18)
                 newValue = 18;
 
-            _config.TimeScaleFactor = (float)newValue / 10;
-            lblSettingsMemoryWritingTimeScaleFactor.Text = $"x{(_config.TimeScaleFactor)}";
+            this.config.TimeScaleFactor = (float)newValue / 10;
+            lblSettingsMemoryWritingTimeScaleFactor.Text = $"x{(this.config.TimeScaleFactor)}";
         }
 
         private void swLootThroughWalls_CheckedChanged(object sender, EventArgs e)
         {
             var enabled = swLootThroughWalls.Checked;
-            _config.LootThroughWalls = enabled;
+            this.config.LootThroughWalls = enabled;
 
             sldrLootThroughWallsDistance.Enabled = enabled;
             lblSettingsMemoryWritingLootThroughWallsDistance.Enabled = enabled;
@@ -2970,17 +3494,17 @@ namespace eft_dma_radar
 
         private void sldrLootThroughWallsDistance_onValueChanged(object sender, int newValue)
         {
-            var pveMode = _config.PvEMode;
+            var pveMode = this.config.PvEMode;
             var distance = (float)newValue / 10;
 
             if (pveMode)
-                _config.LootThroughWallsDistancePvE = distance;
+                this.config.LootThroughWallsDistancePvE = distance;
             else
             {
                 if (distance > 3)
                     distance = 3;
 
-                _config.LootThroughWallsDistance = distance;
+                this.config.LootThroughWallsDistance = distance;
             }
 
             lblSettingsMemoryWritingLootThroughWallsDistance.Text = $"x{distance}";
@@ -2992,7 +3516,7 @@ namespace eft_dma_radar
         private void swExtendedReach_CheckedChanged(object sender, EventArgs e)
         {
             var enabled = swExtendedReach.Checked;
-            _config.ExtendedReach = enabled;
+            this.config.ExtendedReach = enabled;
 
             sldrExtendedReachDistance.Enabled = enabled;
             lblSettingsMemoryWritingExtendedReachDistance.Enabled = enabled;
@@ -3000,17 +3524,17 @@ namespace eft_dma_radar
 
         private void sldrExtendedReachDistance_onValueChanged(object sender, int newValue)
         {
-            var pveMode = _config.PvEMode;
+            var pveMode = this.config.PvEMode;
             var distance = (float)newValue / 10;
 
             if (pveMode)
-                _config.ExtendedReachDistancePvE = distance;
+                this.config.ExtendedReachDistancePvE = distance;
             else
             {
                 if (distance > 4f)
                     distance = 4f;
 
-                _config.ExtendedReachDistance = distance;
+                this.config.ExtendedReachDistance = distance;
             }
 
             lblSettingsMemoryWritingExtendedReachDistance.Text = $"x{distance}";
@@ -3019,52 +3543,72 @@ namespace eft_dma_radar
                 Memory.Toolbox.UpdateExtendedReachDistance = true;
         }
 
-        private void swNoRecoilSway_CheckedChanged(object sender, EventArgs e)
+        private void sldrFOV_onValueChanged(object sender, int newValue)
         {
-            _config.NoRecoilSway = swNoRecoilSway.Checked;
+            this.config.FOV = newValue;
+        }
+
+        private void swInventoryBlur_CheckedChanged(object sender, EventArgs e)
+        {
+            this.config.InventoryBlur = swInventoryBlur.Checked;
+        }
+
+        private void swMedPanel_CheckedChanged(object sender, EventArgs e)
+        {
+            this.config.MedInfoPanel = swMedPanel.Checked;
+        }
+
+        private void swNoRecoil_CheckedChanged(object sender, EventArgs e)
+        {
+            this.config.NoRecoil = swNoRecoil.Checked;
+        }
+
+        private void swNoSway_CheckedChanged(object sender, EventArgs e)
+        {
+            this.config.NoSway = swNoRecoil.Checked;
         }
 
         private void swInstantADS_CheckedChanged(object sender, EventArgs e)
         {
-            _config.InstantADS = swInstantADS.Checked;
+            this.config.InstantADS = swInstantADS.Checked;
         }
 
         private void swNoVisor_CheckedChanged(object sender, EventArgs e)
         {
-            _config.NoVisor = swNoVisor.Checked;
+            this.config.NoVisor = swNoVisor.Checked;
         }
 
         private void swThermalVision_CheckedChanged(object sender, EventArgs e)
         {
             var enabled = swThermalVision.Checked;
-            _config.ThermalVision = enabled;
+            this.config.ThermalVision = enabled;
 
-            mcSettingsMemoryWritingThermal.Enabled = enabled || _config.OpticThermalVision;
+            mcSettingsMemoryWritingThermal.Enabled = enabled || this.config.OpticThermalVision;
         }
 
         private void swOpticalThermal_CheckedChanged(object sender, EventArgs e)
         {
             var enabled = swOpticalThermal.Checked;
-            _config.OpticThermalVision = enabled;
+            this.config.OpticThermalVision = enabled;
 
-            mcSettingsMemoryWritingThermal.Enabled = enabled || _config.ThermalVision;
+            mcSettingsMemoryWritingThermal.Enabled = enabled || this.config.ThermalVision;
         }
 
         private void swNightVision_CheckedChanged(object sender, EventArgs e)
         {
-            _config.NightVision = swNightVision.Checked;
+            this.config.NightVision = swNightVision.Checked;
         }
 
         private void swNoWeaponMalfunctions_CheckedChanged(object sender, EventArgs e)
         {
-            _config.NoWeaponMalfunctions = swNoWeaponMalfunctions.Checked;
+            this.config.NoWeaponMalfunctions = swNoWeaponMalfunctions.Checked;
         }
 
         private void sldrMagDrillsSpeed_onValueChanged(object sender, int newValue)
         {
-            _config.MagDrillSpeed = newValue;
+            this.config.MagDrillSpeed = newValue;
 
-            if (_config.MaxSkills["Mag Drills"] && Memory.LocalPlayer is not null)
+            if (this.config.MaxSkills["Mag Drills"] && Memory.LocalPlayer is not null)
             {
                 var loadSpeedSkill = Memory.PlayerManager.Skills["MagDrills"]["LoadSpeed"];
                 loadSpeedSkill.MaxValue = (float)newValue;
@@ -3079,14 +3623,14 @@ namespace eft_dma_radar
 
         private void swInfiniteStamina_CheckedChanged(object sender, EventArgs e)
         {
-            _config.InfiniteStamina = swInfiniteStamina.Checked;
+            this.config.InfiniteStamina = swInfiniteStamina.Checked;
         }
 
         private void sldrThrowStrength_onValueChanged(object sender, int newValue)
         {
-            _config.ThrowPowerStrength = newValue;
+            this.config.ThrowPowerStrength = newValue;
 
-            if (_config.MaxSkills["Strength"] && Memory.LocalPlayer is not null)
+            if (this.config.MaxSkills["Strength"] && Memory.LocalPlayer is not null)
             {
                 var throwDistanceSkill = Memory.PlayerManager.Skills["Strength"]["BuffThrowDistanceInc"];
                 throwDistanceSkill.MaxValue = (float)newValue / 100;
@@ -3095,7 +3639,7 @@ namespace eft_dma_radar
             }
         }
 
-        private void cboThermalType_SelectedIndexChanged_1(object sender, EventArgs e)
+        private void cboThermalType_SelectedIndexChanged(object sender, EventArgs e)
         {
             var thermalSettings = this.GetSelectedThermalSetting();
 
@@ -3107,36 +3651,51 @@ namespace eft_dma_radar
             sldrMinTemperature.Value = minTemperature;
             sldrThermalRampShift.Value = rampShift;
             cboThermalColorScheme.SelectedIndex = thermalSettings.ColorScheme;
+
+            if (Memory.Toolbox is not null)
+                Memory.Toolbox.UpdateThermalSettings = true;
         }
 
-        private void cboThermalColorScheme_SelectedIndexChanged_1(object sender, EventArgs e)
+        private void cboThermalColorScheme_SelectedIndexChanged(object sender, EventArgs e)
         {
             var thermalSettings = this.GetSelectedThermalSetting();
             thermalSettings.ColorScheme = cboThermalColorScheme.SelectedIndex;
+
+            if (Memory.Toolbox is not null)
+                Memory.Toolbox.UpdateThermalSettings = true;
         }
 
         private void sldrThermalColorCoefficient_onValueChanged(object sender, int newValue)
         {
             var thermalSettings = this.GetSelectedThermalSetting();
             thermalSettings.ColorCoefficient = (float)Math.Round(newValue / 100.0f, 4, MidpointRounding.AwayFromZero);
+
+            if (Memory.Toolbox is not null)
+                Memory.Toolbox.UpdateThermalSettings = true;
         }
 
         private void sldrMinTemperature_onValueChanged(object sender, int newValue)
         {
             var thermalSettings = this.GetSelectedThermalSetting();
             thermalSettings.MinTemperature = (float)Math.Round((0.01f - 0.001f) * (newValue / 100.0f) + 0.001f, 4, MidpointRounding.AwayFromZero);
+
+            if (Memory.Toolbox is not null)
+                Memory.Toolbox.UpdateThermalSettings = true;
         }
 
         private void sldrThermalRampShift_onValueChanged(object sender, int newValue)
         {
             var thermalSettings = this.GetSelectedThermalSetting();
             thermalSettings.RampShift = (float)Math.Round((newValue / 100.0f) - 1.0f, 4, MidpointRounding.AwayFromZero);
+
+            if (Memory.Toolbox is not null)
+                Memory.Toolbox.UpdateThermalSettings = true;
         }
 
         private void swMasterSwitch_CheckedChanged(object sender, EventArgs e)
         {
             bool isChecked = swMasterSwitch.Checked;
-            _config.MasterSwitch = isChecked;
+            this.config.MasterSwitch = isChecked;
 
             mcSettingsMemoryWritingGlobal.Enabled = isChecked;
             mcSettingsMemoryWritingGear.Enabled = isChecked;
@@ -3152,92 +3711,92 @@ namespace eft_dma_radar
 
         private void swMaxEndurance_CheckedChanged(object sender, EventArgs e)
         {
-            _config.MaxSkills["Endurance"] = swMaxEndurance.Checked;
+            this.config.MaxSkills["Endurance"] = swMaxEndurance.Checked;
         }
 
         private void swMaxStrength_CheckedChanged(object sender, EventArgs e)
         {
             var enabled = swMaxStrength.Checked;
-            _config.MaxSkills["Strength"] = enabled;
+            this.config.MaxSkills["Strength"] = enabled;
 
             sldrThrowStrength.Enabled = enabled;
         }
 
         private void swMaxVitality_CheckedChanged(object sender, EventArgs e)
         {
-            _config.MaxSkills["Vitality"] = swMaxVitality.Checked;
+            this.config.MaxSkills["Vitality"] = swMaxVitality.Checked;
         }
 
         private void swMaxHealth_CheckedChanged(object sender, EventArgs e)
         {
-            _config.MaxSkills["Health"] = swMaxHealth.Checked;
+            this.config.MaxSkills["Health"] = swMaxHealth.Checked;
         }
 
         private void swMaxStressResistance_CheckedChanged(object sender, EventArgs e)
         {
-            _config.MaxSkills["Stress Resistance"] = swMaxStressResistance.Checked;
+            this.config.MaxSkills["Stress Resistance"] = swMaxStressResistance.Checked;
         }
 
         private void swMaxMetabolism_CheckedChanged(object sender, EventArgs e)
         {
-            _config.MaxSkills["Metabolism"] = swMaxMetabolism.Checked;
+            this.config.MaxSkills["Metabolism"] = swMaxMetabolism.Checked;
         }
 
         private void swMaxImmunity_CheckedChanged(object sender, EventArgs e)
         {
-            _config.MaxSkills["Immunity"] = swMaxImmunity.Checked;
+            this.config.MaxSkills["Immunity"] = swMaxImmunity.Checked;
         }
 
         private void swMaxPerception_CheckedChanged(object sender, EventArgs e)
         {
-            _config.MaxSkills["Perception"] = swMaxPerception.Checked;
+            this.config.MaxSkills["Perception"] = swMaxPerception.Checked;
         }
 
         private void swMaxIntellect_CheckedChanged(object sender, EventArgs e)
         {
-            _config.MaxSkills["Intellect"] = swMaxIntellect.Checked;
+            this.config.MaxSkills["Intellect"] = swMaxIntellect.Checked;
         }
 
         private void swMaxAttention_CheckedChanged(object sender, EventArgs e)
         {
-            _config.MaxSkills["Attention"] = swMaxAttention.Checked;
+            this.config.MaxSkills["Attention"] = swMaxAttention.Checked;
         }
 
         private void swMaxCovertMovement_CheckedChanged(object sender, EventArgs e)
         {
-            _config.MaxSkills["Covert Movement"] = swMaxCovertMovement.Checked;
+            this.config.MaxSkills["Covert Movement"] = swMaxCovertMovement.Checked;
         }
 
         private void swMaxThrowables_CheckedChanged(object sender, EventArgs e)
         {
-            _config.MaxSkills["Throwables"] = swMaxThrowables.Checked;
+            this.config.MaxSkills["Throwables"] = swMaxThrowables.Checked;
         }
 
         private void swMaxSurgery_CheckedChanged(object sender, EventArgs e)
         {
-            _config.MaxSkills["Surgery"] = swMaxSurgery.Checked;
+            this.config.MaxSkills["Surgery"] = swMaxSurgery.Checked;
         }
 
         private void swMaxSearch_CheckedChanged(object sender, EventArgs e)
         {
-            _config.MaxSkills["Search"] = swMaxSearch.Checked;
+            this.config.MaxSkills["Search"] = swMaxSearch.Checked;
         }
 
         private void swMaxMagDrills_CheckedChanged(object sender, EventArgs e)
         {
             var enabled = swMaxMagDrills.Checked;
-            _config.MaxSkills["Mag Drills"] = enabled;
+            this.config.MaxSkills["Mag Drills"] = enabled;
             sldrMagDrillsSpeed.Enabled = enabled;
         }
 
         private void swMaxLightVests_CheckedChanged(object sender, EventArgs e)
         {
-            _config.MaxSkills["Light Vests"] = swMaxLightVests.Checked;
+            this.config.MaxSkills["Light Vests"] = swMaxLightVests.Checked;
         }
 
         private void swMaxHeavyVests_CheckedChanged(object sender, EventArgs e)
         {
-            _config.MaxSkills["Heavy Vests"] = swMaxHeavyVests.Checked;
+            this.config.MaxSkills["Heavy Vests"] = swMaxHeavyVests.Checked;
         }
 
         private void ToggleChamsControls()
@@ -3258,62 +3817,62 @@ namespace eft_dma_radar
         private void swChams_CheckedChanged(object sender, EventArgs e)
         {
             var isChecked = swChams.Checked;
-            _config.Chams["Enabled"] = isChecked;
+            this.config.Chams["Enabled"] = isChecked;
 
             this.ToggleChamsControls();
         }
 
         private void swChamsPlayers_CheckedChanged(object sender, EventArgs e)
         {
-            _config.Chams["PMCs"] = swChamsPMCs.Checked;
-            RefreshChams();
+            this.config.Chams["PMCs"] = swChamsPMCs.Checked;
+            this.RefreshChamsAsync();
         }
 
         private void swChamsPlayerScavs_CheckedChanged(object sender, EventArgs e)
         {
-            _config.Chams["PlayerScavs"] = swChamsPlayerScavs.Checked;
-            RefreshChams();
+            this.config.Chams["PlayerScavs"] = swChamsPlayerScavs.Checked;
+            this.RefreshChamsAsync();
         }
 
         private void swChamsBosses_CheckedChanged(object sender, EventArgs e)
         {
-            _config.Chams["Bosses"] = swChamsBosses.Checked;
-            RefreshChams();
+            this.config.Chams["Bosses"] = swChamsBosses.Checked;
+            this.RefreshChamsAsync();
         }
 
         private void swChamsRogues_CheckedChanged(object sender, EventArgs e)
         {
-            _config.Chams["Rogues"] = swChamsRogues.Checked;
-            RefreshChams();
+            this.config.Chams["Rogues"] = swChamsRogues.Checked;
+            this.RefreshChamsAsync();
         }
 
         private void swChamsCultists_CheckedChanged(object sender, EventArgs e)
         {
-            _config.Chams["Cultists"] = swChamsCultists.Checked;
-            RefreshChams();
+            this.config.Chams["Cultists"] = swChamsCultists.Checked;
+            this.RefreshChamsAsync();
         }
 
         private void swChamsScavs_CheckedChanged(object sender, EventArgs e)
         {
-            _config.Chams["Scavs"] = swChamsScavs.Checked;
-            RefreshChams();
+            this.config.Chams["Scavs"] = swChamsScavs.Checked;
+            this.RefreshChamsAsync();
         }
 
         private void swChamsTeammates_CheckedChanged(object sender, EventArgs e)
         {
-            _config.Chams["Teammates"] = swChamsTeammates.Checked;
-            RefreshChams();
+            this.config.Chams["Teammates"] = swChamsTeammates.Checked;
+            this.RefreshChamsAsync();
         }
 
         private void swChamsCorpses_CheckedChanged(object sender, EventArgs e)
         {
-            _config.Chams["Corpses"] = swChamsCorpses.Checked;
-            RefreshChams();
+            this.config.Chams["Corpses"] = swChamsCorpses.Checked;
+            this.RefreshChamsAsync();
         }
 
         private void swChamsRevert_CheckedChanged(object sender, EventArgs e)
         {
-            _config.Chams["RevertOnClose"] = swChamsRevert.Checked;
+            this.config.Chams["RevertOnClose"] = swChamsRevert.Checked;
         }
         #endregion
         #endregion
@@ -3323,19 +3882,20 @@ namespace eft_dma_radar
         private void InitiateContainerList()
         {
             var containers = TarkovDevManager.AllLootContainers
-                                              .Select(x => x.Value.Name)
-                                              .OrderByDescending(x => x)
-                                              .Distinct();
+                .Values
+                .Select(x => x.Name)
+                .OrderByDescending(x => x)
+                .Distinct()
+                .ToList();
 
             foreach (var container in containers)
             {
-                MaterialCheckbox checkbox = new MaterialCheckbox();
-                checkbox.Text = container;
-
-                if (_config.LootContainerSettings.ContainsKey(container))
-                    checkbox.Checked = _config.LootContainerSettings[container];
-
-                checkbox.CheckedChanged += ContainerCheckbox_CheckedChanged;
+                var checkbox = new MaterialCheckbox
+                {
+                    Text = container,
+                    Checked = this.config.LootContainerSettings.TryGetValue(container, out bool value) && value
+                };
+                checkbox.CheckedChanged += this.ContainerCheckbox_CheckedChanged;
                 lstContainers.Items.Add(checkbox);
             }
         }
@@ -3348,6 +3908,7 @@ namespace eft_dma_radar
 
             swLooseLoot.Enabled = processLoot;
             swCorpses.Enabled = processLoot;
+            swSubItems.Enabled = processLoot && swCorpses.Checked;
             swItemValue.Enabled = processLoot;
             swAutoLootRefresh.Enabled = processLoot;
             cboAutoRefreshMap.Enabled = (processLoot && lootRefresh);
@@ -3385,61 +3946,69 @@ namespace eft_dma_radar
         private void swProcessLoot_CheckedChanged(object sender, EventArgs e)
         {
             var processLoot = swProcessLoot.Checked;
-            _config.ProcessLoot = processLoot;
+            this.config.ProcessLoot = processLoot;
 
             this.UpdateLootControls();
             this.UpdateQuestControls();
 
             if (!processLoot)
+            {
+                this.RefreshLootListItems();
                 return;
+            }
 
-            if (_config.LootItemRefresh)
-                Memory.Loot?.StartAutoRefresh();
+            if (this.config.LootItemRefresh)
+                this.Loot?.StartAutoRefresh();
             else
-                Memory.Loot?.RefreshLoot(true);
+                this.Loot?.RefreshLoot(true);
         }
 
         private void btnRefreshLoot_Click(object sender, EventArgs e)
         {
             lstLootItems.Items.Clear();
 
-            Memory.Loot?.RefreshLoot(true);
+            this.Loot?.RefreshLoot(true);
         }
 
         private void swLooseLoot_CheckedChanged(object sender, EventArgs e)
         {
             var looseLoot = swLooseLoot.Checked;
 
-            _config.LooseLoot = looseLoot;
+            this.config.LooseLoot = looseLoot;
 
-            Memory.Loot?.ApplyFilter();
+            this.Loot?.ApplyFilter();
         }
 
         private void swFilteredOnly_CheckedChanged(object sender, EventArgs e)
         {
-            _config.ImportantLootOnly = swFilteredOnly.Checked;
+            this.config.ImportantLootOnly = swFilteredOnly.Checked;
         }
 
         private void swSubItems_CheckedChanged(object sender, EventArgs e)
         {
-            _config.SubItems = swSubItems.Checked;
+            this.config.SubItems = swSubItems.Checked;
         }
 
         private void swItemValue_CheckedChanged(object sender, EventArgs e)
         {
-            _config.LootValue = swItemValue.Checked;
+            this.config.LootValue = swItemValue.Checked;
         }
 
         private void swCorpses_CheckedChanged(object sender, EventArgs e)
         {
-            _config.LootCorpses = swCorpses.Checked;
+            var enabled = swCorpses.Checked;
+
+            this.config.LootCorpses = enabled;
+            swSubItems.Enabled = enabled;
+
+            this.Loot?.ApplyFilter();
         }
 
         private void swAutoLootRefresh_CheckedChanged(object sender, EventArgs e)
         {
             var enabled = swAutoLootRefresh.Checked;
             var processLoot = swProcessLoot.Checked;
-            _config.LootItemRefresh = enabled;
+            this.config.LootItemRefresh = enabled;
 
             cboAutoRefreshMap.Enabled = (processLoot && enabled);
             sldrAutoLootRefreshDelay.Enabled = (processLoot && enabled);
@@ -3448,30 +4017,30 @@ namespace eft_dma_radar
                 return;
 
             if (enabled)
-                Memory.Loot?.StartAutoRefresh();
+                this.Loot?.StartAutoRefresh();
             else
-                Memory.Loot?.StopAutoRefresh();
+                this.Loot?.StopAutoRefresh();
         }
 
         private void cboAutoRefreshMap_SelectedIndexChanged(object sender, EventArgs e)
         {
             var mapName = cboAutoRefreshMap.SelectedItem.ToString();
 
-            if (string.IsNullOrEmpty(mapName) || !_config.LootItemRefreshSettings.ContainsKey(mapName))
+            if (string.IsNullOrEmpty(mapName) || !this.config.LootItemRefreshSettings.ContainsKey(mapName))
                 return;
 
-            sldrAutoLootRefreshDelay.Value = _config.LootItemRefreshSettings[mapName];
+            sldrAutoLootRefreshDelay.Value = this.config.LootItemRefreshSettings[mapName];
         }
 
         private void sldrAutoRefreshDelay_onValueChanged(object sender, int newValue)
         {
             var mapName = cboAutoRefreshMap.SelectedItem.ToString();
 
-            if (string.IsNullOrEmpty(mapName) || !_config.LootItemRefreshSettings.ContainsKey(mapName))
+            if (string.IsNullOrEmpty(mapName) || !this.config.LootItemRefreshSettings.ContainsKey(mapName))
                 return;
 
-            if (newValue != _config.LootItemRefreshSettings[mapName])
-                _config.LootItemRefreshSettings[mapName] = newValue;
+            if (newValue != this.config.LootItemRefreshSettings[mapName])
+                this.config.LootItemRefreshSettings[mapName] = newValue;
         }
 
         // Quest Helper
@@ -3479,32 +4048,32 @@ namespace eft_dma_radar
         {
             var enabled = swQuestHelper.Checked;
 
-            _config.QuestHelper = enabled;
+            this.config.QuestHelper = enabled;
 
             this.UpdateQuestControls();
         }
 
         private void swQuestItems_CheckedChanged(object sender, EventArgs e)
         {
-            _config.QuestItems = swQuestItems.Checked;
+            this.config.QuestItems = swQuestItems.Checked;
         }
 
         private void swQuestLootItems_CheckedChanged(object sender, EventArgs e)
         {
-            _config.QuestLootItems = swQuestLootItems.Checked;
-            Memory.Loot?.ApplyFilter();
+            this.config.QuestLootItems = swQuestLootItems.Checked;
+            this.Loot?.ApplyFilter();
         }
 
         private void swQuestLocations_CheckedChanged(object sender, EventArgs e)
         {
-            _config.QuestLocations = swQuestLocations.Checked;
+            this.config.QuestLocations = swQuestLocations.Checked;
         }
 
         private void swAutoTaskRefresh_CheckedChanged(object sender, EventArgs e)
         {
             var enabled = swAutoTaskRefresh.Checked;
 
-            _config.QuestTaskRefresh = enabled;
+            this.config.QuestTaskRefresh = enabled;
             sldrAutoTaskRefreshDelay.Enabled = enabled;
 
             if (enabled)
@@ -3518,12 +4087,12 @@ namespace eft_dma_radar
             if (newValue < 1)
                 newValue = 1;
 
-            _config.QuestTaskRefreshDelay = newValue;
+            this.config.QuestTaskRefreshDelay = newValue;
         }
 
         private void swUnknownQuestItems_CheckedChanged(object sender, EventArgs e)
         {
-            _config.UnknownQuestItems = swUnknownQuestItems.Checked;
+            this.config.UnknownQuestItems = swUnknownQuestItems.Checked;
         }
 
         private void btnRefreshTasks_Click(object sender, EventArgs e)
@@ -3536,10 +4105,10 @@ namespace eft_dma_radar
         {
             if (newValue >= 10)
             {
-                int value = newValue * 1000;
-                _config.MinLootValue = value;
+                var value = newValue * 1000;
+                this.config.MinLootValue = value;
 
-                Loot?.ApplyFilter();
+                this.Loot?.ApplyFilter();
             }
         }
 
@@ -3547,10 +4116,10 @@ namespace eft_dma_radar
         {
             if (newValue >= 250)
             {
-                int value = newValue * 1000;
-                _config.MinImportantLootValue = value;
+                var value = newValue * 1000;
+                this.config.MinImportantLootValue = value;
 
-                Loot?.ApplyFilter();
+                this.Loot?.ApplyFilter();
             }
         }
 
@@ -3558,10 +4127,10 @@ namespace eft_dma_radar
         {
             if (newValue >= 10)
             {
-                int value = newValue * 1000;
-                _config.MinCorpseValue = value;
+                var value = newValue * 1000;
+                this.config.MinCorpseValue = value;
 
-                Loot?.ApplyFilter();
+                this.Loot?.ApplyFilter();
             }
         }
 
@@ -3569,10 +4138,10 @@ namespace eft_dma_radar
         {
             if (newValue >= 5)
             {
-                int value = newValue * 1000;
-                _config.MinSubItemValue = value;
+                var value = newValue * 1000;
+                this.config.MinSubItemValue = value;
 
-                Loot?.ApplyFilter();
+                this.Loot?.ApplyFilter();
             }
 
         }
@@ -3580,12 +4149,12 @@ namespace eft_dma_radar
         // Loot Ping
         private void sldrLootPingAnimationSpeed_onValueChanged(object sender, int newValue)
         {
-            _config.LootPing["AnimationSpeed"] = newValue;
+            this.config.LootPing["AnimationSpeed"] = newValue;
         }
 
         private void sldrLootPingMaxRadius_onValueChanged(object sender, int newValue)
         {
-            _config.LootPing["Radius"] = newValue;
+            this.config.LootPing["Radius"] = newValue;
         }
 
         private void sldrLootPingRepetition_onValueChanged(object sender, int newValue)
@@ -3593,7 +4162,7 @@ namespace eft_dma_radar
             if (newValue < 1)
                 newValue = 1;
 
-            _config.LootPing["Repetition"] = newValue;
+            this.config.LootPing["Repetition"] = newValue;
         }
 
         // Container Settings
@@ -3601,19 +4170,25 @@ namespace eft_dma_radar
         {
             var checkbox = (MaterialCheckbox)sender;
 
-            _config.LootContainerSettings[checkbox.Text] = checkbox.Checked;
+            this.config.LootContainerSettings[checkbox.Text] = checkbox.Checked;
 
-            Memory.Loot?.ApplyFilter();
+            this.Loot?.ApplyFilter();
         }
 
         private void swContainers_CheckedChanged(object sender, EventArgs e)
         {
             var enabled = swContainers.Checked;
 
-            _config.LootContainerSettings["Enabled"] = enabled;
+            this.config.LootContainerSettings["Enabled"] = enabled;
             lstContainers.Enabled = enabled;
 
-            Memory.Loot?.ApplyFilter();
+            this.Loot?.ApplyFilter();
+        }
+
+        private void sldrContainerDistance_onValueChanged(object sender, int newValue)
+        {
+            this.config.LootContainerDistance = newValue;
+            this.Loot?.ApplyFilter();
         }
         #endregion
         #endregion
@@ -3628,14 +4203,14 @@ namespace eft_dma_radar
 
         private void RefreshPlayerTypeByFaction(AIFactionManager.Faction faction)
         {
-            var enemyAI = this.AllPlayers
-                ?.Select(x => x.Value)
+            var enemyAI = this.AllPlayers?
+                .Values
                 .Where(x => !x.IsHuman && faction.Names.Contains(x.Name))
                 .ToList();
 
-            enemyAI?.ForEach(player =>
+            Parallel.ForEach(enemyAI ?? Enumerable.Empty<Player>(), player =>
             {
-                _aiFactions.IsInFaction(player.Name, out var playerType);
+                this.aiFactions.IsInFaction(player.Name, out var playerType);
                 player.Type = playerType;
             });
         }
@@ -3649,34 +4224,35 @@ namespace eft_dma_radar
 
             enemyAI?.ForEach(Player =>
             {
-                _aiFactions.IsInFaction(Player.Name, out var playerType);
+                this.aiFactions.IsInFaction(Player.Name, out var playerType);
                 Player.Type = playerType;
             });
         }
 
         private void UpdateFactions(int index = 0)
         {
-            var factions = _aiFactions.Factions;
+            var factions = this.aiFactions.Factions;
 
+            lstFactions.BeginUpdate();
             lstFactions.Items.Clear();
             lstFactions.Items.AddRange(factions.Select(entry => new ListViewItem
             {
                 Text = entry.Name,
                 Tag = entry,
             }).ToArray());
+            lstFactions.EndUpdate();
 
             if (lstFactions.Items.Count > 0)
             {
-                var itemToSelect = lstFactions.Items[index];
-                itemToSelect.Selected = true;
-                UpdateFactionData();
-                UpdateFactionEntriesList();
+                lstFactions.Items[index].Selected = true;
+                this.UpdateFactionData();
+                this.UpdateFactionEntriesList();
             }
         }
 
         private void UpdateFactionData()
         {
-            var selectedFaction = GetActiveFaction();
+            var selectedFaction = this.GetActiveFaction();
             txtFactionName.Text = selectedFaction?.Name ?? "";
             cboFactionType.SelectedItem = (selectedFaction?.PlayerType ?? PlayerType.Boss);
             cboFactionType.Refresh();
@@ -3696,12 +4272,12 @@ namespace eft_dma_radar
 
         private void UpdateFactionEntryData()
         {
-            txtFactionEntryName.Text = _lastFactionEntry ?? "";
+            txtFactionEntryName.Text = this.lastFactionEntry ?? "";
         }
 
         private void UpdateFactionEntriesList()
         {
-            var selectedFaction = GetActiveFaction();
+            var selectedFaction = this.GetActiveFaction();
             var factionEntries = selectedFaction?.Names ?? Enumerable.Empty<string>();
 
             lstFactionEntries.Items.Clear();
@@ -3714,7 +4290,7 @@ namespace eft_dma_radar
 
         private bool HasUnsavedFactionChanges()
         {
-            var selectedFaction = GetActiveFaction();
+            var selectedFaction = this.GetActiveFaction();
             if (selectedFaction is null)
                 return false;
 
@@ -3724,69 +4300,69 @@ namespace eft_dma_radar
 
         private bool HasUnsavedFactionEntryChanges()
         {
-            if (_lastFactionEntry is null)
+            if (this.lastFactionEntry is null)
                 return false;
 
-            return txtFactionEntryName.Text != _lastFactionEntry;
+            return txtFactionEntryName.Text != this.lastFactionEntry;
         }
 
         private void SaveFaction()
         {
-            if (HasUnsavedFactionChanges())
+            if (this.HasUnsavedFactionChanges())
             {
                 if (string.IsNullOrEmpty(txtFactionName.Text))
                 {
-                    ShowErrorDialog("Add some text to the faction name textbox (minimum 1 character)");
+                    this.ShowErrorDialog("Add some text to the faction name textbox (minimum 1 character)");
                     return;
                 }
-                var selectedFaction = GetActiveFaction();
-                int index = _aiFactions.Factions.IndexOf(selectedFaction);
+                var selectedFaction = this.GetActiveFaction();
+                var index = this.aiFactions.Factions.IndexOf(selectedFaction);
 
                 selectedFaction.Name = txtFactionName.Text;
                 selectedFaction.PlayerType = (PlayerType)cboFactionType.SelectedItem;
 
-                _aiFactions.UpdateFaction(selectedFaction, index);
+                this.aiFactions.UpdateFaction(selectedFaction, index);
 
-                UpdateFactions(lstFactions.SelectedIndices[0]);
-                RefreshPlayerTypeByFaction(selectedFaction);
+                this.UpdateFactions(lstFactions.SelectedIndices[0]);
+                this.RefreshPlayerTypeByFaction(selectedFaction);
             }
         }
 
         private void SaveFactionEntry()
         {
-            if (HasUnsavedFactionEntryChanges())
+            if (this.HasUnsavedFactionEntryChanges())
             {
                 if (string.IsNullOrEmpty(txtFactionEntryName.Text))
                 {
-                    ShowErrorDialog("Add some text to the entry name textbox (minimum 1 character)");
+                    this.ShowErrorDialog("Add some text to the entry name textbox (minimum 1 character)");
                     return;
                 }
 
-                var selectedFaction = GetActiveFaction();
-                var entry = _lastFactionEntry;
+                var selectedFaction = this.GetActiveFaction();
+                var entry = this.lastFactionEntry;
                 var index = selectedFaction.Names.IndexOf(entry);
 
                 entry = txtFactionEntryName.Text;
 
-                _aiFactions.UpdateEntry(selectedFaction, entry, index);
+                this.aiFactions.UpdateEntry(selectedFaction, entry, index);
 
-                _lastFactionEntry = entry;
+                this.lastFactionEntry = entry;
 
-                UpdateFactionEntriesList();
-                RefreshPlayerTypeByName(entry);
+                this.UpdateFactionEntriesList();
+                this.RefreshPlayerTypeByName(entry);
             }
         }
 
         private void RemoveFactionEntry(AIFactionManager.Faction selectedFaction, string name)
         {
-            if (ShowConfirmationDialog("Are you sure you want to remove this entry?", "Are you sure?") == DialogResult.OK)
+            if (this.ShowConfirmationDialog("Are you sure you want to remove this entry?", "Are you sure?") == DialogResult.OK)
             {
-                _aiFactions.RemoveEntry(selectedFaction, name);
-                _lastFactionEntry = null;
+                this.aiFactions.RemoveEntry(selectedFaction, name);
+                this.lastFactionEntry = null;
 
-                UpdateFactionEntriesList();
-                UpdateFactionEntryData();
-                RefreshPlayerTypeByName(name);
+                this.UpdateFactionEntriesList();
+                this.UpdateFactionEntryData();
+                this.RefreshPlayerTypeByName(name);
             }
         }
         #endregion
@@ -3796,18 +4372,18 @@ namespace eft_dma_radar
         {
             if (e.KeyCode == Keys.Enter)
             {
-                var selectedFaction = GetActiveFaction();
+                var selectedFaction = this.GetActiveFaction();
 
                 var newEntryName = txtFactionEntryName.Text;
                 var existingEntry = selectedFaction.Names.FirstOrDefault(entry => entry == newEntryName);
 
                 if (existingEntry is not null)
                 {
-                    ShowErrorDialog($"An entry with the name '{newEntryName}' already exists. Please edit or delete the existing entry.");
+                    this.ShowErrorDialog($"An entry with the name '{newEntryName}' already exists. Please edit or delete the existing entry.");
                     return;
                 }
 
-                SaveFactionEntry();
+                this.SaveFactionEntry();
             }
         }
 
@@ -3815,24 +4391,24 @@ namespace eft_dma_radar
         {
             if (e.KeyCode == Keys.Enter)
             {
-                var selectedFaction = GetActiveFaction();
+                var selectedFaction = this.GetActiveFaction();
 
                 var newFactionName = txtFactionName.Text;
-                var existingEntry = _aiFactions.Factions.FirstOrDefault(entry => entry.Name == newFactionName);
+                var existingEntry = this.aiFactions.Factions.FirstOrDefault(entry => entry.Name == newFactionName);
 
                 if (existingEntry is not null)
                 {
-                    ShowErrorDialog($"A faction with the name '{newFactionName}' already exists. Please edit or delete the existing faction.");
+                    this.ShowErrorDialog($"A faction with the name '{newFactionName}' already exists. Please edit or delete the existing faction.");
                     return;
                 }
 
-                SaveFaction();
+                this.SaveFaction();
             }
         }
 
         private void btnAddFactionEntry_Click(object sender, EventArgs e)
         {
-            var selectedFaction = GetActiveFaction();
+            var selectedFaction = this.GetActiveFaction();
 
             if (selectedFaction is null)
                 return;
@@ -3841,86 +4417,86 @@ namespace eft_dma_radar
 
             if (existingEntry is not null)
             {
-                ShowErrorDialog($"An entry with the name '{existingEntry}' already exists. Please edit or delete the existing entry.");
+                this.ShowErrorDialog($"An entry with the name '{existingEntry}' already exists. Please edit or delete the existing entry.");
                 return;
             }
 
-            _aiFactions.AddEmptyEntry(selectedFaction);
-            UpdateFactionEntriesList();
+            this.aiFactions.AddEmptyEntry(selectedFaction);
+            this.UpdateFactionEntriesList();
         }
 
         private void btnAddFaction_Click(object sender, EventArgs e)
         {
-            var existingFaction = _aiFactions.Factions.FirstOrDefault(faction => faction.Name == "Default");
+            var existingFaction = this.aiFactions.Factions.FirstOrDefault(faction => faction.Name == "Default");
 
             if (existingFaction is not null)
             {
-                ShowErrorDialog($"A faction with the name '{existingFaction.Name}' already exists. Please edit or delete the existing faction.");
+                this.ShowErrorDialog($"A faction with the name '{existingFaction.Name}' already exists. Please edit or delete the existing faction.");
                 return;
             }
 
-            _aiFactions.AddEmptyFaction();
-            UpdateFactions();
+            this.aiFactions.AddEmptyFaction();
+            this.UpdateFactions();
         }
 
         private void btnRemoveFactionEntry_Click(object sender, EventArgs e)
         {
-            var selectedFaction = GetActiveFaction();
-            var selectedEntry = _lastFactionEntry;
+            var selectedFaction = this.GetActiveFaction();
+            var selectedEntry = this.lastFactionEntry;
 
             if (selectedFaction is not null)
-                RemoveFactionEntry(selectedFaction, selectedEntry);
+                this.RemoveFactionEntry(selectedFaction, selectedEntry);
         }
 
         private void btnRemoveFaction_Click(object sender, EventArgs e)
         {
-            var selectedFaction = GetActiveFaction();
+            var selectedFaction = this.GetActiveFaction();
 
             if (selectedFaction is null)
                 return;
 
-            var factions = _aiFactions.Factions;
+            var factions = this.aiFactions.Factions;
 
             if (factions.Count == 1)
             {
-                if (ShowConfirmationDialog("Removing the last faction will automatically create a new one", "Warning") == DialogResult.OK)
+                if (this.ShowConfirmationDialog("Removing the last faction will automatically create a new one", "Warning") == DialogResult.OK)
                 {
-                    _aiFactions.RemoveFaction(lstFactions.SelectedIndices[0]);
-                    _aiFactions.AddEmptyFaction();
-                    RefreshPlayerTypeByFaction(selectedFaction);
+                    this.aiFactions.RemoveFaction(lstFactions.SelectedIndices[0]);
+                    this.aiFactions.AddEmptyFaction();
+                    this.RefreshPlayerTypeByFaction(selectedFaction);
                 }
             }
             else
             {
-                if (ShowConfirmationDialog("Are you sure you want to delete this faction?", "Warning") == DialogResult.OK)
+                if (this.ShowConfirmationDialog("Are you sure you want to delete this faction?", "Warning") == DialogResult.OK)
                 {
-                    _aiFactions.RemoveFaction(selectedFaction);
-                    RefreshPlayerTypeByFaction(selectedFaction);
+                    this.aiFactions.RemoveFaction(selectedFaction);
+                    this.RefreshPlayerTypeByFaction(selectedFaction);
                 }
             }
 
-            UpdateFactions();
+            this.UpdateFactions();
         }
 
         private void cboFactionType_SelectedIndexChanged(object sender, EventArgs e)
         {
-            SaveFaction();
+            this.SaveFaction();
         }
 
         private void lstFactionEntries_SelectedIndexChanged(object sender, EventArgs e)
         {
-            SaveFactionEntry();
-            _lastFactionEntry = lstFactionEntries.FocusedItem?.Text ?? null;
-            UpdateFactionEntryData();
+            this.SaveFactionEntry();
+            this.lastFactionEntry = lstFactionEntries.FocusedItem?.Text ?? null;
+            this.UpdateFactionEntryData();
         }
 
         private void lstFactions_SelectedIndexChanged(object sender, EventArgs e)
         {
-            _lastFactionEntry = null;
+            this.lastFactionEntry = null;
 
-            UpdateFactionData();
-            UpdateFactionEntriesList();
-            UpdateFactionEntryData();
+            this.UpdateFactionData();
+            this.UpdateFactionEntriesList();
+            this.UpdateFactionEntryData();
         }
         #endregion
         #endregion
@@ -3929,45 +4505,50 @@ namespace eft_dma_radar
         #region Helper Functions
         private void UpdateThemeColors()
         {
-            Color primary = picOtherPrimary.BackColor;
-            Color darkPrimary = picOtherPrimaryDark.BackColor;
-            Color lightPrimary = picOtherPrimaryLight.BackColor;
-            Color accent = picOtherAccent.BackColor;
+            var colorScheme = new ColorScheme(
+                picOtherPrimary.BackColor,
+                picOtherPrimaryDark.BackColor,
+                picOtherPrimaryLight.BackColor,
+                picOtherAccent.BackColor,
+                TextShade.WHITE
+            );
 
-            MaterialSkinManager.Instance.ColorScheme = new ColorScheme(primary, darkPrimary, lightPrimary, accent, TextShade.WHITE);
+            MaterialSkinManager.Instance.ColorScheme = colorScheme;
 
-            UpdatePaintColorControls();
+            this.UpdatePaintColorControls();
 
-            this.Invalidate();
-            this.Refresh();
-        }
-
-        private Color PaintColorToColor(string name)
-        {
-            PaintColor.Colors color = _config.PaintColors[name];
-            return Color.FromArgb(color.A, color.R, color.G, color.B);
+            this.BeginInvoke(new Action(() =>
+            {
+                this.Invalidate();
+                this.Refresh();
+            }));
         }
 
         private Color DefaultPaintColorToColor(string name)
         {
-            PaintColor.Colors color = _config.DefaultPaintColors[name];
+            PaintColor.Colors color = this.config.DefaultPaintColors[name];
             return Color.FromArgb(color.A, color.R, color.G, color.B);
         }
 
         private void UpdatePaintColorControls()
         {
-            var colors = _config.PaintColors;
+            var colors = this.config.PaintColors;
 
             Action<PictureBox, string> setColor = (pictureBox, name) =>
             {
-                if (colors.ContainsKey(name))
+                if (colors.TryGetValue(name, out var color))
                 {
-                    pictureBox.BackColor = PaintColorToColor(name);
+                    pictureBox.BackColor = Color.FromArgb(color.A, color.R, color.G, color.B);
                 }
                 else
                 {
-                    colors.Add(name, _config.DefaultPaintColors[name]);
-                    pictureBox.BackColor = DefaultPaintColorToColor(name);
+                    colors[name] = this.config.DefaultPaintColors[name];
+                    pictureBox.BackColor = Color.FromArgb(
+                        this.config.DefaultPaintColors[name].A,
+                        this.config.DefaultPaintColors[name].R,
+                        this.config.DefaultPaintColors[name].G,
+                        this.config.DefaultPaintColors[name].B
+                    );
                 }
             };
 
@@ -3999,6 +4580,10 @@ namespace eft_dma_radar
             setColor(picExfilClosedText, "ExfilClosedText");
             setColor(picExfilClosedIcon, "ExfilClosedIcon");
 
+            // Transits
+            setColor(picTransitText, "TransitText");
+            setColor(picTransitIcon, "TransitIcon");
+
             // Loot/Quests
             setColor(picLootRegular, "RegularLoot");
             setColor(picLootImportant, "ImportantLoot");
@@ -4007,9 +4592,13 @@ namespace eft_dma_radar
             setColor(picRequiredQuestItem, "RequiredQuestItem");
             setColor(picLootPing, "LootPing");
 
+            // Game World
+            setColor(picGrenades, "Grenades");
+            setColor(picTripwires, "Tripwires");
+            setColor(picDeathMarker, "DeathMarker");
+
             // Other
             setColor(picOtherTextOutline, "TextOutline");
-            setColor(picOtherDeathMarker, "DeathMarker");
             setColor(picOtherChams, "Chams");
             setColor(picOtherPrimary, "Primary");
             setColor(picOtherPrimaryDark, "PrimaryDark");
@@ -4032,16 +4621,16 @@ namespace eft_dma_radar
                     B = col.B
                 };
 
-                if (_config.PaintColors.ContainsKey(name))
+                if (this.config.PaintColors.ContainsKey(name))
                 {
-                    _config.PaintColors[name] = paintColorToUse;
+                    this.config.PaintColors[name] = paintColorToUse;
 
                     if (Extensions.SKColors.ContainsKey(name))
                         Extensions.SKColors[name] = new SKColor(col.R, col.G, col.B, col.A);
                 }
                 else
                 {
-                    _config.PaintColors.Add(name, paintColorToUse);
+                    this.config.PaintColors.Add(name, paintColorToUse);
                 }
             }
         }
@@ -4051,200 +4640,222 @@ namespace eft_dma_radar
         // AI
         private void picAIBoss_Click(object sender, EventArgs e)
         {
-            UpdatePaintColorByName("Boss", picAIBoss);
+            this.UpdatePaintColorByName("Boss", picAIBoss);
         }
 
         private void picAIBossGuard_Click(object sender, EventArgs e)
         {
-            UpdatePaintColorByName("BossGuard", picAIBossGuard);
+            this.UpdatePaintColorByName("BossGuard", picAIBossGuard);
         }
 
         private void picAIBossFollower_Click(object sender, EventArgs e)
         {
-            UpdatePaintColorByName("BossFollower", picAIBossFollower);
+            this.UpdatePaintColorByName("BossFollower", picAIBossFollower);
         }
 
         private void picAIRaider_Click(object sender, EventArgs e)
         {
-            UpdatePaintColorByName("Raider", picAIRaider);
+            this.UpdatePaintColorByName("Raider", picAIRaider);
         }
 
         private void picAIRogue_Click(object sender, EventArgs e)
         {
-            UpdatePaintColorByName("Rogue", picAIRogue);
+            this.UpdatePaintColorByName("Rogue", picAIRogue);
         }
 
         private void picAICultist_Click(object sender, EventArgs e)
         {
-            UpdatePaintColorByName("Cultist", picAICultist);
+            this.UpdatePaintColorByName("Cultist", picAICultist);
         }
 
         private void picAIFollowerOfMorana_Click(object sender, EventArgs e)
         {
-            UpdatePaintColorByName("FollowerOfMorana", picAIFollowerOfMorana);
+            this.UpdatePaintColorByName("FollowerOfMorana", picAIFollowerOfMorana);
         }
 
         private void picAIScav_Click(object sender, EventArgs e)
         {
-            UpdatePaintColorByName("Scav", picAIScav);
+            this.UpdatePaintColorByName("Scav", picAIScav);
         }
 
         private void picAIOther_Click(object sender, EventArgs e)
         {
-            UpdatePaintColorByName("Other", picAIOther);
+            this.UpdatePaintColorByName("Other", picAIOther);
         }
 
         // Players
         private void picPlayersUSEC_Click(object sender, EventArgs e)
         {
-            UpdatePaintColorByName("USEC", picPlayersUSEC);
+            this.UpdatePaintColorByName("USEC", picPlayersUSEC);
         }
 
         private void picPlayersBEAR_Click(object sender, EventArgs e)
         {
-            UpdatePaintColorByName("BEAR", picPlayersBEAR);
+            this.UpdatePaintColorByName("BEAR", picPlayersBEAR);
         }
 
         private void picPlayersScav_Click(object sender, EventArgs e)
         {
-            UpdatePaintColorByName("PlayerScav", picPlayersScav);
+            this.UpdatePaintColorByName("PlayerScav", picPlayersScav);
         }
 
         private void picPlayersLocalPlayer_Click(object sender, EventArgs e)
         {
-            UpdatePaintColorByName("LocalPlayer", picPlayersLocalPlayer);
+            this.UpdatePaintColorByName("LocalPlayer", picPlayersLocalPlayer);
         }
 
         private void picPlayersTeammate_Click(object sender, EventArgs e)
         {
-            UpdatePaintColorByName("Teammate", picPlayersTeammate);
+            this.UpdatePaintColorByName("Teammate", picPlayersTeammate);
         }
 
         private void picPlayersTeamHover_Click(object sender, EventArgs e)
         {
-            UpdatePaintColorByName("TeamHover", picPlayersTeamHover);
+            this.UpdatePaintColorByName("TeamHover", picPlayersTeamHover);
         }
 
         private void picPlayersSpecial_Click(object sender, EventArgs e)
         {
-            UpdatePaintColorByName("Special", picPlayersSpecial);
+            this.UpdatePaintColorByName("Special", picPlayersSpecial);
         }
 
         // Exfiltration
         private void picExfilActiveText_Click(object sender, EventArgs e)
         {
-            UpdatePaintColorByName("ExfilActiveText", picExfilActiveText);
+            this.UpdatePaintColorByName("ExfilActiveText", picExfilActiveText);
         }
 
         private void picExfilActiveIcon_Click(object sender, EventArgs e)
         {
-            UpdatePaintColorByName("ExfilActiveIcon", picExfilActiveIcon);
+            this.UpdatePaintColorByName("ExfilActiveIcon", picExfilActiveIcon);
         }
 
         private void picExfilPendingText_Click(object sender, EventArgs e)
         {
-            UpdatePaintColorByName("ExfilPendingText", picExfilPendingText);
+            this.UpdatePaintColorByName("ExfilPendingText", picExfilPendingText);
         }
 
         private void picExfilPendingIcon_Click(object sender, EventArgs e)
         {
-            UpdatePaintColorByName("ExfilPendingIcon", picExfilPendingIcon);
+            this.UpdatePaintColorByName("ExfilPendingIcon", picExfilPendingIcon);
         }
 
         private void picExfilClosedText_Click(object sender, EventArgs e)
         {
-            UpdatePaintColorByName("ExfilClosedText", picExfilClosedText);
+            this.UpdatePaintColorByName("ExfilClosedText", picExfilClosedText);
         }
 
         private void picExfilClosedIcon_Click(object sender, EventArgs e)
         {
-            UpdatePaintColorByName("ExfilClosedIcon", picExfilClosedIcon);
+            this.UpdatePaintColorByName("ExfilClosedIcon", picExfilClosedIcon);
+        }
+
+        // Transits
+        private void picTransitText_Click(object sender, EventArgs e)
+        {
+            this.UpdatePaintColorByName("TransitText", picTransitText);
+        }
+
+        private void picTransitIcon_Click(object sender, EventArgs e)
+        {
+            this.UpdatePaintColorByName("TransitIcon", picTransitIcon);
         }
 
         // Loot / Quests
         private void picLootRegular_Click(object sender, EventArgs e)
         {
-            UpdatePaintColorByName("RegularLoot", picLootRegular);
+            this.UpdatePaintColorByName("RegularLoot", picLootRegular);
         }
 
         private void picLootImportant_Click(object sender, EventArgs e)
         {
-            UpdatePaintColorByName("ImportantLoot", picLootImportant);
+            this.UpdatePaintColorByName("ImportantLoot", picLootImportant);
         }
 
         private void picQuestItem_Click(object sender, EventArgs e)
         {
-            UpdatePaintColorByName("QuestItem", picQuestItem);
+            this.UpdatePaintColorByName("QuestItem", picQuestItem);
         }
 
         private void picQuestZone_Click(object sender, EventArgs e)
         {
-            UpdatePaintColorByName("QuestZone", picQuestZone);
+            this.UpdatePaintColorByName("QuestZone", picQuestZone);
         }
 
         private void picRequiredQuestItem_Click(object sender, EventArgs e)
         {
-            UpdatePaintColorByName("RequiredQuestItem", picRequiredQuestItem);
+            this.UpdatePaintColorByName("RequiredQuestItem", picRequiredQuestItem);
         }
 
         private void picLootPing_Click(object sender, EventArgs e)
         {
-            UpdatePaintColorByName("LootPing", picLootPing);
+            this.UpdatePaintColorByName("LootPing", picLootPing);
+        }
+
+        // Game World
+        private void picGrenades_Click(object sender, EventArgs e)
+        {
+            this.UpdatePaintColorByName("Grenades", picGrenades);
+        }
+
+        private void picTripwires_Click(object sender, EventArgs e)
+        {
+            this.UpdatePaintColorByName("Tripwires", picTripwires);
+        }
+
+        private void picDeathMarker_Click(object sender, EventArgs e)
+        {
+            this.UpdatePaintColorByName("DeathMarker", picDeathMarker);
         }
 
         // Other
         private void picOtherTextOutline_Click(object sender, EventArgs e)
         {
-            UpdatePaintColorByName("TextOutline", picOtherTextOutline);
-        }
-
-        private void picOtherDeathMarker_Click(object sender, EventArgs e)
-        {
-            UpdatePaintColorByName("DeathMarker", picOtherDeathMarker);
+            this.UpdatePaintColorByName("TextOutline", picOtherTextOutline);
         }
 
         private void picOtherChams_Click(object sender, EventArgs e)
         {
-            UpdatePaintColorByName("Chams", picOtherChams);
+            this.UpdatePaintColorByName("Chams", picOtherChams);
         }
 
         private void picOtherPrimary_Click(object sender, EventArgs e)
         {
-            UpdatePaintColorByName("Primary", picOtherPrimary);
-            UpdateThemeColors();
+            this.UpdatePaintColorByName("Primary", picOtherPrimary);
+            this.UpdateThemeColors();
         }
 
         private void picOtherPrimaryDark_Click(object sender, EventArgs e)
         {
-            UpdatePaintColorByName("PrimaryDark", picOtherPrimaryDark);
-            UpdateThemeColors();
+            this.UpdatePaintColorByName("PrimaryDark", picOtherPrimaryDark);
+            this.UpdateThemeColors();
         }
 
         private void picOtherPrimaryLight_Click(object sender, EventArgs e)
         {
-            UpdatePaintColorByName("PrimaryLight", picOtherPrimaryLight);
-            UpdateThemeColors();
+            this.UpdatePaintColorByName("PrimaryLight", picOtherPrimaryLight);
+            this.UpdateThemeColors();
         }
 
         private void picOtherAccent_Click(object sender, EventArgs e)
         {
-            UpdatePaintColorByName("Accent", picOtherAccent);
-            UpdateThemeColors();
+            this.UpdatePaintColorByName("Accent", picOtherAccent);
+            this.UpdateThemeColors();
         }
 
         private void btnResetTheme_Click(object sender, EventArgs e)
         {
-            _config.PaintColors["Primary"] = _config.DefaultPaintColors["Primary"];
-            _config.PaintColors["PrimaryDark"] = _config.DefaultPaintColors["PrimaryDark"];
-            _config.PaintColors["PrimaryLight"] = _config.DefaultPaintColors["PrimaryLight"];
-            _config.PaintColors["Accent"] = _config.DefaultPaintColors["Accent"];
+            this.config.PaintColors["Primary"] = this.config.DefaultPaintColors["Primary"];
+            this.config.PaintColors["PrimaryDark"] = this.config.DefaultPaintColors["PrimaryDark"];
+            this.config.PaintColors["PrimaryLight"] = this.config.DefaultPaintColors["PrimaryLight"];
+            this.config.PaintColors["Accent"] = this.config.DefaultPaintColors["Accent"];
 
-            picOtherPrimary.BackColor = DefaultPaintColorToColor("Primary");
-            picOtherPrimaryDark.BackColor = DefaultPaintColorToColor("PrimaryDark");
-            picOtherPrimaryLight.BackColor = DefaultPaintColorToColor("PrimaryLight");
-            picOtherAccent.BackColor = DefaultPaintColorToColor("Accent");
+            picOtherPrimary.BackColor = this.DefaultPaintColorToColor("Primary");
+            picOtherPrimaryDark.BackColor = this.DefaultPaintColorToColor("PrimaryDark");
+            picOtherPrimaryLight.BackColor = this.DefaultPaintColorToColor("PrimaryLight");
+            picOtherAccent.BackColor = this.DefaultPaintColorToColor("Accent");
 
-            UpdateThemeColors();
+            this.UpdateThemeColors();
         }
         #endregion
         #endregion
@@ -4260,8 +4871,8 @@ namespace eft_dma_radar
 
         private void RefreshWatchlistStatusesByProfile(Watchlist.Profile profile)
         {
-            var enemyPlayers = this.AllPlayers
-                ?.Select(x => x.Value)
+            var enemyPlayers = this.AllPlayers?
+                .Values
                 .Where(x => x.IsHumanHostileActive && profile.Entries.Any(entry => entry.AccountID == x.AccountID))
                 .ToList();
 
@@ -4289,7 +4900,7 @@ namespace eft_dma_radar
 
         private void UpdateWatchlistProfiles(int index = 0)
         {
-            var profiles = _watchlist.Profiles;
+            var profiles = this.watchlist.Profiles;
 
             lstWatchlistProfiles.Items.Clear();
             lstWatchlistProfiles.Items.AddRange(profiles.Select(entry => new ListViewItem
@@ -4300,31 +4911,30 @@ namespace eft_dma_radar
 
             if (lstWatchlistProfiles.Items.Count > 0)
             {
-                var itemToSelect = lstWatchlistProfiles.Items[index];
-                itemToSelect.Selected = true;
-                UpdateWatchlistEntriesList();
+                lstWatchlistProfiles.Items[index].Selected = true;
+                this.UpdateWatchlistEntriesList();
             }
         }
 
         private void UpdateWatchlistProfileData()
         {
-            var selectedProfile = GetActiveWatchlistProfile();
+            var selectedProfile = this.GetActiveWatchlistProfile();
             txtWatchlistProfileName.Text = selectedProfile?.Name ?? "";
         }
 
         private void UpdateWatchlistEntryData()
         {
-            txtWatchlistAccountID.Text = _lastWatchlistEntry?.AccountID ?? "";
-            txtWatchlistTag.Text = _lastWatchlistEntry?.Tag ?? "";
-            txtWatchlistPlatformUsername.Text = _lastWatchlistEntry?.PlatformUsername ?? "";
-            swWatchlistIsStreamer.Checked = _lastWatchlistEntry?.IsStreamer ?? false;
-            rdbTwitch.Checked = _lastWatchlistEntry?.Platform == 0;
-            rdbYoutube.Checked = _lastWatchlistEntry?.Platform == 1;
+            txtWatchlistAccountID.Text = this.lastWatchlistEntry?.AccountID ?? "";
+            txtWatchlistTag.Text = this.lastWatchlistEntry?.Tag ?? "";
+            txtWatchlistPlatformUsername.Text = this.lastWatchlistEntry?.PlatformUsername ?? "";
+            swWatchlistIsStreamer.Checked = this.lastWatchlistEntry?.IsStreamer ?? false;
+            rdbTwitch.Checked = this.lastWatchlistEntry?.Platform == 0;
+            rdbYoutube.Checked = this.lastWatchlistEntry?.Platform == 1;
         }
 
         private void UpdateWatchlistEntriesList()
         {
-            var selectedProfile = GetActiveWatchlistProfile();
+            var selectedProfile = this.GetActiveWatchlistProfile();
             var watchlistEntries = selectedProfile?.Entries ?? Enumerable.Empty<Watchlist.Entry>();
 
             lstWatchlistEntries.Items.Clear();
@@ -4338,59 +4948,59 @@ namespace eft_dma_radar
 
         private bool HasUnsavedWatchlistProfileChanges()
         {
-            var selectedProfile = GetActiveWatchlistProfile();
+            var selectedProfile = this.GetActiveWatchlistProfile();
             return (selectedProfile is not null && lstWatchlistProfiles.Text != selectedProfile.Name);
         }
 
         private bool HasUnsavedWatchlistEntryChanges()
         {
-            if (_lastWatchlistEntry is null)
+            if (this.lastWatchlistEntry is null)
                 return false;
 
-            return txtWatchlistAccountID.Text != _lastWatchlistEntry.AccountID ||
-                    txtWatchlistTag.Text != _lastWatchlistEntry.Tag ||
-                    txtWatchlistPlatformUsername.Text != _lastWatchlistEntry.PlatformUsername ||
-                    swWatchlistIsStreamer.Checked != _lastWatchlistEntry.IsStreamer ||
-                    (rdbTwitch.Checked ? 0 : 1) != _lastWatchlistEntry.Platform;
+            return txtWatchlistAccountID.Text != this.lastWatchlistEntry.AccountID ||
+                    txtWatchlistTag.Text != this.lastWatchlistEntry.Tag ||
+                    txtWatchlistPlatformUsername.Text != this.lastWatchlistEntry.PlatformUsername ||
+                    swWatchlistIsStreamer.Checked != this.lastWatchlistEntry.IsStreamer ||
+                    (rdbTwitch.Checked ? 0 : 1) != this.lastWatchlistEntry.Platform;
         }
 
         private void SaveWatchlistProfile()
         {
             if (string.IsNullOrEmpty(txtWatchlistProfileName.Text))
             {
-                ShowErrorDialog("Add some text to the profile name textbox (minimum 1 character)");
+                this.ShowErrorDialog("Add some text to the profile name textbox (minimum 1 character)");
                 return;
             }
 
-            if (HasUnsavedWatchlistProfileChanges())
+            if (this.HasUnsavedWatchlistProfileChanges())
             {
-                var selectedProfile = GetActiveWatchlistProfile();
-                int index = _watchlist.Profiles.IndexOf(selectedProfile);
+                var selectedProfile = this.GetActiveWatchlistProfile();
+                var index = this.watchlist.Profiles.IndexOf(selectedProfile);
 
                 selectedProfile.Name = txtWatchlistProfileName.Text;
 
-                _watchlist.UpdateProfile(selectedProfile, index);
+                this.watchlist.UpdateProfile(selectedProfile, index);
 
-                UpdateWatchlistProfiles(lstWatchlistProfiles.SelectedIndices[0]);
-                RefreshWatchlistStatusesByProfile(selectedProfile);
+                this.UpdateWatchlistProfiles(lstWatchlistProfiles.SelectedIndices[0]);
+                this.RefreshWatchlistStatusesByProfile(selectedProfile);
             }
         }
 
         private void SaveWatchlistEntry()
         {
-            var selectedProfile = GetActiveWatchlistProfile();
+            var selectedProfile = this.GetActiveWatchlistProfile();
 
-            if (HasUnsavedWatchlistEntryChanges())
+            if (this.HasUnsavedWatchlistEntryChanges())
             {
                 if (string.IsNullOrEmpty(txtWatchlistAccountID.Text) ||
                     string.IsNullOrEmpty(txtWatchlistTag.Text) ||
                     string.IsNullOrEmpty(txtWatchlistPlatformUsername.Text))
                 {
-                    ShowErrorDialog("Add some text to the account id / tag / platform username textboxes (minimum 1 character)");
+                    this.ShowErrorDialog("Add some text to the account id / tag / platform username textboxes (minimum 1 character)");
                     return;
                 }
 
-                var entry = _lastWatchlistEntry;
+                var entry = this.lastWatchlistEntry;
                 var index = selectedProfile.Entries.IndexOf(entry);
 
                 entry = new Watchlist.Entry()
@@ -4402,62 +5012,59 @@ namespace eft_dma_radar
                     PlatformUsername = txtWatchlistPlatformUsername.Text
                 };
 
-                _watchlist.UpdateEntry(selectedProfile, entry, index);
+                this.watchlist.UpdateEntry(selectedProfile, entry, index);
 
-                _lastWatchlistEntry = entry;
+                this.lastWatchlistEntry = entry;
 
-                UpdateWatchlistEntriesList();
-                RefreshWatchlistStatus(entry.AccountID);
+                this.UpdateWatchlistEntriesList();
+                this.RefreshWatchlistStatus(entry.AccountID);
             }
         }
 
         private void RemoveWatchlistEntry(Watchlist.Profile selectedProfile, Watchlist.Entry selectedEntry)
         {
-            if (ShowConfirmationDialog("Are you sure you want to remove this entry?", "Are you sure?") == DialogResult.OK)
+            if (this.ShowConfirmationDialog("Are you sure you want to remove this entry?", "Are you sure?") == DialogResult.OK)
             {
-                _watchlist.RemoveEntry(selectedProfile, selectedEntry);
+                this.watchlist.RemoveEntry(selectedProfile, selectedEntry);
 
-                _lastWatchlistEntry = null;
+                this.lastWatchlistEntry = null;
 
-                UpdateWatchlistEntriesList();
-                RefreshWatchlistStatus(selectedEntry.AccountID);
-                UpdateWatchlistEntryData();
+                this.UpdateWatchlistEntriesList();
+                this.RefreshWatchlistStatus(selectedEntry.AccountID);
+                this.UpdateWatchlistEntryData();
             }
         }
 
         private void UpdateWatchlistPlayers(bool clearItems)
         {
-            var enemyPlayers = this.AllPlayers
-                ?.Select(x => x.Value)
+            var enemyPlayers = this.AllPlayers?
+                .Values
                 .Where(x => x.IsHumanHostileActive)
                 .ToList();
 
-            _watchlistMatchPlayers = new List<Player>();
+            if (clearItems)
+                this.watchlistMatchPlayers.Clear();
 
-            if (!clearItems)
+            if (enemyPlayers != null)
             {
-                foreach (var player in lstWatchlistPlayerList.Items)
-                {
-                    _watchlistMatchPlayers.Add((Player)player);
-                }
+                var newPlayers = enemyPlayers
+                    .Where(player => !this.watchlistMatchPlayers.Any(p => p.Name == player.Name))
+                    .ToList();
+
+                this.watchlistMatchPlayers.AddRange(newPlayers);
             }
 
-            if (enemyPlayers is not null)
-            {
-                foreach (var player in enemyPlayers)
+            lstWatchlistPlayerList.BeginUpdate();
+            lstWatchlistPlayerList.Items.Clear();
+            lstWatchlistPlayerList.Items.AddRange(this.watchlistMatchPlayers
+                .Select(entry => new ListViewItem
                 {
-                    if (!_watchlistMatchPlayers.Any(p => p.Name == player.Name))
-                    {
-                        _watchlistMatchPlayers.Add(player);
-                    }
-                }
-            }
-
-            lstWatchlistPlayerList.Items.AddRange(_watchlistMatchPlayers.Select(entry => new ListViewItem
-            {
-                Text = entry.Name,
-                Tag = entry,
-            }).OrderBy(entry => entry.Name).ToArray());
+                    Text = entry.Name,
+                    Tag = entry,
+                })
+                .OrderBy(entry => entry.Text)
+                .ToArray());
+            lstWatchlistPlayerList.EndUpdate();
         }
         #endregion
 
@@ -4465,55 +5072,47 @@ namespace eft_dma_radar
         private void txtWatchlistAccountID_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Enter)
-            {
-                SaveWatchlistEntry();
-            }
+                this.SaveWatchlistEntry();
         }
 
         private void txtWatchlistTag_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Enter)
-            {
-                SaveWatchlistEntry();
-            }
+                this.SaveWatchlistEntry();
         }
 
         private void txtWatchlistPlatformUsername_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Enter)
-            {
-                SaveWatchlistEntry();
-            }
+                this.SaveWatchlistEntry();
         }
 
         private void swWatchlistIsStreamer_CheckedChanged(object sender, EventArgs e)
         {
-            SaveWatchlistEntry();
+            this.SaveWatchlistEntry();
         }
 
         private void rdbTwitch_CheckedChanged(object sender, EventArgs e)
         {
             if (rdbTwitch.Checked)
-                SaveWatchlistEntry();
+                this.SaveWatchlistEntry();
         }
 
         private void rdbYoutube_CheckedChanged(object sender, EventArgs e)
         {
             if (rdbYoutube.Checked)
-                SaveWatchlistEntry();
+                this.SaveWatchlistEntry();
         }
 
         private void txtWatchlistProfileName_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Enter)
-            {
-                SaveWatchlistProfile();
-            }
+                this.SaveWatchlistProfile();
         }
 
         private void btnAddWatchlistEntry_Click(object sender, EventArgs e)
         {
-            var selectedProfile = GetActiveWatchlistProfile();
+            var selectedProfile = this.GetActiveWatchlistProfile();
             var selectedPlayer = lstWatchlistPlayerList.SelectedItems.Count > 0 ? lstWatchlistPlayerList.SelectedItems[0].Tag as Player : null;
 
             if (selectedProfile is null)
@@ -4523,95 +5122,95 @@ namespace eft_dma_radar
 
             if (existingEntry is not null)
             {
-                ShowErrorDialog($"An entry with the account id '{existingEntry.AccountID}' already exists. Please edit or delete the existing entry.");
+                this.ShowErrorDialog($"An entry with the account id '{existingEntry.AccountID}' already exists. Please edit or delete the existing entry.");
                 return;
             }
 
             if (selectedPlayer is not null)
             {
-                _watchlist.AddEntry(selectedProfile, selectedPlayer.AccountID, selectedPlayer.Name);
-                RefreshWatchlistStatuses();
+                this.watchlist.AddEntry(selectedProfile, selectedPlayer.AccountID, selectedPlayer.Name);
+                this.RefreshWatchlistStatuses();
             }
             else
             {
-                _watchlist.AddEmptyEntry(selectedProfile);
+                this.watchlist.AddEmptyEntry(selectedProfile);
             }
 
-            UpdateWatchlistEntriesList();
+            this.UpdateWatchlistEntriesList();
         }
 
         private void btnAddWatchlistProfile_Click(object sender, EventArgs e)
         {
-            var existingProfile = _watchlist.Profiles.FirstOrDefault(profile => profile.Name == "Default");
+            var existingProfile = watchlist.Profiles.FirstOrDefault(profile => profile.Name == "Default");
 
             if (existingProfile is not null)
             {
-                ShowErrorDialog($"A profile with the name '{existingProfile.Name}' already exists. Please edit or delete the existing profile.");
+                this.ShowErrorDialog($"A profile with the name '{existingProfile.Name}' already exists. Please edit or delete the existing profile.");
                 return;
             }
 
-            _watchlist.AddEmptyProfile();
-            UpdateWatchlistProfiles();
+            this.watchlist.AddEmptyProfile();
+            this.UpdateWatchlistProfiles();
         }
 
         private void btnRemoveWatchlistProfile_Click(object sender, EventArgs e)
         {
-            var selectedProfile = GetActiveWatchlistProfile();
+            var selectedProfile = this.GetActiveWatchlistProfile();
 
             if (selectedProfile is null)
                 return;
 
-            var profiles = _watchlist.Profiles;
+            var profiles = this.watchlist.Profiles;
 
             if (profiles.Count == 1)
             {
-                if (ShowConfirmationDialog("Removing the last profile will automatically create a default one", "Warning") == DialogResult.OK)
+                if (this.ShowConfirmationDialog("Removing the last profile will automatically create a default one", "Warning") == DialogResult.OK)
                 {
-                    _watchlist.RemoveProfile(lstWatchlistProfiles.SelectedIndices[0]);
-                    _watchlist.AddEmptyProfile();
-                    RefreshWatchlistStatusesByProfile(selectedProfile);
+                    this.watchlist.RemoveProfile(lstWatchlistProfiles.SelectedIndices[0]);
+                    this.watchlist.AddEmptyProfile();
+                    this.RefreshWatchlistStatusesByProfile(selectedProfile);
                 }
             }
             else
             {
-                if (ShowConfirmationDialog("Are you sure you want to delete this profile?", "Warning") == DialogResult.OK)
+                if (this.ShowConfirmationDialog("Are you sure you want to delete this profile?", "Warning") == DialogResult.OK)
                 {
-                    _watchlist.RemoveProfile(selectedProfile);
-                    RefreshWatchlistStatusesByProfile(selectedProfile);
+                    this.watchlist.RemoveProfile(selectedProfile);
+                    this.RefreshWatchlistStatusesByProfile(selectedProfile);
                 }
             }
 
-            UpdateWatchlistProfiles();
+            this.UpdateWatchlistProfiles();
         }
 
         private void btnRemoveWatchlistEntry_Click(object sender, EventArgs e)
         {
-            var selectedWatchlist = GetActiveWatchlistProfile();
-            var selectedEntry = _lastWatchlistEntry;
+            var selectedWatchlist = this.GetActiveWatchlistProfile();
+            var selectedEntry = this.lastWatchlistEntry;
 
             if (selectedWatchlist is not null)
-                RemoveWatchlistEntry(selectedWatchlist, selectedEntry);
+                this.RemoveWatchlistEntry(selectedWatchlist, selectedEntry);
         }
 
         private void lstViewWatchlistEntries_SelectedIndexChanged(object sender, EventArgs e)
         {
-            SaveWatchlistEntry();
-            _lastWatchlistEntry = lstWatchlistEntries.SelectedItems.Count > 0 ? (Watchlist.Entry)lstWatchlistEntries.SelectedItems[0].Tag : null;
-            UpdateWatchlistEntryData();
+            this.SaveWatchlistEntry();
+            this.lastWatchlistEntry = lstWatchlistEntries.SelectedItems.Count > 0 ? (Watchlist.Entry)lstWatchlistEntries.SelectedItems[0].Tag : null;
+            this.UpdateWatchlistEntryData();
         }
 
         private void lstWatchlistProfiles_SelectedIndexChanged(object sender, EventArgs e)
         {
-            _lastWatchlistEntry = null;
+            this.lastWatchlistEntry = null;
 
-            UpdateWatchlistProfileData();
-            UpdateWatchlistEntriesList();
-            UpdateWatchlistEntryData();
+            this.UpdateWatchlistProfileData();
+            this.UpdateWatchlistEntriesList();
+            this.UpdateWatchlistEntryData();
         }
 
         private void btnResetPlayerlist_Click(object sender, EventArgs e)
         {
-            UpdateWatchlistPlayers(true);
+            this.UpdateWatchlistPlayers(true);
         }
         #endregion
         #endregion
@@ -4621,12 +5220,12 @@ namespace eft_dma_radar
         private LootFilterManager.Filter GetActiveLootFilter()
         {
             var itemCount = lstLootFilters.SelectedItems.Count;
-            return itemCount > 0 ? lstLootFilters.SelectedItems[0].Tag as LootFilterManager.Filter : null;
+            return itemCount > 0 ? (LootFilterManager.Filter)lstLootFilters.SelectedItems[0].Tag : null;
         }
 
         private bool HasUnsavedFilterChanges()
         {
-            var selectedFilter = GetActiveLootFilter();
+            var selectedFilter = this.GetActiveLootFilter();
 
             if (selectedFilter is null)
                 return false;
@@ -4638,21 +5237,22 @@ namespace eft_dma_radar
 
         private void UpdateLootFilters(int index = 0)
         {
-            var lootFilters = _config.Filters.OrderBy(lf => lf.Order).ToList();
+            var lootFilters = this.config.Filters.OrderBy(lf => lf.Order).ToList();
 
+            lstLootFilters.BeginUpdate();
             lstLootFilters.Items.Clear();
             lstLootFilters.Items.AddRange(lootFilters.Select(entry => new ListViewItem
             {
                 Text = entry.Name,
                 Tag = entry,
             }).ToArray());
+            lstLootFilters.EndUpdate();
 
             if (lstLootFilters.Items.Count > 0)
             {
-                var itemToSelect = lstLootFilters.Items[index];
-                itemToSelect.Selected = true;
-                UpdateLootFilterData();
-                UpdateLootFilterEntriesList();
+                lstLootFilters.Items[index].Selected = true;
+                this.UpdateLootFilterData();
+                this.UpdateLootFilterEntriesList();
             }
 
             this.Loot?.ApplyFilter();
@@ -4660,7 +5260,7 @@ namespace eft_dma_radar
 
         private void UpdateLootFilterData()
         {
-            var selectedFilter = GetActiveLootFilter();
+            var selectedFilter = this.GetActiveLootFilter();
 
             if (selectedFilter is null)
                 return;
@@ -4674,18 +5274,18 @@ namespace eft_dma_radar
         {
             if (string.IsNullOrEmpty(txtLootFilterName.Text))
             {
-                ShowErrorDialog("Add some text to the loot filter name textbox (minimum 1 character)");
+                this.ShowErrorDialog("Add some text to the loot filter name textbox (minimum 1 character)");
                 return;
             }
 
-            var selectedFilter = GetActiveLootFilter();
+            var selectedFilter = this.GetActiveLootFilter();
 
             if (selectedFilter is null)
                 return;
 
-            if (HasUnsavedFilterChanges())
+            if (this.HasUnsavedFilterChanges())
             {
-                int index = _config.Filters.IndexOf(selectedFilter);
+                var index = this.config.Filters.IndexOf(selectedFilter);
 
                 selectedFilter.Name = txtLootFilterName.Text;
                 selectedFilter.IsActive = swLootFilterActive.Checked;
@@ -4697,41 +5297,40 @@ namespace eft_dma_radar
                     A = picLootFilterColor.BackColor.A
                 };
 
-                _lootFilterManager.UpdateFilter(selectedFilter, index);
-                UpdateLootFilters(lstLootFilters.SelectedIndices[0]);
+                this.lootFilterManager.UpdateFilter(selectedFilter, index);
+                this.UpdateLootFilters(lstLootFilters.SelectedIndices[0]);
             }
         }
 
         private void UpdateLootFilterOrders()
         {
-            for (int i = 0; i < _config.Filters.Count; i++)
+            for (int i = 0; i < this.config.Filters.Count; i++)
             {
-                _config.Filters[i].Order = i + 1;
+                this.config.Filters[i].Order = i + 1;
             }
         }
 
         private void UpdateLootFilterEntriesList()
         {
-            var selectedFilter = GetActiveLootFilter();
-
-            if (selectedFilter?.Items is null)
+            var selectedFilter = this.GetActiveLootFilter();
+            if (selectedFilter?.Items == null)
                 return;
 
-            var lootList = TarkovDevManager.AllItems.Values.ToList();
-            var matchingLoot = lootList.Where(loot => selectedFilter.Items.Contains(loot.Item.id))
-                                       .OrderBy(l => l.Item.name)
-                                       .ToList();
+            var lootList = TarkovDevManager.AllItems;
+            var matchingLoot = lootList.Values
+                .Where(loot => selectedFilter.Items.Contains(loot.Item.id))
+                .OrderBy(l => l.Item.name)
+                .ToList();
 
+            lstLootFilterEntries.BeginUpdate();
             lstLootFilterEntries.Items.Clear();
             lstLootFilterEntries.Items.AddRange(matchingLoot.Select(item => new ListViewItem
             {
                 Text = item.Name,
                 Tag = item,
-                SubItems =
-                {
-                    TarkovDevManager.FormatNumber(item.Value)
-                }
+                SubItems = { TarkovDevManager.FormatNumber(item.Value) }
             }).ToArray());
+            lstLootFilterEntries.EndUpdate();
         }
         #endregion
 
@@ -4758,8 +5357,8 @@ namespace eft_dma_radar
             if (cboLootFilterItemsToAdd.SelectedIndex == -1)
                 return;
 
-            var selectedFilter = GetActiveLootFilter();
-            var selectedItem = cboLootFilterItemsToAdd.SelectedItem as LootItem;
+            var selectedFilter = this.GetActiveLootFilter();
+            var selectedItem = (LootItem)cboLootFilterItemsToAdd.SelectedItem;
 
             if (selectedFilter?.Items is not null && selectedItem is not null && !selectedFilter.Items.Contains(selectedItem.ID))
             {
@@ -4773,8 +5372,8 @@ namespace eft_dma_radar
 
                 lstLootFilterEntries.Items.Add(listItem);
                 selectedFilter.Items.Add(selectedItem.Item.id);
-                LootFilterManager.SaveLootFilterManager(_lootFilterManager);
-                Loot?.ApplyFilter();
+                LootFilterManager.SaveLootFilterManager(this.lootFilterManager);
+                this.Loot?.ApplyFilter();
             }
         }
 
@@ -4783,92 +5382,92 @@ namespace eft_dma_radar
             if (lstLootFilterEntries.SelectedItems.Count < 1)
                 return;
 
-            var selectedFilter = GetActiveLootFilter();
+            var selectedFilter = this.GetActiveLootFilter();
             var selectedItem = lstLootFilterEntries.SelectedItems[0];
 
             if (selectedItem?.Tag is LootItem lootItem)
             {
                 selectedItem.Remove();
-                _lootFilterManager.RemoveFilterItem(selectedFilter, lootItem.Item.id);
+                this.lootFilterManager.RemoveFilterItem(selectedFilter, lootItem.Item.id);
                 this.Loot?.ApplyFilter();
             }
         }
 
         private void btnFilterPriorityUp_Click(object sender, EventArgs e)
         {
-            var selectedFilter = GetActiveLootFilter();
+            var selectedFilter = this.GetActiveLootFilter();
 
             if (selectedFilter is null || selectedFilter.Order == 1)
                 return;
 
-            int index = selectedFilter.Order - 1;
-            var swapFilter = _config.Filters.FirstOrDefault(f => f.Order == index);
+            var index = selectedFilter.Order - 1;
+            var swapFilter = this.config.Filters.FirstOrDefault(f => f.Order == index);
 
             if (swapFilter is not null)
             {
                 selectedFilter.Order = swapFilter.Order;
                 swapFilter.Order = index + 1;
-                LootFilterManager.SaveLootFilterManager(_lootFilterManager);
-                UpdateLootFilters(index - 1);
+                LootFilterManager.SaveLootFilterManager(this.lootFilterManager);
+                this.UpdateLootFilters(index - 1);
             }
         }
 
         private void btnFilterPriorityDown_Click(object sender, EventArgs e)
         {
-            var selectedFilter = GetActiveLootFilter();
+            var selectedFilter = this.GetActiveLootFilter();
 
-            if (selectedFilter is null || selectedFilter.Order == _config.Filters.Count)
+            if (selectedFilter is null || selectedFilter.Order == this.config.Filters.Count)
                 return;
 
-            int index = selectedFilter.Order;
-            var swapFilter = _config.Filters.FirstOrDefault(f => f.Order == index + 1);
+            var index = selectedFilter.Order;
+            var swapFilter = this.config.Filters.FirstOrDefault(f => f.Order == index + 1);
 
             if (swapFilter is not null)
             {
                 selectedFilter.Order = swapFilter.Order;
                 swapFilter.Order = index;
-                LootFilterManager.SaveLootFilterManager(_lootFilterManager);
-                UpdateLootFilters(index);
+                LootFilterManager.SaveLootFilterManager(this.lootFilterManager);
+                this.UpdateLootFilters(index);
             }
         }
 
         private void btnAddFilter_Click(object sender, EventArgs e)
         {
-            var existingFilter = _config.Filters.FirstOrDefault(filter => filter.Name == "New Filter");
+            var existingFilter = this.config.Filters.FirstOrDefault(filter => filter.Name == "New Filter");
 
             if (existingFilter is not null)
             {
-                ShowErrorDialog("A loot filter with the name 'New Filter' already exists. Please rename or delete the existing filter.");
+                this.ShowErrorDialog("A loot filter with the name 'New Filter' already exists. Please rename or delete the existing filter.");
                 return;
             }
 
-            _lootFilterManager.AddEmptyProfile();
-            UpdateLootFilters(_config.Filters.Count - 1);
+            this.lootFilterManager.AddEmptyProfile();
+            this.UpdateLootFilters(this.config.Filters.Count - 1);
         }
 
         private void btnRemoveFilter_Click(object sender, EventArgs e)
         {
-            var selectedFilter = GetActiveLootFilter();
+            var selectedFilter = this.GetActiveLootFilter();
 
             if (selectedFilter is null)
                 return;
 
-            if (_config.Filters.Count == 1)
+            if (this.config.Filters.Count == 1)
             {
-                if (ShowConfirmationDialog("Removing the last filter will automatically create a blank one. Are you sure you want to proceed?", "Warning") == DialogResult.OK)
+                if (this.ShowConfirmationDialog("Removing the last filter will automatically create a blank one. Are you sure you want to proceed?", "Warning") == DialogResult.OK)
                 {
-                    _lootFilterManager.RemoveFilter(lstLootFilters.SelectedIndices[0]);
-                    _lootFilterManager.AddEmptyProfile();
-                    UpdateLootFilters();
+                    this.lootFilterManager.RemoveFilter(lstLootFilters.SelectedIndices[0]);
+                    this.lootFilterManager.AddEmptyProfile();
+                    this.UpdateLootFilters();
                 }
             }
             else
             {
-                if (ShowConfirmationDialog("Are you sure you want to delete this filter?", "Warning") == DialogResult.OK)
+                if (this.ShowConfirmationDialog("Are you sure you want to delete this filter?", "Warning") == DialogResult.OK)
                 {
-                    _lootFilterManager.RemoveFilter(selectedFilter);
-                    UpdateLootFilterOrders();
-                    UpdateLootFilters();
+                    this.lootFilterManager.RemoveFilter(selectedFilter);
+                    this.UpdateLootFilterOrders();
+                    this.UpdateLootFilters();
                 }
             }
         }
@@ -4877,7 +5476,7 @@ namespace eft_dma_radar
         {
             if (e.KeyCode is Keys.Enter)
             {
-                SaveLootFilterChanges();
+                this.SaveLootFilterChanges();
             }
         }
 
@@ -4886,19 +5485,19 @@ namespace eft_dma_radar
             if (colDialog.ShowDialog() == DialogResult.OK)
             {
                 picLootFilterColor.BackColor = colDialog.Color;
-                SaveLootFilterChanges();
+                this.SaveLootFilterChanges();
             }
         }
 
         private void swLootFilterActive_CheckedChanged(object sender, EventArgs e)
         {
-            SaveLootFilterChanges();
+            this.SaveLootFilterChanges();
         }
 
         private void lstLootFilters_SelectedIndexChanged(object sender, EventArgs e)
         {
-            UpdateLootFilterData();
-            UpdateLootFilterEntriesList();
+            this.UpdateLootFilterData();
+            this.UpdateLootFilterEntriesList();
         }
         #endregion
         #endregion
