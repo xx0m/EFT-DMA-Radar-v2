@@ -29,7 +29,6 @@ namespace eft_dma_radar
         private List<GearSlot> GearSlots { get; set; }
         private ulong _slots { get; set; }
 
-
         public List<Gear> GearItems { get; set; }
 
         public Gear ActiveWeapon { get; set; }
@@ -47,8 +46,6 @@ namespace eft_dma_radar
             this.GetGearSlots();
             this.CheckGearSlots();
         }
-
-        // Add way to refresh weapon information (ammo type / count)
 
         private void GetGearSlots()
         {
@@ -226,7 +223,7 @@ namespace eft_dma_radar
 
             for (int i = 0; i < slotDict.Count; i++)
             {
-                ProcessSlot(i, scatterReadMap, loot, ref result, recurseDepth, slotNames);
+                this.ProcessSlot(i, scatterReadMap, loot, ref result, recurseDepth, slotNames);
             }
         }
 

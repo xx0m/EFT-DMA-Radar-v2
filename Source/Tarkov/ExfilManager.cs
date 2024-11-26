@@ -99,7 +99,7 @@ namespace eft_dma_radar
                 if (!this._swExtractTimer.IsRunning)
                     this._swExtractTimer.Start();
 
-                var timeToExtract = (this.currentExfil.IsVehicleExtract ? 3f : (this.currentExfil.ExfiltrationTime - 3f)) * 1000;
+                var timeToExtract = (this.currentExfil.IsVehicleExtract ? 4f : (this.currentExfil.ExfiltrationTime - 4f)) * 1000;
 
                 if (timeToExtract < 1)
                     timeToExtract = (2f * 1000);

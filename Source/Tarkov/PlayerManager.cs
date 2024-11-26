@@ -315,7 +315,7 @@ namespace eft_dma_radar
                     entries.Add(new ScatterWriteDataEntry<float>(this._physical + Offsets.Physical.FallDamageMultiplier, 1f));
                 }
 
-                if (this._physicalCondition != 0)
+                if (this._physicalCondition != 0 && (this._physicalCondition != 3592 && this._physicalCondition != 1544))
                     entries.Add(new ScatterWriteDataEntry<int>(this._movementContext + Offsets.MovementContext.PhysicalCondition, 0));
 
                 if (this._speedLimit != 1)

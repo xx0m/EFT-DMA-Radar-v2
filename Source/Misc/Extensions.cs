@@ -107,7 +107,6 @@ namespace eft_dma_radar
                 PlayerType.Raider => Extensions.SKColorFromPaintColor("Raider"),
                 PlayerType.Rogue => Extensions.SKColorFromPaintColor("Rogue"),
                 PlayerType.Cultist => Extensions.SKColorFromPaintColor("Cultist"),
-                PlayerType.FollowerOfMorana => Extensions.SKColorFromPaintColor("FollowerOfMorana"),
                 PlayerType.Scav => Extensions.SKColorFromPaintColor("Scav"),
 
                 // Player
@@ -117,6 +116,10 @@ namespace eft_dma_radar
                 PlayerType.BEAR => Extensions.SKColorFromPaintColor("BEAR"),
                 PlayerType.USEC => Extensions.SKColorFromPaintColor("USEC"),
                 PlayerType.SpecialPlayer => Extensions.SKColorFromPaintColor("Special"),
+
+                // Event/Temporary
+                PlayerType.FollowerOfMorana => Extensions.SKColorFromPaintColor("FollowerOfMorana"),
+                PlayerType.Zombie => Extensions.SKColorFromPaintColor("Zombie"),
 
                 // default to yellow
                 _ => new SKColor(255, 0, 255, 255),
@@ -278,7 +281,6 @@ namespace eft_dma_radar
                 PlayerType.Raider => Extensions.SKColorFromPaintColor("Raider"),
                 PlayerType.Rogue => Extensions.SKColorFromPaintColor("Rogue"),
                 PlayerType.Cultist => Extensions.SKColorFromPaintColor("Cultist"),
-                PlayerType.FollowerOfMorana => Extensions.SKColorFromPaintColor("FollowerOfMorana"),
                 PlayerType.Scav => Extensions.SKColorFromPaintColor("Scav"),
 
                 // Player
@@ -288,6 +290,10 @@ namespace eft_dma_radar
                 PlayerType.BEAR => Extensions.SKColorFromPaintColor("BEAR"),
                 PlayerType.USEC => Extensions.SKColorFromPaintColor("USEC"),
                 PlayerType.SpecialPlayer => Extensions.SKColorFromPaintColor("Special"),
+
+                // Event/Temporary
+                PlayerType.FollowerOfMorana => Extensions.SKColorFromPaintColor("FollowerOfMorana"),
+                PlayerType.Zombie => Extensions.SKColorFromPaintColor("Zombie"),
 
                 // default to magenta
                 _ => new SKColor(255, 0, 255, 255),

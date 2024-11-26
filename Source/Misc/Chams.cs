@@ -1,6 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Numerics;
+using System.Reflection.Metadata.Ecma335;
 
 namespace eft_dma_radar
 {
@@ -106,6 +107,7 @@ namespace eft_dma_radar
                                     (this._config.Chams["PlayerScavs"] && x.Type == PlayerType.PlayerScav && x.IsAlive) ||
                                     (this._config.Chams["Bosses"] && x.Type == PlayerType.Boss && x.IsAlive) ||
                                     (this._config.Chams["Rogues"] && x.IsRogueRaider && x.IsAlive) ||
+                                    (this._config.Chams["Event"] && x.IsEventAI && x.IsAlive) ||
                                     (this._config.Chams["Cultists"] && x.Type == PlayerType.Cultist && x.IsAlive) ||
                                     (this._config.Chams["Scavs"] && x.Type == PlayerType.Scav && x.IsAlive))
                             .ToList();
@@ -140,11 +142,21 @@ namespace eft_dma_radar
             var setAnyMaterial = false;
             var entries = new List<IScatterWriteEntry>();
 
+            if (Memory.IsExtracting)
+                return false;
+
+            // temp
+            //if (player.Name != "Tagilla")
+            //    return false;
+
             try
             {
                 var BodySkins = Memory.ReadPtr(player.PlayerBody + 0x40);
                 var BodySkinEntries = Memory.ReadPtr(BodySkins + 0x18);
                 var bodySkinsCount = Memory.ReadValue<int>(BodySkins + 0x40);
+
+                //if (bodySkinsCount < 1)
+                //    return false;
 
                 for (int i = 0; i < bodySkinsCount; i++)
                 {
@@ -153,6 +165,13 @@ namespace eft_dma_radar
                         var bodySkin = Memory.ReadPtr(BodySkinEntries + 0x30 + (0x18 * (uint)i));
                         var lodsArray = Memory.ReadPtr(bodySkin + 0x18);
                         var lodsCount = Memory.ReadValue<int>(lodsArray + 0x18);
+
+                        //if (lodsCount < 1)
+                        //    continue;
+
+                        // temporary
+                        //if (i != 1)
+                        //    continue;
 
                         for (int j = 0; j < lodsCount; j++)
                         {
@@ -172,7 +191,9 @@ namespace eft_dma_radar
                                     {
                                         skinnedMeshRender = Memory.ReadPtr(skinnedMeshRender + 0x20);
                                     }
-                                    catch { }
+                                    catch {
+                                        continue;
+                                    }
                                 }
 
                                 var materialDictionary = Memory.ReadPtr(skinnedMeshRender + 0x10);
@@ -209,13 +230,13 @@ namespace eft_dma_radar
                                     catch { Console.WriteLine("Failed to read material"); }
                                 }
                             }
-                            catch { }
+                            catch {}
                         }
                     }
-                    catch { }
+                    catch {}
                 }
             }
-            catch { }
+            catch {}
 
             if (!setAnyMaterial)
                 this.PlayersWithChams.Remove(player.ProfileID);

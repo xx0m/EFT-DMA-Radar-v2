@@ -42,17 +42,6 @@ namespace eft_dma_radar
             "Verdana",
         };
 
-        private static readonly string[] PlayerTypeNames = {
-            "LocalPlayer",
-            "Teammate",
-            "PMC",
-            "Scav",
-            "Boss",
-            "Raider",
-            "Cultist",
-            "PlayerScav"
-        };
-
         private bool isFreeMapToggled = false;
         private float uiScale = 1.0f;
         private float aimviewWindowSize = 200;
@@ -793,6 +782,7 @@ namespace eft_dma_radar
             swChamsPlayerScavs.Checked = this.config.Chams["PlayerScavs"];
             swChamsBosses.Checked = this.config.Chams["Bosses"];
             swChamsRogues.Checked = this.config.Chams["Rogues"];
+            swChamsEvent.Checked = this.config.Chams["Event"];
             swChamsCultists.Checked = this.config.Chams["Cultists"];
             swChamsScavs.Checked = this.config.Chams["Scavs"];
             swChamsTeammates.Checked = this.config.Chams["Teammates"];
@@ -1054,32 +1044,6 @@ namespace eft_dma_radar
 
         #region Radar Tab
         #region Helper Functions
-        private int GetPlayerTypeIndex(PlayerType type)
-        {
-            switch (type)
-            {
-                case PlayerType.LocalPlayer:
-                    return 0;
-                case PlayerType.Teammate:
-                    return 1;
-                case PlayerType.USEC:
-                case PlayerType.BEAR:
-                    return 2;
-                case PlayerType.Scav:
-                    return 3;
-                case PlayerType.Boss:
-                    return 4;
-                case PlayerType.Raider:
-                    return 5;
-                case PlayerType.Cultist:
-                    return 6;
-                case PlayerType.PlayerScav:
-                    return 7;
-                default:
-                    return 3;
-            }
-        }
-
         private void InvalidateMapParams()
         {
             this.lastMapParamsUpdate = DateTime.MinValue;
@@ -1110,20 +1074,20 @@ namespace eft_dma_radar
             lblRadarBossesValue.Text = "0";
             lblRadarBossesValue.UseAccent = false;
             lblRadarBossesValue.HighEmphasis = false;
+            lblRadarOtherValue.Text = "0";
+            lblRadarOtherValue.UseAccent = false;
+            lblRadarOtherValue.HighEmphasis = false;
 
             this.lastLootItemCount = 0;
             this.itemToPing = null;
             lstLootItems.Items.Clear();
 
-            this.ClearItemRefs();
-            this.ClearPlayerRefs();
-            this.ClearTaskItemRefs();
-            this.ClearTaskZoneRefs();
+            this.ClearAllRefs();
         }
 
         private void UpdateWindowTitle()
         {
-            if (!this.InGame || this.LocalPlayer == null)
+            if (!this.InGame || this.LocalPlayer is null)
             {
                 this.ResetVariables();
                 return;
@@ -1169,6 +1133,8 @@ namespace eft_dma_radar
                                                       playerCounts.GetValueOrDefault(PlayerType.BossGuard) +
                                                       playerCounts.GetValueOrDefault(PlayerType.Cultist));
             this.UpdateEnemyStatLabel(lblRadarBossesValue, playerCounts.GetValueOrDefault(PlayerType.Boss, 0));
+            this.UpdateEnemyStatLabel(lblRadarOtherValue, playerCounts.GetValueOrDefault(PlayerType.FollowerOfMorana) +
+                                                      playerCounts.GetValueOrDefault(PlayerType.Zombie));
         }
 
         private void UpdateEnemyStatLabel(MaterialLabel label, int count)
@@ -1441,8 +1407,10 @@ namespace eft_dma_radar
             if (!this.InGame || this.LocalPlayer is null)
                 return;
 
-            var typeIndex = this.GetPlayerTypeIndex(player.Type);
-            var type = PlayerTypeNames[typeIndex];
+            var type = player.Type.ToString();
+
+            if (type.Equals("BEAR", StringComparison.OrdinalIgnoreCase) || type.Equals("USEC", StringComparison.OrdinalIgnoreCase))
+                type = "PMC";
 
             var playerSettings = this.config.PlayerInformationSettings[type];
             var height = playerZoomedPos.Height - localPlayerMapPos.Height;
@@ -2416,8 +2384,11 @@ namespace eft_dma_radar
 
         private void UpdateClosestObjects(Vector2 mouse, float threshold)
         {
-            var players = this.AllPlayers?.Values.Where(x => x.Type != PlayerType.LocalPlayer && !x.HasExfild).ToList();
-            this.closestPlayerToMouse = this.FindClosestObject(players, mouse, x => x.ZoomedPosition, threshold);
+            var allPlayers = this.AllPlayers
+                            .Select(x => x.Value)
+                            .Where(x => x.IsActive && x.IsAlive && !x.HasExfild);
+
+            this.closestPlayerToMouse = this.FindClosestObject(allPlayers, mouse, x => x.ZoomedPosition, threshold);
 
             this.mouseOverGroup = this.closestPlayerToMouse?.IsHumanHostile == true && this.closestPlayerToMouse.GroupID != -1
                 ? this.closestPlayerToMouse.GroupID
@@ -2504,7 +2475,7 @@ namespace eft_dma_radar
 
         private void skMapCanvas_MouseMovePlayer(object sender, MouseEventArgs e)
         {
-            if (!this.InGame || this.LocalPlayer == null)
+            if (!this.IsReadyToRender())
             {
                 this.ClearAllRefs();
                 return;
@@ -2516,9 +2487,7 @@ namespace eft_dma_radar
             this.UpdateClosestObjects(mouse, threshold);
 
             if (this.isFreeMapToggled && this.isDragging)
-            {
                 this.HandleMapDragging(e);
-            }
         }
 
         private void skMapCanvas_MouseDown(object sender, MouseEventArgs e)
@@ -3014,6 +2983,7 @@ namespace eft_dma_radar
             swPlayerInfoActiveWeapon.Enabled = flagsChecked;
             swPlayerInfoThermal.Enabled = flagsChecked;
             swPlayerInfoNightVision.Enabled = flagsChecked;
+            swPlayerInfoGear.Enabled = flagsChecked;
             swPlayerInfoAmmoType.Enabled = flagsChecked;
             swPlayerInfoGroup.Enabled = flagsChecked;
             swPlayerInfoValue.Enabled = flagsChecked;
@@ -3806,6 +3776,7 @@ namespace eft_dma_radar
             swChamsPlayerScavs.Enabled = isChecked;
             swChamsBosses.Enabled = isChecked;
             swChamsRogues.Enabled = isChecked;
+            swChamsEvent.Enabled = isChecked;
             swChamsCultists.Enabled = isChecked;
             swChamsScavs.Enabled = isChecked;
             swChamsTeammates.Enabled = isChecked;
@@ -3842,6 +3813,12 @@ namespace eft_dma_radar
         private void swChamsRogues_CheckedChanged(object sender, EventArgs e)
         {
             this.config.Chams["Rogues"] = swChamsRogues.Checked;
+            this.RefreshChamsAsync();
+        }
+
+        private void swChamsEvent_CheckedChanged(object sender, EventArgs e)
+        {
+            this.config.Chams["Event"] = swChamsEvent.Checked;
             this.RefreshChamsAsync();
         }
 
@@ -4558,7 +4535,6 @@ namespace eft_dma_radar
             setColor(picAIRaider, "Raider");
             setColor(picAIRogue, "Rogue");
             setColor(picAICultist, "Cultist");
-            setColor(picAIFollowerOfMorana, "FollowerOfMorana");
             setColor(picAIOther, "Other");
             setColor(picAIScav, "Scav");
 
@@ -4603,6 +4579,10 @@ namespace eft_dma_radar
             setColor(picOtherPrimaryDark, "PrimaryDark");
             setColor(picOtherPrimaryLight, "PrimaryLight");
             setColor(picOtherAccent, "Accent");
+
+            // Event/Temporary
+            setColor(picEventFollowerOfMorana, "FollowerOfMorana");
+            setColor(picEventZombie, "Zombie");
         }
 
         private void UpdatePaintColorByName(string name, PictureBox pictureBox)
@@ -4665,11 +4645,6 @@ namespace eft_dma_radar
         private void picAICultist_Click(object sender, EventArgs e)
         {
             this.UpdatePaintColorByName("Cultist", picAICultist);
-        }
-
-        private void picAIFollowerOfMorana_Click(object sender, EventArgs e)
-        {
-            this.UpdatePaintColorByName("FollowerOfMorana", picAIFollowerOfMorana);
         }
 
         private void picAIScav_Click(object sender, EventArgs e)
@@ -4855,6 +4830,17 @@ namespace eft_dma_radar
             picOtherAccent.BackColor = this.DefaultPaintColorToColor("Accent");
 
             this.UpdateThemeColors();
+        }
+
+        // Event/Temporary
+        private void picEventFollowerOfMorana_Click(object sender, EventArgs e)
+        {
+            this.UpdatePaintColorByName("FollowerOfMorana", picEventFollowerOfMorana);
+        }
+
+        private void picEventZombie_Click(object sender, EventArgs e)
+        {
+            this.UpdatePaintColorByName("Zombie", picEventZombie);
         }
         #endregion
         #endregion

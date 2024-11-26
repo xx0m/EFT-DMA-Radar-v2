@@ -19,7 +19,7 @@ namespace eft_dma_radar
         public CorpseManager(ulong localGameWorld)
         {
             this.localGameWorld = localGameWorld;
-            this._corpseDictionary = Memory.ReadPtr(this.localGameWorld + 0xE0);
+            this._corpseDictionary = Memory.ReadPtr(this.localGameWorld + Offsets.LocalGameWorld.ObservedPlayersCorpses);
             this._sw.Start();
         }
 
@@ -50,9 +50,8 @@ namespace eft_dma_radar
                     Parallel.For(0, count, Program.Config.ParallelOptions, i =>
                     {
                         if (!scatterReadMap.Results[i][0].TryGetResult<ulong>(out var corpseBase))
-                        {
                             return;
-                        }
+
                         //Console.WriteLine($"[CorpseManager] - CorpseBase: {corpseBase}");
                         //[40] ItemOwner : -.GClass257D
                         //[60] ItemId : String

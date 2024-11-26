@@ -196,7 +196,8 @@ namespace eft_dma_radar
         BossGuard,
         BossFollower,
         FollowerOfMorana,
-        Cultist
+        Cultist,
+        Zombie
     }
 
     public enum PlayerBones

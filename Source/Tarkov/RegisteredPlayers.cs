@@ -327,7 +327,7 @@ namespace eft_dma_radar
                             var health = round1.AddEntry<int>(i, 6, player.HealthController, null, Offsets.HealthController.HealthStatus);
                         }
 
-                        if (checkWeaponInfo)
+                        if (checkWeaponInfo && !player.IsZombie)
                         {
                             ScatterReadEntry<ulong> handsController, currentItem;
 
@@ -452,7 +452,7 @@ namespace eft_dma_radar
                             if (scatterMap.Results[i][6].TryGetResult<int>(out var hp))
                                 player.SetHealth(hp);
 
-                        if (checkWeaponInfo)
+                        if (checkWeaponInfo && !player.IsZombie)
                         {
                             try
                             {

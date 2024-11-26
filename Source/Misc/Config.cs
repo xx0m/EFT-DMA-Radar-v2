@@ -237,7 +237,6 @@ namespace eft_dma_radar
             ["Raider"] = new PaintColor.Colors { A = 255, R = 128, G = 0, B = 128 },
             ["Rogue"] = new PaintColor.Colors { A = 255, R = 128, G = 0, B = 128 },
             ["Cultist"] = new PaintColor.Colors { A = 255, R = 128, G = 0, B = 128 },
-            ["FollowerOfMorana"] = new PaintColor.Colors { A = 255, R = 128, G = 0, B = 128 },
             ["Scav"] = new PaintColor.Colors { A = 255, R = 255, G = 255, B = 0 },
             ["Other"] = new PaintColor.Colors { A = 255, R = 255, G = 255, B = 255 },
 
@@ -281,7 +280,11 @@ namespace eft_dma_radar
             ["Primary"] = new PaintColor.Colors { A = 255, R = 80, G = 80, B = 80 },
             ["PrimaryDark"] = new PaintColor.Colors { A = 255, R = 50, G = 50, B = 50 },
             ["PrimaryLight"] = new PaintColor.Colors { A = 255, R = 130, G = 130, B = 130 },
-            ["Accent"] = new PaintColor.Colors { A = 255, R = 255, G = 128, B = 0 }
+            ["Accent"] = new PaintColor.Colors { A = 255, R = 255, G = 128, B = 0 },
+
+            // Event/Temporary
+            ["FollowerOfMorana"] = new PaintColor.Colors { A = 255, R = 128, G = 0, B = 128 },
+            ["Zombie"] = new PaintColor.Colors { A = 255, R = 190, G = 128, B = 0 }
         };
 
         [JsonIgnore]
@@ -311,6 +314,7 @@ namespace eft_dma_radar
             ["PMCs"] = false,
             ["RevertOnClose"] = false,
             ["Rogues"] = false,
+            ["Event"] = false,
             ["Scavs"] = false,
             ["Teammates"] = false
         };
@@ -380,18 +384,19 @@ namespace eft_dma_radar
         [JsonIgnore]
         public Dictionary<string, PlayerInformationSettings> DefaultPlayerInformationSettings = new Dictionary<string, PlayerInformationSettings>()
         {
+            ["Boss"] = new PlayerInformationSettings(true, true, true, true, 15, 255, 0, 13, false, false, false, false, false, false, false, false, false, false, 0, 13),
+            ["BossFollower"] = new PlayerInformationSettings(true, true, true, true, 15, 255, 0, 13, false, false, false, false, false, false, false, false, false, false, 0, 13),
+            ["BossGuard"] = new PlayerInformationSettings(true, true, true, true, 15, 255, 0, 13, false, false, false, false, false, false, false, false, false, false, 0, 13),
+            ["Cultist"] = new PlayerInformationSettings(true, true, true, true, 15, 255, 0, 13, false, false, false, false, false, false, false, false, false, false, 0, 13),
+            ["LocalPlayer"] = new PlayerInformationSettings(true, true, true, true, 500, 255, 0, 13, false, false, false, false, false, false, false, false, false, false, 0, 13),
             ["PMC"] = new PlayerInformationSettings(true, true, true, true, 15, 255, 0, 13, false, false, false, false, false, false, false, false, false, false, 0, 13),
             ["PlayerScav"] = new PlayerInformationSettings(true, true, true, true, 15, 255, 0, 13, false, false, false, false, false, false, false, false, false, false, 0, 13),
-            ["Boss"] = new PlayerInformationSettings(true, true, true, true, 15, 255, 0, 13, false, false, false, false, false, false, false, false, false, false, 0, 13),
-            ["BossGuard"] = new PlayerInformationSettings(true, true, true, true, 15, 255, 0, 13, false, false, false, false, false, false, false, false, false, false, 0, 13),
-            ["BossFollower"] = new PlayerInformationSettings(true, true, true, true, 15, 255, 0, 13, false, false, false, false, false, false, false, false, false, false, 0, 13),
             ["Raider"] = new PlayerInformationSettings(true, true, true, true, 15, 255, 0, 13, false, false, false, false, false, false, false, false, false, false, 0, 13),
             ["Rogue"] = new PlayerInformationSettings(true, true, true, true, 15, 255, 0, 13, false, false, false, false, false, false, false, false, false, false, 0, 13),
-            ["Cultist"] = new PlayerInformationSettings(true, true, true, true, 15, 255, 0, 13, false, false, false, false, false, false, false, false, false, false, 0, 13),
             ["Scav"] = new PlayerInformationSettings(true, true, true, true, 15, 255, 0, 13, false, false, false, false, false, false, false, false, false, false, 0, 13),
             ["Special"] = new PlayerInformationSettings(true, true, true, true, 15, 255, 0, 13, false, false, false, false, false, false, false, false, false, false, 0, 13),
             ["Teammate"] = new PlayerInformationSettings(true, true, true, true, 500, 255, 0, 13, false, false, false, false, false, false, false, false, false, false, 0, 13),
-            ["LocalPlayer"] = new PlayerInformationSettings(true, true, true, true, 500, 255, 0, 13, false, false, false, false, false, false, false, false, false, false, 0, 13)
+            ["Zombie"] = new PlayerInformationSettings(true, true, true, true, 15, 255, 0, 13, false, false, false, false, false, false, false, false, false, false, 0, 13),
         };
 
         [JsonIgnore]

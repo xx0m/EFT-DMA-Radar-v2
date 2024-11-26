@@ -221,6 +221,17 @@ namespace eft_dma_radar
                 this.Type is PlayerType.Rogue ||
                 this.Type is PlayerType.Cultist);
         }
+
+        /// <summary>
+        /// Player is rogue, raider etc.
+        /// </summary>
+        public bool IsEventAI
+        {
+            get => (
+                this.Type is PlayerType.FollowerOfMorana ||
+                this.Type is PlayerType.Zombie);
+        }
+
         /// <summary>
         /// Player is AI/human-controlled and Active/Alive.
         /// </summary>
@@ -239,6 +250,7 @@ namespace eft_dma_radar
                 this.Type is PlayerType.Rogue ||
                 this.Type is PlayerType.OfflineScav ||
                 this.Type is PlayerType.Cultist ||
+                this.Type is PlayerType.Zombie ||
                 this.Type is PlayerType.Boss) && this.IsActive && this.IsAlive;
         }
         /// <summary>
@@ -250,6 +262,12 @@ namespace eft_dma_radar
                 this.Type is PlayerType.LocalPlayer ||
                 this.Type is PlayerType.Teammate) && this.IsActive && this.IsAlive);
         }
+
+        public bool IsZombie
+        {
+            get => this.Type is PlayerType.Zombie;
+        }
+
         /// <summary>
         /// Player has exfil'd/left the raid.
         /// </summary>
@@ -460,6 +478,9 @@ namespace eft_dma_radar
 
         public void CheckForRequiredGear()
         {
+            if (this.Gear.Count < 1)
+                return;
+
             var found = false;
             var loot = Memory.Loot;
             var requiredQuestItems = QuestManager.RequiredItems;
@@ -510,9 +531,13 @@ namespace eft_dma_radar
                     if (!inFaction && Memory.IsPvEMode)
                     {
                         var dogtagSlot = this.Gear.FirstOrDefault(x => x.Slot.Key == "Dogtag");
-                        
+
                         if (dogtagSlot.Item is not null)
                             playerType = (dogtagSlot.Item.Short == "BEAR" ? PlayerType.BEAR : PlayerType.USEC);
+                    }
+                    else if (!inFaction && this.Name.Equals("???", StringComparison.OrdinalIgnoreCase))
+                    {
+                        playerType = PlayerType.Zombie;
                     }
 
                     return playerType;
@@ -536,11 +561,17 @@ namespace eft_dma_radar
                 {
                     return (this.PlayerRole == 51 ? PlayerType.BEAR : PlayerType.USEC);
                 }
+                else if (Program.AIFactionManager.IsInFaction(this.Name, out var playerType))
+                {
+                    return playerType;
+                }
+                else if (this.Name == "???")
+                {
+                    return PlayerType.Zombie;
+                }
                 else
                 {
-                    Program.AIFactionManager.IsInFaction(this.Name, out var playerType);
-
-                    return playerType;
+                    return PlayerType.Scav; // default to scav
                 }
             }
         }
@@ -748,6 +779,9 @@ namespace eft_dma_radar
         {
             if (this.IsHumanHostile)
                 this.RefreshWatchlistStatus();
+
+            if (this.Type == PlayerType.Zombie)
+                this.Name = "Zombie";
         }
 
         public async void RefreshWatchlistStatus()
@@ -783,11 +817,6 @@ namespace eft_dma_radar
                 this.Tag = "";
                 this.Type = this.isOfflinePlayer ? this.GetOfflinePlayerType(false) : this.GetOnlinePlayerType(false);
             }
-        }
-
-        public void RefreshGear()
-        {
-            //this._gearManager.RefreshGear();
         }
 
         /// <summary>
