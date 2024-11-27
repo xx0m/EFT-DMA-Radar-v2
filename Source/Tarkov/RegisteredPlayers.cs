@@ -361,48 +361,26 @@ namespace eft_dma_radar
                     if (player.LastUpdate) // player may be dead/exfil'd
                     {
                         var doChams = Program.Config.MasterSwitch && Program.Config.Chams["Enabled"];
+                        var logMessage = player.Position == DEFAULT_POSITION ? "exfiltrated" : "died";
 
-                        if (player.Position == DEFAULT_POSITION)
+                        if (doChams)
                         {
-
-                            player.IsActive = false;
-                            Program.Log($"{player.Name} exfiltrated");
-
-                            if (doChams)
-                                Memory.Chams.RemovePointersForPlayer(player);
-                        }
-                        else
-                        {
-                            if (player.Position == DEFAULT_POSITION)
+                            if (player.IsLocalPlayer)
                             {
-
-                                player.IsActive = false;
-                                Program.Log($"{player.Name} exfiltrated");
-
-                                Memory.Chams.RemovePointersForPlayer(player);
+                                Memory.Chams.RestorePointers();
+                                Program.Log("LocalPlayer has died!");
                             }
                             else
                             {
-                                if (doChams)
-                                {
-                                    if (player.IsLocalPlayer)
-                                    {
-                                        Memory.Chams.RestorePointers();
-                                        Program.Log("LocalPlayer has died!");
-                                    }
-                                    else
-                                    {
-                                        if (Program.Config.Chams["Corpses"])
-                                            Memory.Chams.SetPlayerBodyChams(player, Memory.Chams.ThermalMaterial);
-                                        else
-                                            Memory.Chams.RestorePointersForPlayer(player);
-                                    }
-                                }
-
-                                player.IsAlive = false;
-                                Program.Log($"{player.Name} died");
+                                if (Program.Config.Chams["Corpses"])
+                                    Memory.Chams.SetPlayerBodyChams(player, Memory.Chams.ThermalMaterial);
+                                else
+                                    Memory.Chams.RestorePointersForPlayer(player);
                             }
                         }
+
+                        player.IsActive = false;
+                        Program.Log($"{player.Name} {logMessage}");
 
                         player.LastUpdate = false;
                     }
