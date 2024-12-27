@@ -76,10 +76,10 @@ namespace eft_dma_radar
             }
 
             if (this._nvgMaterial == 0UL)
-                this._nvgMaterial = Memory.ReadPtrChain(nightVisionComponent, new uint[] { 0x90, 0x10, 0x8 });
+                this._nvgMaterial = Memory.ReadPtrChain(nightVisionComponent, new uint[] { 0x98, 0x10, 0x8 });
 
             if (this._thermalMaterial == 0UL)
-                this._thermalMaterial = Memory.ReadPtrChain(fpsThermal, new uint[] { 0x90, 0x10, 0x8 });
+                this._thermalMaterial = Memory.ReadPtrChain(fpsThermal, new uint[] { 0x98, 0x10, 0x8 });
 
             if (this._nvgMaterial == 0UL || this._thermalMaterial == 0UL)
             {
@@ -90,7 +90,7 @@ namespace eft_dma_radar
             if (this.lastColor != this._color)
             {
                 this.lastColor = this._color;
-                Memory.WriteValue(nightVisionComponent + 0xD8, this.lastColor);
+                Memory.WriteValue(nightVisionComponent + 0xE0, this.lastColor);
             }
 
             var players = this.AllPlayers
@@ -151,7 +151,7 @@ namespace eft_dma_radar
 
             try
             {
-                var BodySkins = Memory.ReadPtr(player.PlayerBody + 0x40);
+                var BodySkins = Memory.ReadPtr(player.PlayerBody + 0x48);
                 var BodySkinEntries = Memory.ReadPtr(BodySkins + 0x18);
                 var bodySkinsCount = Memory.ReadValue<int>(BodySkins + 0x40);
 
@@ -163,7 +163,7 @@ namespace eft_dma_radar
                     try
                     {
                         var bodySkin = Memory.ReadPtr(BodySkinEntries + 0x30 + (0x18 * (uint)i));
-                        var lodsArray = Memory.ReadPtr(bodySkin + 0x18);
+                        var lodsArray = Memory.ReadPtr(bodySkin + 0x20);
                         var lodsCount = Memory.ReadValue<int>(lodsArray + 0x18);
 
                         //if (lodsCount < 1)
@@ -178,18 +178,18 @@ namespace eft_dma_radar
                             try
                             {
                                 var lodEntry = Memory.ReadPtr(lodsArray + 0x20 + (0x8 * (uint)j));
-                                var skinnedMeshRender = Memory.ReadPtr(lodEntry + 0x20);
+                                var skinnedMeshRender = Memory.ReadPtr(lodEntry + 0x28);
 
                                 try //  Diz.Skinning.Skin
                                 {
-                                    var _rootBonePath = Memory.ReadPtr(lodEntry + 0x30);
+                                    var _rootBonePath = Memory.ReadPtr(lodEntry + 0x38);
                                     var rootbonePath = Memory.ReadUnityString(_rootBonePath);
                                 }
                                 catch // EFT.Visual.TorsoSkin or EFT.Visual.CustomSkin`1
                                 {
                                     try
                                     {
-                                        skinnedMeshRender = Memory.ReadPtr(skinnedMeshRender + 0x20);
+                                        skinnedMeshRender = Memory.ReadPtr(skinnedMeshRender + 0x28);
                                     }
                                     catch {
                                         continue;
@@ -260,7 +260,7 @@ namespace eft_dma_radar
                 var map1Round1 = scatterReadMap.AddRound();
                 var map1Round2 = scatterReadMap.AddRound();
 
-                var bodySkinsPtr = map1Round1.AddEntry<ulong>(0, 0, player.PlayerBody, null, 0x40);
+                var bodySkinsPtr = map1Round1.AddEntry<ulong>(0, 0, player.PlayerBody, null, 0x48);
                 var skinEntriesPtr = map1Round2.AddEntry<ulong>(0, 1, bodySkinsPtr, null, 0x18);
                 var bodySkinsCountPtr = map1Round2.AddEntry<int>(0, 2, bodySkinsPtr, null, 0x40);
 

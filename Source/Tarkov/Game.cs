@@ -292,8 +292,8 @@ namespace eft_dma_radar
 
             while (activeObject.obj != 0x0 && activeObject.obj != lastObject.obj)
             {
-                ulong objectNamePtr = Memory.ReadPtr(activeObject.obj + Offsets.GameObject.ObjectName);
-                string objectNameStr = Memory.ReadString(objectNamePtr, 64);
+                var objectNamePtr = Memory.ReadPtr(activeObject.obj + Offsets.GameObject.ObjectName);
+                var objectNameStr = Memory.ReadString(objectNamePtr, 64);
 
                 if (string.Equals(objectNameStr, objectName, StringComparison.OrdinalIgnoreCase))
                 {
@@ -313,8 +313,8 @@ namespace eft_dma_radar
 
             if (lastObject.obj != 0x0)
             {
-                ulong objectNamePtr = Memory.ReadPtr(lastObject.obj + Offsets.GameObject.ObjectName);
-                string objectNameStr = Memory.ReadString(objectNamePtr, 64);
+                var objectNamePtr = Memory.ReadPtr(lastObject.obj + Offsets.GameObject.ObjectName);
+                var objectNameStr = Memory.ReadString(objectNamePtr, 64);
 
                 if (string.Equals(objectNameStr, objectName, StringComparison.OrdinalIgnoreCase))
                 {

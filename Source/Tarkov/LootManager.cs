@@ -377,7 +377,7 @@ namespace eft_dma_radar
 
                 var position = vRound8.AddEntry<ulong>(i, 24, transformTwo, null, Offsets.LootGameObjectClass.To_TransformInternal[2]);
 
-                var corpsePlayerProfileIDPtr = vRound3.AddEntry<ulong>(i, 25, interactiveClass, null, Offsets.LootInteractiveClass.PlayerProfileID);
+                var corpsePlayerProfileIDPtr = vRound3.AddEntry<ulong>(i, 25, interactiveClass, null, Offsets.ObservedCorpse.PlayerProfileID);
             }
 
             validScatterMap.Execute();

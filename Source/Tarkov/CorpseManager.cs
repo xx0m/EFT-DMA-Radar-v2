@@ -69,7 +69,7 @@ namespace eft_dma_radar
                         //var corpseItemInHandsPtr = Memory.ReadPtr(corpseBase + 0x130);
                         try
                         {
-                            var corpsePlayerProfileIDPtr = Memory.ReadPtr(corpseBase + 0x140);
+                            var corpsePlayerProfileIDPtr = Memory.ReadPtr(corpseBase + Offsets.ObservedCorpse.PlayerProfileID);
                             var corpsePlayerProfileID = Memory.ReadUnityString(corpsePlayerProfileIDPtr);
                             var posAddr = Memory.ReadPtrChain(corpseBase, Offsets.GameObject.To_TransformInternal);
                             var position = new Transform(posAddr, false).GetPosition();

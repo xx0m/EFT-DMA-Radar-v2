@@ -734,11 +734,12 @@ namespace eft_dma_radar
             this.InventorySlots = inventorySlots;
             this._gearManager = new GearManager(this.InventorySlots);
             this.TransformInternal = transformInternal;
-            this._transform = new Transform(this.TransformInternal, true);
             this.PlayerBody = playerBody;
             this.Name = Memory.ReadUnityString(name);
             this.Name = Helpers.TransliterateCyrillic(this.Name);
             this.PlayerSide = playerSide;
+
+            this._transform = new Transform(this.TransformInternal, true);
 
             if (groupID != 0)
             {
