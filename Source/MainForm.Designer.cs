@@ -3699,7 +3699,7 @@
             sldrXFactor.Size = new Size(185, 40);
             sldrXFactor.TabIndex = 49;
             sldrXFactor.Text = "X";
-            toolTip.SetToolTip(sldrXFactor, "Remove % of X recoil");
+            toolTip.SetToolTip(sldrXFactor, "% of X recoil");
             sldrXFactor.UseAccentColor = true;
             sldrXFactor.ValueMax = 100;
             sldrXFactor.ValueSuffix = "%";
@@ -3732,7 +3732,7 @@
             sldrSwayFactor.Size = new Size(214, 40);
             sldrSwayFactor.TabIndex = 51;
             sldrSwayFactor.Text = "Factor";
-            toolTip.SetToolTip(sldrSwayFactor, "Remove % of weapon sway");
+            toolTip.SetToolTip(sldrSwayFactor, "% of weapon sway");
             sldrSwayFactor.UseAccentColor = true;
             sldrSwayFactor.ValueMax = 100;
             sldrSwayFactor.ValueSuffix = "%";
@@ -3748,7 +3748,7 @@
             sldrYFactor.Size = new Size(185, 40);
             sldrYFactor.TabIndex = 52;
             sldrYFactor.Text = "Y";
-            toolTip.SetToolTip(sldrYFactor, "Remove % of Y recoil");
+            toolTip.SetToolTip(sldrYFactor, "% of Y recoil");
             sldrYFactor.UseAccentColor = true;
             sldrYFactor.ValueMax = 100;
             sldrYFactor.ValueSuffix = "%";
