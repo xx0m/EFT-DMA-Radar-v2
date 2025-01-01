@@ -19,6 +19,8 @@ namespace eft_dma_radar
         private ulong _playerProfile;
         private ulong _proceduralWeaponAnimation;
         private ulong _breathEffector;
+        private ulong _shotEffector;
+        private ulong _newShotRecoil;
         private ulong _firmarmController;
         private ulong _skillsManager;
         private ulong _stamina;
@@ -34,9 +36,11 @@ namespace eft_dma_radar
         private float _overweight;
         private string _lastWeaponID;
         private float _breathIntensity;
+        private Vector3 _recoilIntensity;
 
         private Vector3 THIRD_PERSON_ON = new Vector3(0.04f, 0.14f, -2.2f);
         private Vector3 THIRD_PERSON_OFF = new Vector3(0.04f, 0.04f, 0.05f);
+        private Vector3 DEFAULT_RECOIL = new Vector3(1, 1, 1);
 
         public bool UpdateLootThroughWallsDistance { get; set; } = false;
 
@@ -218,6 +222,7 @@ namespace eft_dma_radar
             var round3 = scatterMap.AddRound();
             var round4 = scatterMap.AddRound();
             var round5 = scatterMap.AddRound();
+            var round6 = scatterMap.AddRound();
 
             var playerBasePtr = round1.AddEntry<ulong>(0, 0, localGameWorld, null, Offsets.LocalGameWorld.MainPlayer);
 
@@ -230,10 +235,12 @@ namespace eft_dma_radar
             var handsStaminaPtr = round3.AddEntry<ulong>(0, 7, physicalPtr, null, Offsets.Physical.HandsStamina);
             var handsContainerPtr = round3.AddEntry<ulong>(0, 8, proceduralWeaponAnimationPtr, null, Offsets.ProceduralWeaponAnimation.HandsContainer);
             var breathEffectorPtr = round3.AddEntry<ulong>(0, 9, proceduralWeaponAnimationPtr, null, Offsets.ProceduralWeaponAnimation.Breath);
+            var shotEffectorPtr = round3.AddEntry<ulong>(0, 10, proceduralWeaponAnimationPtr, null, Offsets.ProceduralWeaponAnimation.Shooting);
+            var newShotRecoilPtr = round4.AddEntry<ulong>(0, 11, shotEffectorPtr, null, Offsets.ShotEffector.NewShotRecoil);
 
-            var startingIndex = 10; // last scattermap index + 1
+            var startingIndex = 12; // last scattermap index + 1
 
-            SetupOriginalSkillValues(startingIndex, skillsManagerPtr, ref round4, ref round5);
+            this.SetupOriginalSkillValues(startingIndex, skillsManagerPtr, ref round5, ref round6);
 
             scatterMap.Execute();
 
@@ -257,6 +264,10 @@ namespace eft_dma_radar
                 return;
             if (!scatterMap.Results[0][9].TryGetResult<ulong>(out var breathEffector))
                 return;
+            if (!scatterMap.Results[0][10].TryGetResult<ulong>(out var shotEffector))
+                return;
+            if (!scatterMap.Results[0][11].TryGetResult<ulong>(out var newShotRecoil))
+                return;
 
             this._playerBase = playerBase;
             this._playerProfile = playerProfile;
@@ -268,20 +279,22 @@ namespace eft_dma_radar
             this._proceduralWeaponAnimation = proceduralWeaponAnimation;
             this._handsContainer = handsContainer;
             this._breathEffector = breathEffector;
+            this._shotEffector = shotEffector;
+            this._newShotRecoil = newShotRecoil;
 
             this.UpdateVariables();
 
             this.ProcessOriginalSkillValues(startingIndex, ref scatterMap);
         }
 
-        public void SetNoRecoil(bool on, ref List<IScatterWriteEntry> entries)
+        public void SetRecoil(bool on, float xIntensity, float yIntensity, ref List<IScatterWriteEntry> entries)
         {
             try
             {
-                if (on && this._mask != 1)
-                    entries.Add(new ScatterWriteDataEntry<int>(this._proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.Mask, 1));
-                else if (!on && this._mask == 1)
-                    entries.Add(new ScatterWriteDataEntry<int>(this._proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.Mask, (int)this.OriginalValues["Mask"]));
+                if (on && (this._recoilIntensity[0] != xIntensity || this._recoilIntensity[1] != yIntensity))
+                    entries.Add(new ScatterWriteDataEntry<Vector3>(this._newShotRecoil + Offsets.NewRecoilShotEffect.IntensitySeparateFactors, new Vector3(xIntensity, yIntensity, 1)));
+                else if (!on && this._recoilIntensity != DEFAULT_RECOIL)
+                    entries.Add(new ScatterWriteDataEntry<Vector3>(this._newShotRecoil + Offsets.NewRecoilShotEffect.IntensitySeparateFactors, DEFAULT_RECOIL));
             }
             catch (Exception ex)
             {
@@ -289,12 +302,12 @@ namespace eft_dma_radar
             }
         }
 
-        public void SetNoSway(bool on, ref List<IScatterWriteEntry> entries)
+        public void SetWeaponSway(bool on, float intensity, ref List<IScatterWriteEntry> entries)
         {
             try
             {
-                if (on && this._breathIntensity != 0f)
-                    entries.Add(new ScatterWriteDataEntry<float>(this._breathEffector + Offsets.BreathEffector.Intensity, 0f));
+                if (on && this._breathIntensity != intensity)
+                    entries.Add(new ScatterWriteDataEntry<float>(this._breathEffector + Offsets.BreathEffector.Intensity, intensity));
             }
             catch (Exception ex)
             {
@@ -498,15 +511,16 @@ namespace eft_dma_radar
             var overweightPtr = round1.AddEntry<float>(0, 8, this._physical, null, Offsets.Physical.Overweight);
             var breathIntensityPtr = round1.AddEntry<float>(0, 9, this._breathEffector, null, Offsets.BreathEffector.Intensity);
 
-            var currentItemPtr = round2.AddEntry<ulong>(0, 10, handsControllerPtr, null, Offsets.HandsController.Item);
-            var weaponLnPtr = round2.AddEntry<float>(0, 11, firearmControllerPtr, null, Offsets.FirearmController.WeaponLn);
-            var animationStatePtr = round2.AddEntry<byte>(0, 12, baseMovementStatePtr, null, Offsets.BaseMovementState.Name);
+            var currentItemPtr = round2.AddEntry<ulong>(0, 11, handsControllerPtr, null, Offsets.HandsController.Item);
+            var weaponLnPtr = round2.AddEntry<float>(0, 12, firearmControllerPtr, null, Offsets.FirearmController.WeaponLn);
+            var animationStatePtr = round2.AddEntry<byte>(0, 13, baseMovementStatePtr, null, Offsets.BaseMovementState.Name);
+            var intensitySeparateFactorsPtr = round2.AddEntry<Vector3>(0, 14, this._newShotRecoil, null, Offsets.NewRecoilShotEffect.IntensitySeparateFactors);
 
-            var currentItemTemplatePtr = round3.AddEntry<ulong>(0, 13, currentItemPtr, null, Offsets.Item.Template);
+            var currentItemTemplatePtr = round3.AddEntry<ulong>(0, 15, currentItemPtr, null, Offsets.Item.Template);
 
-            var currentItemMongoIDPtr = round4.AddEntry<ulong>(0, 14, currentItemTemplatePtr, null, Offsets.ItemTemplate.MongoID);
+            var currentItemMongoIDPtr = round4.AddEntry<ulong>(0, 16, currentItemTemplatePtr, null, Offsets.ItemTemplate.MongoID);
 
-            var currentItemIDPtr = round5.AddEntry<ulong>(0, 15, currentItemTemplatePtr, null, Offsets.MongoID.ID);
+            var currentItemIDPtr = round5.AddEntry<ulong>(0, 17, currentItemTemplatePtr, null, Offsets.MongoID.ID);
 
             scatterMap.Execute();
 
@@ -528,15 +542,17 @@ namespace eft_dma_radar
                 return;
             if (!scatterMap.Results[0][9].TryGetResult<float>(out var breathIntensity))
                 return;
-            if (!scatterMap.Results[0][10].TryGetResult<ulong>(out var currentItem))
+            if (!scatterMap.Results[0][11].TryGetResult<ulong>(out var currentItem))
                 return;
-            if (!scatterMap.Results[0][11].TryGetResult<float>(out var weaponLn))
+            if (!scatterMap.Results[0][12].TryGetResult<float>(out var weaponLn))
                 return;
-            if (!scatterMap.Results[0][12].TryGetResult<byte>(out var animationState))
+            if (!scatterMap.Results[0][13].TryGetResult<byte>(out var animationState))
                 return;
-            if (!scatterMap.Results[0][13].TryGetResult<ulong>(out var currentItemTemplate))
+            if (!scatterMap.Results[0][14].TryGetResult<Vector3>(out var intensitySeparateFactors))
                 return;
-            if (!scatterMap.Results[0][15].TryGetResult<ulong>(out var currentItemId))
+            if (!scatterMap.Results[0][15].TryGetResult<ulong>(out var currentItemTemplate))
+                return;
+            if (!scatterMap.Results[0][16].TryGetResult<ulong>(out var currentItemId))
                 return;
 
             this._baseMovementState = baseMovementState;
@@ -552,6 +568,7 @@ namespace eft_dma_radar
             this._weaponLn = weaponLn;
             this._overweight = overweight;
             this._breathIntensity = breathIntensity;
+            this._recoilIntensity = intensitySeparateFactors;
 
             if (this.OriginalValues["weaponLn"] == -1f)
                 this.OriginalValues["weaponLn"] = this._weaponLn;

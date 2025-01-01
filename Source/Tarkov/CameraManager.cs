@@ -7,11 +7,13 @@ namespace eft_dma_radar
         private ulong visorComponent;
         private ulong nvgComponent;
         private ulong thermalComponent;
+        private ulong frostBiteComponent;
         private ulong opticThermalComponent;
         private ulong inventoryBlurComponent;
 
         private bool nvgComponentFound = false;
         private bool visorComponentFound = false;
+        private bool frostBiteComponentFound = false;
         private bool fpsThermalComponentFound = false;
         private bool opticThermalComponentFound = false;
         private bool inventoryBlurCompontentFound = false;
@@ -36,6 +38,11 @@ namespace eft_dma_radar
         public ulong ThermalComponent
         {
             get => this.thermalComponent;
+        }
+
+        public ulong FrostbiteComponent
+        {
+            get => this.frostBiteComponent;
         }
 
         public ulong FPSCamera
@@ -123,6 +130,12 @@ namespace eft_dma_radar
                         this.fpsThermalComponentFound = this.thermalComponent != 0;
                     }
 
+                    if (!this.frostBiteComponentFound)
+                    {
+                        this.frostBiteComponent = this.GetComponentFromGameObject(this._fpsCamera, "FrostBiteEffect");
+                        this.frostBiteComponentFound = this.frostBiteComponent != 0;
+                    }
+
                     if (!this.fovPtrFound)
                     {
                         this._fovPtr = Memory.ReadPtrChain(this._fpsCamera, [0x30, 0x18]);
@@ -135,7 +148,7 @@ namespace eft_dma_radar
                         this.inventoryBlurCompontentFound = this.inventoryBlurComponent != 0;
                     }
 
-                    foundFPSCamera = this.nvgComponentFound && this.visorComponentFound && this.fpsThermalComponentFound;
+                    foundFPSCamera = this.nvgComponentFound && this.visorComponentFound && this.fpsThermalComponentFound && this.frostBiteComponentFound;
                 }
 
                 if (foundFPSCamera && foundOpticCamera)
@@ -286,11 +299,33 @@ namespace eft_dma_radar
                 var visorDown = intensity == 1.0f;
 
                 if (state == visorDown)
-                    entries.Add(new ScatterWriteDataEntry<float>(this.visorComponent + Offsets.VisorEffect.Intensity, state ? 0.0f : 1.0f));
+                    entries.Add(new ScatterWriteDataEntry<float>(this.visorComponent + Offsets.VisorEffect.Intensity, state ? 0f : 1.0f));
             }
             catch (Exception ex)
             {
                 Program.Log($"CameraManager - (VisorEffect) {ex.Message}\n{ex.StackTrace}");
+            }
+        }
+
+        /// <summary>
+        /// public function to turn frostbite on and off
+        /// </summary>
+        public void FrostBite(bool state, ref List<IScatterWriteEntry> entries)
+        {
+            if (!this.IsReady)
+                return;
+
+            try
+            {
+                var opacity = Memory.ReadValue<float>(this.frostBiteComponent + Offsets.FrostbiteEffect.Opacity);
+                var frostBite = opacity == 0.75f;
+
+                if (state == frostBite)
+                    entries.Add(new ScatterWriteDataEntry<float>(this.frostBiteComponent + Offsets.FrostbiteEffect.Opacity, state ? 0f : 0.75f));
+            }
+            catch (Exception ex)
+            {
+                Program.Log($"CameraManager - (FrostBite) {ex.Message}\n{ex.StackTrace}");
             }
         }
 

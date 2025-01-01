@@ -102,15 +102,15 @@ namespace eft_dma_radar
         {
             "Chams",
             "Important Loot",
-            "No Recoil",
-            "No Sway",
             "Optical Thermal",
+            "Recoil",
             "Show Containers",
             "Show Corpses",
             "Show Loot",
             "Thirdperson",
             "Thermal Vision",
             "Time Scale",
+            "Weapon Sway",
             "Zoom In",
             "Zoom Out"
         };
@@ -608,15 +608,15 @@ namespace eft_dma_radar
             {
                 { HotkeyAction.Chams, this.SetChams },
                 { HotkeyAction.ImportantLoot, this.SetImportantLootOnly },
-                { HotkeyAction.NoRecoil, this.SetNoRecoil },
-                { HotkeyAction.NoSway, this.SetNoSway },
                 { HotkeyAction.OpticalThermal, this.SetOpticalThermal },
+                { HotkeyAction.Recoil, this.SetRecoil },
                 { HotkeyAction.ShowContainers, this.SetShowContainers },
                 { HotkeyAction.ShowCorpses, this.SetShowCorpses },
                 { HotkeyAction.ShowLoot, this.SetShowLoot },
                 { HotkeyAction.Thirdperson, this.SetThirdperson },
                 { HotkeyAction.ThermalVision, this.SetThermalVision },
-                { HotkeyAction.TimeScale, this.SetTimescale }
+                { HotkeyAction.TimeScale, this.SetTimescale },
+                { HotkeyAction.WeaponSway, this.SetWeaponSway },
             };
         }
 
@@ -730,10 +730,17 @@ namespace eft_dma_radar
 
             // Gear Features
             mcSettingsMemoryWritingGear.Enabled = this.config.MasterSwitch;
-            swNoRecoil.Checked = this.config.NoRecoil;
-            swNoSway.Checked = this.config.NoSway;
+            swRecoil.Checked = this.config.Recoil;
+            swWeaponSway.Checked = this.config.WeaponSway;
+            sldrXFactor.Enabled = this.config.Recoil;
+            sldrXFactor.Value = (int)Math.Round(this.config.RecoilXPercent * 100);
+            sldrYFactor.Enabled = this.config.Recoil;
+            sldrYFactor.Value = (int)Math.Round(this.config.RecoilXPercent * 100);
+            sldrSwayFactor.Enabled = this.config.WeaponSway;
+            sldrSwayFactor.Value = (int)Math.Round(this.config.WeaponSwayPercent * 100);
             swInstantADS.Checked = this.config.InstantADS;
             swNoVisor.Checked = this.config.NoVisor;
+            swFrostBite.Checked = this.config.FrostBite;
             swThermalVision.Checked = this.config.ThermalVision;
             swOpticalThermal.Checked = this.config.OpticThermalVision;
             swNightVision.Checked = this.config.NightVision;
@@ -3108,16 +3115,16 @@ namespace eft_dma_radar
             swFilteredOnly.Checked = enabled;
         }
 
-        private void SetNoRecoil(bool enabled)
+        private void SetRecoil(bool enabled)
         {
-            this.config.NoRecoil = enabled;
-            swNoRecoil.Checked = enabled;
+            this.config.Recoil = enabled;
+            swRecoil.Checked = enabled;
         }
 
-        private void SetNoSway(bool enabled)
+        private void SetWeaponSway(bool enabled)
         {
-            this.config.NoSway = enabled;
-            swNoSway.Checked = enabled;
+            this.config.WeaponSway = enabled;
+            swWeaponSway.Checked = enabled;
         }
 
         private void SetOpticalThermal(bool enabled)
@@ -3527,14 +3534,37 @@ namespace eft_dma_radar
             this.config.MedInfoPanel = swMedPanel.Checked;
         }
 
-        private void swNoRecoil_CheckedChanged(object sender, EventArgs e)
+        private void swRecoil_CheckedChanged(object sender, EventArgs e)
         {
-            this.config.NoRecoil = swNoRecoil.Checked;
+            var enabled = swRecoil.Checked;
+            this.config.Recoil = enabled;
+            sldrXFactor.Enabled = enabled;
+            sldrYFactor.Enabled = enabled;
         }
 
-        private void swNoSway_CheckedChanged(object sender, EventArgs e)
+        private void swWeaponSway_CheckedChanged(object sender, EventArgs e)
         {
-            this.config.NoSway = swNoRecoil.Checked;
+            var enabled = swWeaponSway.Checked;
+            this.config.WeaponSway = enabled;
+            sldrSwayFactor.Enabled = enabled;
+        }
+
+        private void sldrXFactor_onValueChanged(object sender, int newValue)
+        {
+            var newPercent = (float)newValue / 100;
+            this.config.RecoilXPercent = newPercent;
+        }
+
+        private void sldrYFactor_onValueChanged(object sender, int newValue)
+        {
+            var newPercent = (float)newValue / 100;
+            this.config.RecoilYPercent = newPercent;
+        }
+
+        private void sldrWeaponSway_onValueChanged(object sender, int newValue)
+        {
+            var newPercent = (float)newValue / 100;
+            this.config.WeaponSwayPercent = newPercent;
         }
 
         private void swInstantADS_CheckedChanged(object sender, EventArgs e)
@@ -3545,6 +3575,11 @@ namespace eft_dma_radar
         private void swNoVisor_CheckedChanged(object sender, EventArgs e)
         {
             this.config.NoVisor = swNoVisor.Checked;
+        }
+
+        private void swFrostBite_CheckedChanged(object sender, EventArgs e)
+        {
+            this.config.FrostBite = swFrostBite.Checked;
         }
 
         private void swThermalVision_CheckedChanged(object sender, EventArgs e)

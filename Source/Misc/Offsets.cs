@@ -314,6 +314,11 @@
         public const uint Item = 0x58; // [58] item_0x58 : EFT.InventoryLogic.Item
     }
 
+    public struct ShotEffector
+    {
+        public const uint NewShotRecoil = 0x18; // [18] NewShotRecoil : EFT.Animations.NewRecoil.NewRecoilShotEffect
+    }
+
     public struct BreathEffector
     {
         public const uint Intensity = 0xA4; // [A4] Intensity : Single
@@ -332,6 +337,11 @@
     public struct ForceEffector
     {
         public const uint Intensity = 0x30; // [30] Intensity : Single
+    }
+
+    public struct NewRecoilShotEffect
+    {
+        public const uint IntensitySeparateFactors = 0x94; // [94] IntensitySeparateFactors : UnityEngine.Vector3
     }
 
     public struct ThermalVision
@@ -374,6 +384,11 @@
     public struct VisorEffect
     {
         public const uint Intensity = 0xC8; // [C8] Intensity : Single
+    }
+
+    public struct FrostbiteEffect
+    {
+        public const uint Opacity = 0x64; // [64] _opacity : Single
     }
 
     public struct InventoryBlur

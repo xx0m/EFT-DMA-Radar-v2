@@ -17,6 +17,7 @@ namespace eft_dma_radar
         
         private bool thermalVision = false;
         private bool nightVision = false;
+        private bool frostBite = false;
 
         private bool thirdperson = false;
 
@@ -234,8 +235,8 @@ namespace eft_dma_radar
                     this._playerManager.UpdateVariables();
 
                     // No Recoil / Sway
-                    this._playerManager.SetNoRecoil(this._config.NoRecoil, ref entries);
-                    this._playerManager.SetNoSway(this._config.NoSway, ref entries);
+                    this._playerManager.SetRecoil(this._config.Recoil, this._config.RecoilXPercent, this._config.RecoilYPercent, ref entries);
+                    this._playerManager.SetWeaponSway(this._config.WeaponSway, this._config.WeaponSwayPercent, ref entries);
 
                     // Instant ADS
                     this._playerManager.SetInstantADS(this._config.InstantADS, ref entries);
@@ -458,6 +459,12 @@ namespace eft_dma_radar
                             {
                                 this._cameraManager.OpticThermalVision(false, ref entries);
                             }
+                        }
+
+                        if (this._config.FrostBite != this.frostBite)
+                        {
+                            this.frostBite = this._config.FrostBite;
+                            this._cameraManager.FrostBite(this.frostBite, ref entries);
                         }
 
                         // Night Vision

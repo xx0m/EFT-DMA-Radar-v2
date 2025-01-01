@@ -51,7 +51,7 @@
             sldrMagDrillsSpeed = new MaterialSkin.Controls.MaterialSlider();
             swNoVisor = new MaterialSkin.Controls.MaterialSwitch();
             swInstantADS = new MaterialSkin.Controls.MaterialSwitch();
-            swNoRecoil = new MaterialSkin.Controls.MaterialSwitch();
+            swRecoil = new MaterialSkin.Controls.MaterialSwitch();
             cboThermalColorScheme = new MaterialSkin.Controls.MaterialComboBox();
             cboThermalType = new MaterialSkin.Controls.MaterialComboBox();
             sldrMinCorpse = new MaterialSkin.Controls.MaterialSlider();
@@ -189,9 +189,13 @@
             btnRemoveHotkey = new MaterialSkin.Controls.MaterialButton();
             rdbToggleKey = new MaterialSkin.Controls.MaterialRadioButton();
             rdbOnKey = new MaterialSkin.Controls.MaterialRadioButton();
-            swNoSway = new MaterialSkin.Controls.MaterialSwitch();
+            swWeaponSway = new MaterialSkin.Controls.MaterialSwitch();
             cboHotkeyKey = new MaterialSkin.Controls.MaterialComboBox();
             swChamsEvent = new MaterialSkin.Controls.MaterialSwitch();
+            sldrXFactor = new MaterialSkin.Controls.MaterialSlider();
+            swFrostBite = new MaterialSkin.Controls.MaterialSwitch();
+            sldrSwayFactor = new MaterialSkin.Controls.MaterialSlider();
+            sldrYFactor = new MaterialSkin.Controls.MaterialSlider();
             sldrThermalColorCoefficient = new MaterialSkin.Controls.MaterialSlider();
             sldrMinTemperature = new MaterialSkin.Controls.MaterialSlider();
             sldrThermalRampShift = new MaterialSkin.Controls.MaterialSlider();
@@ -750,7 +754,7 @@
             // 
             swNightVision.Depth = 0;
             swNightVision.Font = new Font("Segoe UI", 9F);
-            swNightVision.Location = new Point(381, 85);
+            swNightVision.Location = new Point(388, 155);
             swNightVision.Margin = new Padding(0);
             swNightVision.MouseLocation = new Point(-1, -1);
             swNightVision.MouseState = MaterialSkin.MouseState.HOVER;
@@ -767,7 +771,7 @@
             // 
             swOpticalThermal.Depth = 0;
             swOpticalThermal.Font = new Font("Segoe UI", 9F);
-            swOpticalThermal.Location = new Point(194, 85);
+            swOpticalThermal.Location = new Point(201, 155);
             swOpticalThermal.Margin = new Padding(0);
             swOpticalThermal.MouseLocation = new Point(-1, -1);
             swOpticalThermal.MouseState = MaterialSkin.MouseState.HOVER;
@@ -784,7 +788,7 @@
             // 
             swThermalVision.Depth = 0;
             swThermalVision.Font = new Font("Segoe UI", 9F);
-            swThermalVision.Location = new Point(15, 85);
+            swThermalVision.Location = new Point(22, 155);
             swThermalVision.Margin = new Padding(0);
             swThermalVision.MouseLocation = new Point(-1, -1);
             swThermalVision.MouseState = MaterialSkin.MouseState.HOVER;
@@ -819,7 +823,7 @@
             // 
             swNoVisor.Depth = 0;
             swNoVisor.Font = new Font("Segoe UI", 9F);
-            swNoVisor.Location = new Point(408, 125);
+            swNoVisor.Location = new Point(388, 118);
             swNoVisor.Margin = new Padding(0);
             swNoVisor.MouseLocation = new Point(-1, -1);
             swNoVisor.MouseState = MaterialSkin.MouseState.HOVER;
@@ -836,7 +840,7 @@
             // 
             swInstantADS.Depth = 0;
             swInstantADS.Font = new Font("Segoe UI", 9F);
-            swInstantADS.Location = new Point(381, 46);
+            swInstantADS.Location = new Point(23, 118);
             swInstantADS.Margin = new Padding(0);
             swInstantADS.MouseLocation = new Point(-1, -1);
             swInstantADS.MouseState = MaterialSkin.MouseState.HOVER;
@@ -849,22 +853,22 @@
             swInstantADS.UseVisualStyleBackColor = true;
             swInstantADS.CheckedChanged += swInstantADS_CheckedChanged;
             // 
-            // swNoRecoil
+            // swRecoil
             // 
-            swNoRecoil.Depth = 0;
-            swNoRecoil.Font = new Font("Segoe UI", 9F);
-            swNoRecoil.Location = new Point(15, 45);
-            swNoRecoil.Margin = new Padding(0);
-            swNoRecoil.MouseLocation = new Point(-1, -1);
-            swNoRecoil.MouseState = MaterialSkin.MouseState.HOVER;
-            swNoRecoil.Name = "swNoRecoil";
-            swNoRecoil.Ripple = true;
-            swNoRecoil.Size = new Size(130, 28);
-            swNoRecoil.TabIndex = 1;
-            swNoRecoil.Text = "No Recoil";
-            toolTip.SetToolTip(swNoRecoil, "Removes weapon recoil");
-            swNoRecoil.UseVisualStyleBackColor = true;
-            swNoRecoil.CheckedChanged += swNoRecoil_CheckedChanged;
+            swRecoil.Depth = 0;
+            swRecoil.Font = new Font("Segoe UI", 9F);
+            swRecoil.Location = new Point(23, 41);
+            swRecoil.Margin = new Padding(0);
+            swRecoil.MouseLocation = new Point(-1, -1);
+            swRecoil.MouseState = MaterialSkin.MouseState.HOVER;
+            swRecoil.Name = "swRecoil";
+            swRecoil.Ripple = true;
+            swRecoil.Size = new Size(103, 28);
+            swRecoil.TabIndex = 1;
+            swRecoil.Text = "Recoil";
+            toolTip.SetToolTip(swRecoil, "Removes weapon recoil");
+            swRecoil.UseVisualStyleBackColor = true;
+            swRecoil.CheckedChanged += swRecoil_CheckedChanged;
             // 
             // cboThermalColorScheme
             // 
@@ -2773,15 +2777,15 @@
             // 
             swNoWeaponMalfunctions.Depth = 0;
             swNoWeaponMalfunctions.Font = new Font("Segoe UI", 9F);
-            swNoWeaponMalfunctions.Location = new Point(15, 125);
+            swNoWeaponMalfunctions.Location = new Point(201, 195);
             swNoWeaponMalfunctions.Margin = new Padding(0);
             swNoWeaponMalfunctions.MouseLocation = new Point(-1, -1);
             swNoWeaponMalfunctions.MouseState = MaterialSkin.MouseState.HOVER;
             swNoWeaponMalfunctions.Name = "swNoWeaponMalfunctions";
             swNoWeaponMalfunctions.Ripple = true;
-            swNoWeaponMalfunctions.Size = new Size(244, 28);
+            swNoWeaponMalfunctions.Size = new Size(179, 28);
             swNoWeaponMalfunctions.TabIndex = 37;
-            swNoWeaponMalfunctions.Text = "No Weapon Malfunctions";
+            swNoWeaponMalfunctions.Text = "No Malfunctions";
             toolTip.SetToolTip(swNoWeaponMalfunctions, "Removes misfiring, failure to eject/feed, jammed bolts & overheating");
             swNoWeaponMalfunctions.UseVisualStyleBackColor = true;
             swNoWeaponMalfunctions.CheckedChanged += swNoWeaponMalfunctions_CheckedChanged;
@@ -3437,7 +3441,7 @@
             // 
             swJuggernaut.Depth = 0;
             swJuggernaut.Font = new Font("Segoe UI", 9F);
-            swJuggernaut.Location = new Point(262, 125);
+            swJuggernaut.Location = new Point(23, 195);
             swJuggernaut.Margin = new Padding(0);
             swJuggernaut.MouseLocation = new Point(-1, -1);
             swJuggernaut.MouseState = MaterialSkin.MouseState.HOVER;
@@ -3625,22 +3629,22 @@
             rdbOnKey.UseVisualStyleBackColor = true;
             rdbOnKey.CheckedChanged += rdbOnKey_CheckedChanged;
             // 
-            // swNoSway
+            // swWeaponSway
             // 
-            swNoSway.Depth = 0;
-            swNoSway.Font = new Font("Segoe UI", 9F);
-            swNoSway.Location = new Point(194, 46);
-            swNoSway.Margin = new Padding(0);
-            swNoSway.MouseLocation = new Point(-1, -1);
-            swNoSway.MouseState = MaterialSkin.MouseState.HOVER;
-            swNoSway.Name = "swNoSway";
-            swNoSway.Ripple = true;
-            swNoSway.Size = new Size(130, 28);
-            swNoSway.TabIndex = 49;
-            swNoSway.Text = "No Sway";
-            toolTip.SetToolTip(swNoSway, "Removes weapon sway");
-            swNoSway.UseVisualStyleBackColor = true;
-            swNoSway.CheckedChanged += swNoSway_CheckedChanged;
+            swWeaponSway.Depth = 0;
+            swWeaponSway.Font = new Font("Segoe UI", 9F);
+            swWeaponSway.Location = new Point(22, 78);
+            swWeaponSway.Margin = new Padding(0);
+            swWeaponSway.MouseLocation = new Point(-1, -1);
+            swWeaponSway.MouseState = MaterialSkin.MouseState.HOVER;
+            swWeaponSway.Name = "swWeaponSway";
+            swWeaponSway.Ripple = true;
+            swWeaponSway.Size = new Size(162, 28);
+            swWeaponSway.TabIndex = 49;
+            swWeaponSway.Text = "Weapon Sway";
+            toolTip.SetToolTip(swWeaponSway, "Removes weapon sway");
+            swWeaponSway.UseVisualStyleBackColor = true;
+            swWeaponSway.CheckedChanged += swWeaponSway_CheckedChanged;
             // 
             // cboHotkeyKey
             // 
@@ -3684,6 +3688,71 @@
             toolTip.SetToolTip(swChamsEvent, "Shows event/temporary AI through walls");
             swChamsEvent.UseVisualStyleBackColor = true;
             swChamsEvent.CheckedChanged += swChamsEvent_CheckedChanged;
+            // 
+            // sldrXFactor
+            // 
+            sldrXFactor.Depth = 0;
+            sldrXFactor.ForeColor = Color.Black;
+            sldrXFactor.Location = new Point(134, 36);
+            sldrXFactor.MouseState = MaterialSkin.MouseState.HOVER;
+            sldrXFactor.Name = "sldrXFactor";
+            sldrXFactor.Size = new Size(185, 40);
+            sldrXFactor.TabIndex = 49;
+            sldrXFactor.Text = "X";
+            toolTip.SetToolTip(sldrXFactor, "Remove % of X recoil");
+            sldrXFactor.UseAccentColor = true;
+            sldrXFactor.ValueMax = 100;
+            sldrXFactor.ValueSuffix = "%";
+            sldrXFactor.onValueChanged += sldrXFactor_onValueChanged;
+            // 
+            // swFrostBite
+            // 
+            swFrostBite.Depth = 0;
+            swFrostBite.Font = new Font("Segoe UI", 9F);
+            swFrostBite.Location = new Point(201, 118);
+            swFrostBite.Margin = new Padding(0);
+            swFrostBite.MouseLocation = new Point(-1, -1);
+            swFrostBite.MouseState = MaterialSkin.MouseState.HOVER;
+            swFrostBite.Name = "swFrostBite";
+            swFrostBite.Ripple = true;
+            swFrostBite.Size = new Size(130, 28);
+            swFrostBite.TabIndex = 50;
+            swFrostBite.Text = "No Frost";
+            toolTip.SetToolTip(swFrostBite, "Removes visual frost bite effect");
+            swFrostBite.UseVisualStyleBackColor = true;
+            swFrostBite.CheckedChanged += swFrostBite_CheckedChanged;
+            // 
+            // sldrSwayFactor
+            // 
+            sldrSwayFactor.Depth = 0;
+            sldrSwayFactor.ForeColor = Color.Black;
+            sldrSwayFactor.Location = new Point(205, 74);
+            sldrSwayFactor.MouseState = MaterialSkin.MouseState.HOVER;
+            sldrSwayFactor.Name = "sldrSwayFactor";
+            sldrSwayFactor.Size = new Size(214, 40);
+            sldrSwayFactor.TabIndex = 51;
+            sldrSwayFactor.Text = "Factor";
+            toolTip.SetToolTip(sldrSwayFactor, "Remove % of weapon sway");
+            sldrSwayFactor.UseAccentColor = true;
+            sldrSwayFactor.ValueMax = 100;
+            sldrSwayFactor.ValueSuffix = "%";
+            sldrSwayFactor.onValueChanged += sldrWeaponSway_onValueChanged;
+            // 
+            // sldrYFactor
+            // 
+            sldrYFactor.Depth = 0;
+            sldrYFactor.ForeColor = Color.Black;
+            sldrYFactor.Location = new Point(333, 36);
+            sldrYFactor.MouseState = MaterialSkin.MouseState.HOVER;
+            sldrYFactor.Name = "sldrYFactor";
+            sldrYFactor.Size = new Size(185, 40);
+            sldrYFactor.TabIndex = 52;
+            sldrYFactor.Text = "Y";
+            toolTip.SetToolTip(sldrYFactor, "Remove % of Y recoil");
+            sldrYFactor.UseAccentColor = true;
+            sldrYFactor.ValueMax = 100;
+            sldrYFactor.ValueSuffix = "%";
+            sldrYFactor.onValueChanged += sldrYFactor_onValueChanged;
             // 
             // sldrThermalColorCoefficient
             // 
@@ -4628,7 +4697,7 @@
             mcSettingsMemoryWritingThermal.Controls.Add(sldrThermalRampShift);
             mcSettingsMemoryWritingThermal.Depth = 0;
             mcSettingsMemoryWritingThermal.ForeColor = Color.FromArgb(222, 0, 0, 0);
-            mcSettingsMemoryWritingThermal.Location = new Point(14, 545);
+            mcSettingsMemoryWritingThermal.Location = new Point(14, 613);
             mcSettingsMemoryWritingThermal.Margin = new Padding(14);
             mcSettingsMemoryWritingThermal.MouseState = MaterialSkin.MouseState.HOVER;
             mcSettingsMemoryWritingThermal.Name = "mcSettingsMemoryWritingThermal";
@@ -4735,16 +4804,20 @@
             // mcSettingsMemoryWritingGear
             // 
             mcSettingsMemoryWritingGear.BackColor = Color.FromArgb(255, 255, 255);
-            mcSettingsMemoryWritingGear.Controls.Add(swNoSway);
+            mcSettingsMemoryWritingGear.Controls.Add(sldrYFactor);
+            mcSettingsMemoryWritingGear.Controls.Add(swWeaponSway);
+            mcSettingsMemoryWritingGear.Controls.Add(sldrSwayFactor);
+            mcSettingsMemoryWritingGear.Controls.Add(swFrostBite);
+            mcSettingsMemoryWritingGear.Controls.Add(sldrXFactor);
             mcSettingsMemoryWritingGear.Controls.Add(swNoWeaponMalfunctions);
             mcSettingsMemoryWritingGear.Controls.Add(swNightVision);
             mcSettingsMemoryWritingGear.Controls.Add(swJuggernaut);
             mcSettingsMemoryWritingGear.Controls.Add(swOpticalThermal);
+            mcSettingsMemoryWritingGear.Controls.Add(swRecoil);
             mcSettingsMemoryWritingGear.Controls.Add(swThermalVision);
             mcSettingsMemoryWritingGear.Controls.Add(lblSettingsMemoryWritingGear);
             mcSettingsMemoryWritingGear.Controls.Add(swNoVisor);
             mcSettingsMemoryWritingGear.Controls.Add(swInstantADS);
-            mcSettingsMemoryWritingGear.Controls.Add(swNoRecoil);
             mcSettingsMemoryWritingGear.Depth = 0;
             mcSettingsMemoryWritingGear.ForeColor = Color.FromArgb(222, 0, 0, 0);
             mcSettingsMemoryWritingGear.Location = new Point(14, 360);
@@ -4752,7 +4825,7 @@
             mcSettingsMemoryWritingGear.MouseState = MaterialSkin.MouseState.HOVER;
             mcSettingsMemoryWritingGear.Name = "mcSettingsMemoryWritingGear";
             mcSettingsMemoryWritingGear.Padding = new Padding(14);
-            mcSettingsMemoryWritingGear.Size = new Size(535, 170);
+            mcSettingsMemoryWritingGear.Size = new Size(535, 237);
             mcSettingsMemoryWritingGear.TabIndex = 39;
             // 
             // lblSettingsMemoryWritingGear
@@ -7092,7 +7165,7 @@
         private MaterialSkin.Controls.MaterialSlider sldrMagDrillsSpeed;
         private MaterialSkin.Controls.MaterialSwitch swNoVisor;
         private MaterialSkin.Controls.MaterialSwitch swInstantADS;
-        private MaterialSkin.Controls.MaterialSwitch swNoRecoil;
+        private MaterialSkin.Controls.MaterialSwitch swRecoil;
         private MaterialSkin.Controls.MaterialCard mcSettingsMemoryWritingSkillBuffs;
         private MaterialSkin.Controls.MaterialLabel lblSettingsMemoryWritingSkills;
         private MaterialSkin.Controls.MaterialCard mcSettingsLootMinRubleValue;
@@ -7418,7 +7491,7 @@
         private MaterialSkin.Controls.MaterialLabel materialLabel1;
         private MaterialSkin.Controls.MaterialRadioButton rdbToggleKey;
         private MaterialSkin.Controls.MaterialRadioButton rdbOnKey;
-        private MaterialSkin.Controls.MaterialSwitch swNoSway;
+        private MaterialSkin.Controls.MaterialSwitch swWeaponSway;
         private MaterialSkin.Controls.MaterialComboBox cboHotkeyKey;
         private PictureBox picTransitIcon;
         private MaterialSkin.Controls.MaterialLabel lblSettingsColorsTransitIcon;
@@ -7429,6 +7502,10 @@
         private MaterialSkin.Controls.MaterialSwitch swChamsEvent;
         private MaterialSkin.Controls.MaterialLabel lblRadarOtherValue;
         private MaterialSkin.Controls.MaterialLabel lblRadarOther;
+        private MaterialSkin.Controls.MaterialSlider sldrXFactor;
+        private MaterialSkin.Controls.MaterialSlider sldrSwayFactor;
+        private MaterialSkin.Controls.MaterialSwitch swFrostBite;
+        private MaterialSkin.Controls.MaterialSlider sldrYFactor;
     }
 }
 

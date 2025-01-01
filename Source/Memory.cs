@@ -703,6 +703,7 @@ namespace eft_dma_radar
                         IScatterWriteDataEntry<bool> boolEntry => scatter.PrepareWriteStruct(boolEntry.Address, boolEntry.Data),
                         IScatterWriteDataEntry<byte> byteEntry => scatter.PrepareWriteStruct(byteEntry.Address, byteEntry.Data),
                         IScatterWriteDataEntry<Vector3> vector3Entry => scatter.PrepareWriteStruct(vector3Entry.Address, vector3Entry.Data),
+                        IScatterWriteDataEntry<uint> uintEntry => scatter.PrepareWriteStruct(uintEntry.Address, uintEntry.Data),
                         _ => throw new NotSupportedException($"Unsupported data type: {entry.GetType()}")
                     };
 

@@ -243,15 +243,15 @@ namespace eft_dma_radar
     {
         Chams,
         ImportantLoot,
-        NoRecoil,
-        NoSway,
         OpticalThermal,
+        Recoil,
         ShowContainers,
         ShowCorpses,
         ShowLoot,
         Thirdperson,
         ThermalVision,
         TimeScale,
+        WeaponSway,
         ZoomIn,
         ZoomOut
     }
