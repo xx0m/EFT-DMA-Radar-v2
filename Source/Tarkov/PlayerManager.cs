@@ -292,7 +292,7 @@ namespace eft_dma_radar
             try
             {
                 if (on && (this._recoilIntensity[0] != xIntensity || this._recoilIntensity[1] != yIntensity))
-                    entries.Add(new ScatterWriteDataEntry<Vector3>(this._newShotRecoil + Offsets.NewRecoilShotEffect.IntensitySeparateFactors, new Vector3(xIntensity, yIntensity, 1)));
+                    entries.Add(new ScatterWriteDataEntry<Vector3>(this._newShotRecoil + Offsets.NewRecoilShotEffect.IntensitySeparateFactors, new Vector3(1f-xIntensity, 1f-yIntensity, 1)));
                 else if (!on && this._recoilIntensity != DEFAULT_RECOIL)
                     entries.Add(new ScatterWriteDataEntry<Vector3>(this._newShotRecoil + Offsets.NewRecoilShotEffect.IntensitySeparateFactors, DEFAULT_RECOIL));
             }
@@ -307,7 +307,7 @@ namespace eft_dma_radar
             try
             {
                 if (on && this._breathIntensity != intensity)
-                    entries.Add(new ScatterWriteDataEntry<float>(this._breathEffector + Offsets.BreathEffector.Intensity, intensity));
+                    entries.Add(new ScatterWriteDataEntry<float>(this._breathEffector + Offsets.BreathEffector.Intensity, 1f-intensity));
             }
             catch (Exception ex)
             {
