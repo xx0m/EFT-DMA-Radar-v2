@@ -524,9 +524,14 @@ namespace eft_dma_radar
         public List<Category> categories { get; set; } = new List<Category>();
         public List<VendorPrice> sellFor { get; set; } = new List<VendorPrice>(); 
 
+        public class Vendor
+        {
+            public string normalizedName { get; set; }
+        }
+
         public class VendorPrice
         {
-            public string vendorName { get; set; }
+            public Vendor vendor { get; set; }
             public int price { get; set; }
         }
 
