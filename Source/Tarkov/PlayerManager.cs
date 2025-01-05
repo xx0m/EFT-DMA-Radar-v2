@@ -552,7 +552,7 @@ namespace eft_dma_radar
                 return;
             if (!scatterMap.Results[0][15].TryGetResult<ulong>(out var currentItemTemplate))
                 return;
-            if (!scatterMap.Results[0][16].TryGetResult<ulong>(out var currentItemId))
+            if (!scatterMap.Results[0][17].TryGetResult<ulong>(out var currentItemId))
                 return;
 
             this._baseMovementState = baseMovementState;

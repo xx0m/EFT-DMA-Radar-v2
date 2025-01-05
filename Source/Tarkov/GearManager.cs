@@ -132,6 +132,7 @@ namespace eft_dma_radar
                     continue;
                 if (!scatterReadMap.Results[i][3].TryGetResult<ulong>(out var idPtr))
                     continue;
+
                 try
                 {
                     var id = Memory.ReadUnityString(idPtr);

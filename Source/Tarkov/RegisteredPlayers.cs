@@ -467,7 +467,8 @@ namespace eft_dma_radar
                                     player.SetItemInHands(activeWeaponPtr);
 
                                 player.CheckForRequiredGear();
-                            } catch { }
+                            }
+                            catch { }
                         }
 
                         if (p2 && p3)

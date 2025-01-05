@@ -17,7 +17,6 @@ namespace eft_dma_radar {
         }
 
         public static ulong FindClass(string assembly_name, string class_name) {
-
             var monoClass = Monolib.find_class(assembly_name, class_name);
             if (monoClass == 0x0)
                 throw new Exception("NULL " + nameof(monoClass));
@@ -74,7 +73,7 @@ namespace eft_dma_radar {
                 var mono_module = Memory.GetMonoModule();
                 if (mono_module == 0x0)
                     return default;
-                return new mono_root_domain_t(Memory.ReadValue<ulong>(mono_module + 0x499c78));
+                return new mono_root_domain_t(Memory.ReadValue<ulong>(mono_module + 0x751020));
             }
 
             public static bool init_functions() {
@@ -144,7 +143,7 @@ namespace eft_dma_radar {
                 var mono_image = domain_assembly.mono_image();
                 if (mono_image == 0x0)
                     return default;
-                var table_info = mono_image.get_table_info(2);
+                var table_info = mono_image.get_table_info(3);
                 if (table_info == 0x0)
                     return default;
                 int rowCount = table_info.get_rows();
@@ -153,7 +152,7 @@ namespace eft_dma_radar {
                     return default;
                 }
                 for (int i = 0; i < rowCount; i++) {
-                    var ptr = new mono_class_t(new mono_hash_table_t(mono_image + 0x4C0).lookup((ulong)(0x02000000 | i + 1)));
+                    var ptr = new mono_class_t(new mono_hash_table_t(mono_image + 0x4D0).lookup((ulong)(0x02000000 | i + 1)));
                     if (ptr == 0x0)
                         continue;
                     var name = ptr.name();
@@ -187,9 +186,9 @@ namespace eft_dma_radar {
                 Base = baseAddr;
             }
 
-            public readonly glist_t domain_assemblies() => new glist_t(Memory.ReadValue<ulong>(this + 0xC8));
-            public readonly int domain_id() => Memory.ReadValue<int>(this + 0xBC);
-            public readonly ulong jitted_function_table() => Memory.ReadValue<ulong>(this + 0x148);
+            public readonly glist_t domain_assemblies() => new glist_t(Memory.ReadValue<ulong>(this + 0xA0));
+            public readonly int domain_id() => Memory.ReadValue<int>(this + 0x94);
+            public readonly ulong jitted_function_table() => Memory.ReadValue<ulong>(this + 0x120);
         }
 
         public readonly struct mono_table_info_t {
@@ -271,7 +270,7 @@ namespace eft_dma_radar {
 
             public readonly ulong get_static_field_data() {
                 if ((this.flags() & 4) != 0)
-                    return Memory.ReadValue<ulong>(this + 0x40 + 8 * (uint)Memory.ReadValue<int>(Memory.ReadValue<ulong>(this + 0x0) + 0x5C));
+                    return Memory.ReadValue<ulong>(this + 0x48 + 8 * (uint)Memory.ReadValue<int>(Memory.ReadValue<ulong>(this + 0x0) + 0x5C));
                 return 0x0;
             }
         }
@@ -291,7 +290,7 @@ namespace eft_dma_radar {
                 var address = Memory.ReadValue<ulong>(this + 0x48);
                 string name = Monolib.read_widechar(address, 128);
 
-                if (name.Length > 0 && (byte)name[0] == 0xEE) {
+                if (name.Length > 0 && ((byte)name[0] == 0xEE || (byte)name[0] == 0xEF)) {
                     var utf16Value = Monolib.utf8_to_utf16(name);
                     name = $"\\u{utf16Value:X4}";
                 }
@@ -312,16 +311,14 @@ namespace eft_dma_radar {
             }
 
             public readonly int get_num_methods() {
-                var v2 = (Memory.ReadValue<int>(this + 0x2A) & 7) - 1;
+                var v2 = (Memory.ReadValue<int>(this + 0x1B & 7) - 1);
                 switch (v2) {
                     case 0:
                     case 1:
                         return Memory.ReadValue<int>(this + 0xFC);
-
                     case 3:
                     case 5:
                         return 0;
-
                     case 4:
                         return Memory.ReadValue<int>(this + 0xF0);
 

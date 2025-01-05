@@ -183,7 +183,8 @@ namespace eft_dma_radar
                                     {
                                         skinnedMeshRender = Memory.ReadPtr(skinnedMeshRender + 0x28);
                                     }
-                                    catch {
+                                    catch
+                                    {
                                         continue;
                                     }
                                 }
@@ -191,7 +192,7 @@ namespace eft_dma_radar
                                 var materialDictionary = Memory.ReadPtr(skinnedMeshRender + 0x10);
                                 var materialCount = Memory.ReadValue<int>(materialDictionary + 0x158);
 
-                                if (materialCount < 1 && materialCount > 5)
+                                if (materialCount < 1 || materialCount > 5)
                                     continue;
 
                                 var materialDictionaryBase = Memory.ReadPtr(materialDictionary + 0x148);

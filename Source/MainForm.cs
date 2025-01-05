@@ -231,19 +231,8 @@ namespace eft_dma_radar
             materialSkinManager.Theme = MaterialSkinManager.Themes.DARK;
             materialSkinManager.ColorScheme = new ColorScheme(Primary.Grey800, Primary.Grey800, Primary.Indigo100, Accent.Orange400, TextShade.WHITE);
 
-            this.LoadConfig();
-            this.LoadMaps();
-
             this.mapCanvas = skMapCanvas;
             this.mapCanvas.VSync = this.config.VSync;
-
-            this.mapChangeTimer.AutoReset = false;
-            this.mapChangeTimer.Elapsed += this.MapChangeTimer_Elapsed;
-
-            this.fpsWatch.Start();
-
-            this.InitializeInputCheckTimer();
-            this.InitializeDoubleBuffering();
         }
         #endregion
 
@@ -711,13 +700,7 @@ namespace eft_dma_radar
             // Global Features
             mcSettingsMemoryWritingGlobal.Enabled = this.config.MasterSwitch;
             swThirdperson.Checked = this.config.Thirdperson;
-            swFreezeTime.Checked = this.config.FreezeTimeOfDay;
-            sldrTimeOfDay.Enabled = this.config.FreezeTimeOfDay;
-            sldrTimeOfDay.Value = (int)this.config.TimeOfDay;
             swInfiniteStamina.Checked = this.config.InfiniteStamina;
-            swTimeScale.Checked = this.config.TimeScale;
-            sldrTimeScaleFactor.Enabled = this.config.TimeScale;
-            sldrTimeScaleFactor.Value = (int)(this.config.TimeScaleFactor * 10);
             lblSettingsMemoryWritingTimeScaleFactor.Text = $"x{(this.config.TimeScaleFactor)}";
             lblSettingsMemoryWritingTimeScaleFactor.Enabled = this.config.TimeScale;
             swLootThroughWalls.Checked = this.config.LootThroughWalls;
@@ -795,6 +778,29 @@ namespace eft_dma_radar
             swChamsTeammates.Checked = this.config.Chams["Teammates"];
             swChamsCorpses.Checked = this.config.Chams["Corpses"];
             swChamsRevert.Checked = this.config.Chams["RevertOnClose"];
+
+            // World
+            mcSettingsMemoryWritingWorld.Enabled = this.config.MasterSwitch;
+            swNoFog.Checked = this.config.WorldSettings.Fog;
+            swNoRain.Checked = this.config.WorldSettings.Rain;
+            swNoClouds.Checked = this.config.WorldSettings.Clouds;
+            swNoShadows.Checked = this.config.WorldSettings.Shadows;
+            swNoSun.Checked = this.config.WorldSettings.Sun;
+            swNoMoon.Checked = this.config.WorldSettings.Moon;
+
+            swSunIntensity.Checked = this.config.WorldSettings.SunLight;
+            sldrSunIntensity.Enabled = this.config.WorldSettings.SunLight;
+            sldrSunIntensity.Value = this.config.WorldSettings.SunLightIntensity;
+            swMoonIntensity.Checked = this.config.WorldSettings.MoonLight;
+            sldrMoonIntensity.Enabled = this.config.WorldSettings.MoonLight;
+            sldrSunIntensity.Value = this.config.WorldSettings.SunLightIntensity;
+
+            swFreezeTime.Checked = this.config.WorldSettings.FreezeTime;
+            sldrTimeOfDay.Enabled = this.config.WorldSettings.FreezeTime;
+            sldrTimeOfDay.Value = this.config.WorldSettings.TimeOfDay;
+            swTimeScale.Checked = this.config.TimeScale;
+            sldrTimeScaleFactor.Enabled = this.config.TimeScale;
+            sldrTimeScaleFactor.Value = (int)(this.config.TimeScaleFactor * 10);
 
             this.ToggleChamsControls();
             #endregion
@@ -892,6 +898,21 @@ namespace eft_dma_radar
                     this.mapCanvas.Invalidate();
                 }
             }
+        }
+
+        private void frmMain_Load(object sender, EventArgs e)
+        {
+            this.LoadConfig();
+
+            this.LoadMaps();
+
+            this.mapChangeTimer.AutoReset = false;
+            this.mapChangeTimer.Elapsed += this.MapChangeTimer_Elapsed;
+
+            this.fpsWatch.Start();
+
+            this.InitializeInputCheckTimer();
+            this.InitializeDoubleBuffering();
         }
 
         private void MapChangeTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
@@ -1126,9 +1147,10 @@ namespace eft_dma_radar
 
         private void UpdateEnemyStats()
         {
-            var playerCounts = this.AllPlayers
-                .Where(x => x.Value.IsAlive && x.Value.IsActive)
-                .GroupBy(x => x.Value.Type)
+            var playerCounts = this.AllPlayers?
+                .Select(x => x.Value)
+                .Where(x => x.IsAlive && x.IsActive)
+                .GroupBy(x => x.Type)
                 .ToDictionary(g => g.Key, g => g.Count());
 
             this.UpdateEnemyStatLabel(lblRadarPMCsValue, playerCounts.GetValueOrDefault(PlayerType.USEC, 0) + playerCounts.GetValueOrDefault(PlayerType.BEAR, 0));
@@ -1357,7 +1379,7 @@ namespace eft_dma_radar
 
             if (this.InGame && localPlayer is not null)
             {
-                var allPlayers = this.AllPlayers
+                var allPlayers = this.AllPlayers?
                         .Select(x => x.Value)
                         .Where(x => x.IsActive && x.IsAlive && !x.HasExfild);
 
@@ -1812,7 +1834,11 @@ namespace eft_dma_radar
             if (!this.config.Aimview || this.AllPlayers is null)
                 return;
 
-            var aimviewPlayers = this.AllPlayers.Values.Where(x => x.IsActive && x.IsAlive).ToList();
+            var aimviewPlayers = this.AllPlayers?
+                .Select(x => x.Value)
+                .Where(x => x.IsActive && x.IsAlive)
+                .ToList();
+
             if (!aimviewPlayers.Any())
                 return;
 
@@ -1820,7 +1846,9 @@ namespace eft_dma_radar
             var localPlayerAimviewBounds = this.CalculateAimviewBounds(isItemListVisible, mcRadarLootItemViewer);
             var primaryTeammateAimviewBounds = this.CalculateAimviewBounds(mcRadarStats.Visible || mcRadarEnemyStats.Visible, mcRadarStats);
 
-            var primaryTeammate = this.AllPlayers.Values.FirstOrDefault(x => x.AccountID == txtTeammateID.Text);
+            var primaryTeammate = this.AllPlayers?
+                .Select(x => x.Value)
+                .FirstOrDefault(x => x.AccountID == txtTeammateID.Text);
 
             this.RenderAimview(canvas, localPlayerAimviewBounds, this.LocalPlayer, aimviewPlayers);
             this.RenderAimview(canvas, primaryTeammateAimviewBounds, primaryTeammate, aimviewPlayers);
@@ -2391,7 +2419,7 @@ namespace eft_dma_radar
 
         private void UpdateClosestObjects(Vector2 mouse, float threshold)
         {
-            var allPlayers = this.AllPlayers
+            var allPlayers = this.AllPlayers?
                             .Select(x => x.Value)
                             .Where(x => x.IsActive && x.IsAlive && !x.HasExfild);
 
@@ -3426,39 +3454,6 @@ namespace eft_dma_radar
             this.config.Juggernaut = swJuggernaut.Checked;
         }
 
-        private void swFreezeTime_CheckedChanged(object sender, EventArgs e)
-        {
-            var enabled = swFreezeTime.Checked;
-            this.config.FreezeTimeOfDay = enabled;
-
-            sldrTimeOfDay.Enabled = enabled;
-        }
-
-        private void sldrTimeOfDay_onValueChanged(object sender, int newValue)
-        {
-            this.config.TimeOfDay = (float)sldrTimeOfDay.Value;
-        }
-
-        private void swTimeScale_CheckedChanged(object sender, EventArgs e)
-        {
-            var enabled = swTimeScale.Checked;
-            this.config.TimeScale = enabled;
-            sldrTimeScaleFactor.Enabled = enabled;
-
-            lblSettingsMemoryWritingTimeScaleFactor.Enabled = enabled;
-        }
-
-        private void sldrTimeScaleFactor_onValueChanged(object sender, int newValue)
-        {
-            if (newValue < 10)
-                newValue = 10;
-            else if (newValue > 18)
-                newValue = 18;
-
-            this.config.TimeScaleFactor = (float)newValue / 10;
-            lblSettingsMemoryWritingTimeScaleFactor.Text = $"x{(this.config.TimeScaleFactor)}";
-        }
-
         private void swLootThroughWalls_CheckedChanged(object sender, EventArgs e)
         {
             var enabled = swLootThroughWalls.Checked;
@@ -3706,6 +3701,7 @@ namespace eft_dma_radar
             mcSettingsMemoryWritingThermal.Enabled = isChecked;
             mcSettingsMemoryWritingSkillBuffs.Enabled = isChecked;
             mcSettingsMemoryWritingChams.Enabled = isChecked;
+            mcSettingsMemoryWritingWorld.Enabled = isChecked;
 
             if (isChecked)
                 Memory.Toolbox?.StartToolbox();
@@ -3884,6 +3880,93 @@ namespace eft_dma_radar
         private void swChamsRevert_CheckedChanged(object sender, EventArgs e)
         {
             this.config.Chams["RevertOnClose"] = swChamsRevert.Checked;
+        }
+
+        private void swNoFog_CheckedChanged(object sender, EventArgs e)
+        {
+            this.config.WorldSettings.Fog = swNoFog.Checked;
+        }
+
+        private void swNoRain_CheckedChanged(object sender, EventArgs e)
+        {
+            this.config.WorldSettings.Rain = swNoRain.Checked;
+        }
+
+        private void swNoClouds_CheckedChanged(object sender, EventArgs e)
+        {
+            this.config.WorldSettings.Clouds = swNoClouds.Checked;
+        }
+
+        private void swNoShadows_CheckedChanged(object sender, EventArgs e)
+        {
+            this.config.WorldSettings.Shadows = swNoShadows.Checked;
+        }
+
+        private void swNoSun_CheckedChanged(object sender, EventArgs e)
+        {
+            this.config.WorldSettings.Sun = swNoSun.Checked;
+        }
+
+        private void swNoMoon_CheckedChanged(object sender, EventArgs e)
+        {
+            this.config.WorldSettings.Moon = swNoMoon.Checked;
+        }
+
+        private void swSunIntensity_CheckedChanged(object sender, EventArgs e)
+        {
+            var enabled = swSunIntensity.Checked;
+            this.config.WorldSettings.SunLight = enabled;
+            sldrSunIntensity.Enabled = enabled;
+        }
+
+        private void sldrSunIntensity_onValueChanged(object sender, int newValue)
+        {
+            this.config.WorldSettings.SunLightIntensity = newValue;
+        }
+
+        private void swMoonIntensity_CheckedChanged(object sender, EventArgs e)
+        {
+            var enabled = swMoonIntensity.Checked;
+            this.config.WorldSettings.MoonLight = enabled;
+            sldrMoonIntensity.Enabled = enabled;
+        }
+
+        private void sldrMoonIntensity_onValueChanged(object sender, int newValue)
+        {
+            this.config.WorldSettings.MoonLightIntensity = newValue;
+        }
+
+        private void swFreezeTime_CheckedChanged(object sender, EventArgs e)
+        {
+            var enabled = swFreezeTime.Checked;
+            this.config.WorldSettings.FreezeTime = enabled;
+
+            sldrTimeOfDay.Enabled = enabled;
+        }
+
+        private void sldrTimeOfDay_onValueChanged(object sender, int newValue)
+        {
+            this.config.WorldSettings.TimeOfDay = sldrTimeOfDay.Value;
+        }
+
+        private void swTimeScale_CheckedChanged(object sender, EventArgs e)
+        {
+            var enabled = swTimeScale.Checked;
+            this.config.TimeScale = enabled;
+            sldrTimeScaleFactor.Enabled = enabled;
+
+            lblSettingsMemoryWritingTimeScaleFactor.Enabled = enabled;
+        }
+
+        private void sldrTimeScaleFactor_onValueChanged(object sender, int newValue)
+        {
+            if (newValue < 10)
+                newValue = 10;
+            else if (newValue > 18)
+                newValue = 18;
+
+            this.config.TimeScaleFactor = (float)newValue / 10;
+            lblSettingsMemoryWritingTimeScaleFactor.Text = $"x{(this.config.TimeScaleFactor)}";
         }
         #endregion
         #endregion
@@ -4215,7 +4298,7 @@ namespace eft_dma_radar
         private void RefreshPlayerTypeByFaction(AIFactionManager.Faction faction)
         {
             var enemyAI = this.AllPlayers?
-                .Values
+                .Select(x => x.Value)
                 .Where(x => !x.IsHuman && faction.Names.Contains(x.Name))
                 .ToList();
 
@@ -4228,8 +4311,8 @@ namespace eft_dma_radar
 
         private void RefreshPlayerTypeByName(string name)
         {
-            var enemyAI = this.AllPlayers
-                ?.Select(x => x.Value)
+            var enemyAI = this.AllPlayers?
+                .Select(x => x.Value)
                 .Where(x => !x.IsHuman && x.Name == name)
                 .ToList();
 
@@ -4892,7 +4975,7 @@ namespace eft_dma_radar
         private void RefreshWatchlistStatusesByProfile(Watchlist.Profile profile)
         {
             var enemyPlayers = this.AllPlayers?
-                .Values
+                .Select(x => x.Value)
                 .Where(x => x.IsHumanHostileActive && profile.Entries.Any(entry => entry.AccountID == x.AccountID))
                 .ToList();
 
@@ -4901,8 +4984,8 @@ namespace eft_dma_radar
 
         private void RefreshWatchlistStatuses()
         {
-            var enemyPlayers = this.AllPlayers
-                ?.Select(x => x.Value)
+            var enemyPlayers = this.AllPlayers?
+                .Select(x => x.Value)
                 .Where(x => x.IsHumanHostileActive)
                 .ToList();
 
@@ -4911,8 +4994,8 @@ namespace eft_dma_radar
 
         private void RefreshWatchlistStatus(string accountID)
         {
-            var enemyPlayer = this.AllPlayers
-                ?.Select(x => x.Value)
+            var enemyPlayer = this.AllPlayers?
+                .Select(x => x.Value)
                 .FirstOrDefault(x => x.IsHumanHostileActive && x.AccountID == accountID);
 
             enemyPlayer?.RefreshWatchlistStatus();
@@ -5058,7 +5141,7 @@ namespace eft_dma_radar
         private void UpdateWatchlistPlayers(bool clearItems)
         {
             var enemyPlayers = this.AllPlayers?
-                .Values
+                .Select(x => x.Value)
                 .Where(x => x.IsHumanHostileActive)
                 .ToList();
 

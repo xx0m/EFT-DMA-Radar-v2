@@ -69,7 +69,8 @@ namespace eft_dma_radar
         /// <summary>
         /// all quest items
         /// </summary>
-        private ConcurrentBag<QuestItem> QuestItems {
+        private ConcurrentBag<QuestItem> QuestItems
+        {
             get => Memory.QuestManager?.QuestItems ?? null;
         }
 
@@ -190,7 +191,7 @@ namespace eft_dma_radar
             var swTotal = new Stopwatch();
             sw.Start();
             swTotal.Start();
-            await Task.Run(async() => { this.GetLootList(); });
+            await Task.Run(async () => { this.GetLootList(); });
             var ts = sw.Elapsed;
             var elapsedTime = String.Format("[LootManager] Finished GetLootList {0:00}:{1:00}:{2:00}.{3:00}", ts.Hours, ts.Minutes, ts.Seconds, ts.Milliseconds / 10);
             Program.Log(elapsedTime);
@@ -408,7 +409,7 @@ namespace eft_dma_radar
 
                         try
                         {
-                            Vector3 position = new Transform(posToTransform).GetPosition();
+                            var position = new Transform(posToTransform).GetPosition();
                             var corpsePlayerProfileID = Memory.ReadUnityString(corpsePlayerProfileIDPtr);
 
                             //this.savedLootCorpsesInfo.Add(new CorpseInfo { InteractiveClass = interactiveClass, Position = position, Slots = slots, PlayerName = playerName });
@@ -427,8 +428,7 @@ namespace eft_dma_radar
                         //    return;
                         try
                         {
-                            Vector3 position = new Transform(posToTransform).GetPosition();
-
+                            var position = new Transform(posToTransform).GetPosition();
                             var containerID = Memory.ReadUnityString(containerIDPtr);
                             var containerExists = TarkovDevManager.AllLootContainers.TryGetValue(containerID, out var container) && container is not null;
 
@@ -476,8 +476,8 @@ namespace eft_dma_radar
                             //}
                             //else if (!savedItemExists)
                             //{
-                                Vector3 position = new Transform(posToTransform, false).GetPosition();
-                                this.savedLootItemsInfo.Add(new LootItemInfo { InteractiveClass = interactiveClass, QuestItem = isQuestItem, Position = position, ItemID = id });
+                            var position = new Transform(posToTransform).GetPosition();
+                            this.savedLootItemsInfo.Add(new LootItemInfo { InteractiveClass = interactiveClass, QuestItem = isQuestItem, Position = position, ItemID = id });
                             //}
                         }
                         catch { }
@@ -563,9 +563,12 @@ namespace eft_dma_radar
             Parallel.ForEach(this.savedLootCorpsesInfo, Program.Config.ParallelOptions, (savedLootCorpse) =>
             {
                 if (this.validLootEntities.Any(x => x.Pointer == savedLootCorpse.InteractiveClass))
-                    loot.Add(CreateLootableCorpse(savedLootCorpse.ProfileID, savedLootCorpse.Name, savedLootCorpse.InteractiveClass, savedLootCorpse.Position, savedLootCorpse.Slots));
-                else
-                    this.savedLootCorpsesInfo = new ConcurrentBag<CorpseInfo>(this.savedLootCorpsesInfo.Where(x => x.InteractiveClass != savedLootCorpse.InteractiveClass));
+                {
+                    if (Memory.Players.Any())
+                        loot.Add(CreateLootableCorpse(savedLootCorpse.ProfileID, savedLootCorpse.Name, savedLootCorpse.InteractiveClass, savedLootCorpse.Position, savedLootCorpse.Slots));
+                    else
+                        this.savedLootCorpsesInfo = new ConcurrentBag<CorpseInfo>(this.savedLootCorpsesInfo.Where(x => x.InteractiveClass != savedLootCorpse.InteractiveClass));
+                }
 
                 if (!hasCachedItems)
                 {

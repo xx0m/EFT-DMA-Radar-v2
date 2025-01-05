@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Collections.Concurrent;
+using System.Text;
 using Vmmsharp;
 
 namespace eft_dma_radar
@@ -12,7 +13,7 @@ namespace eft_dma_radar
 
         private static byte[] currentStateBitmap = new byte[64];
         private static byte[] previousStateBitmap = new byte[64];
-        private static readonly HashSet<int> pressedKeys = new HashSet<int>();
+        private static readonly ConcurrentDictionary<int, byte> pressedKeys = new ConcurrentDictionary<int, byte>();
 
         private static Vmm vmmInstance;
         private static VmmProcess winlogon;
@@ -184,7 +185,7 @@ namespace eft_dma_radar
                 for (int vk = 0; vk < 256; ++vk)
                 {
                     if ((InputManager.currentStateBitmap[(vk * 2 / 8)] & 1 << vk % 4 * 2) != 0)
-                        InputManager.pressedKeys.Add(vk);
+                        InputManager.pressedKeys.AddOrUpdate(vk, 1, (oldkey, oldvalue) => 1);
                 }
             }
 
@@ -201,7 +202,7 @@ namespace eft_dma_radar
 
             var virtualKeyCode = (int)key;
 
-            return InputManager.pressedKeys.Contains(virtualKeyCode);
+            return InputManager.pressedKeys.ContainsKey(virtualKeyCode);
         }
 
         public static bool IsKeyPressed(Keys key)
@@ -214,7 +215,7 @@ namespace eft_dma_radar
 
             var virtualKeyCode = (int)key;
 
-            return InputManager.pressedKeys.Contains(virtualKeyCode) &&
+            return InputManager.pressedKeys.ContainsKey(virtualKeyCode) &&
                    (InputManager.previousStateBitmap[(virtualKeyCode * 2 / 8)] & (1 << (virtualKeyCode % 4 * 2))) == 0;
         }
     }

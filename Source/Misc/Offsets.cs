@@ -306,7 +306,7 @@
 
     public struct HandsController
     {
-        public const uint Item = 0x60; // [60] item_0x60 : EFT.InventoryLogic.Item
+        public const uint Item = 0x68; // [68] item_0x60 : EFT.InventoryLogic.Item
     }
 
     public struct ObservedHandsController
@@ -611,7 +611,12 @@
     {
         public const uint CachedPtr = 0x10; // [10] m_CachedPtr : IntPtr
         public const uint Cycle = 0x20; // [20] Cycle : -.TOD_CycleParameters
-        public const uint Instance = 0x28; // [28] World : -.TOD_WorldParameters
+        public const uint Day = 0x38; // [38] Day : -.TOD_DayParameters
+        public const uint Night = 0x40; // [40] Night : -.TOD_NightParameters
+        public const uint Sun = 0x48; // [48] Sun : -.TOD_SunParameters
+        public const uint Moon = 0x50; // [50] Moon : -.TOD_MoonParameters
+        public const uint Ambient = 0x70; // [70] Ambient : -.TOD_AmbientParameters
+        public const uint Instance = 0x20;
         public const uint TOD_Components = 0x80; // [80] tOD_Components_0x80 : -.TOD_Components
     }
 
@@ -623,5 +628,64 @@
     public struct TOD_Time
     {
         public const uint GameDateTime = 0x20; // [20] GameDateTime : EFT.GameDateTime
+        public const uint LockCurrentTime = 0x70; // [70] LockCurrentTime : Boolean
+    }
+
+    public struct GameDateTime
+    {
+        public const uint Locked = 0x34; // [34] _locked : Boolean
+    }
+
+    public struct TOD_CycleParameters
+    {
+        public const uint Hour = 0x10; // [10] Hour : Single
+    }
+
+    public struct TOD_DayParameters
+    {
+        public const uint LightIntensity = 0x38; // [38] LightIntensity : Single
+        public const uint ShadowStrength = 0x3C; // [3C] ShadowStrength : Single
+        public const uint AmbientMultiplier = 0x44; // [44] AmbientMultiplier : Single
+        public const uint ReflectionMultiplier = 0x48; // [48] ReflectionMultiplier : Single
+    }
+
+    public struct TOD_NightParameters
+    {
+        public const uint LightIntensity = 0x38; // [38] LightIntensity : Single
+        public const uint ShadowStrength = 0x3C; // [3C] ShadowStrength : Single
+        public const uint AmbientMultiplier = 0x44; // [44] AmbientMultiplier : Single
+        public const uint ReflectionMultiplier = 0x48; // [48] ReflectionMultiplier : Single
+    }
+
+    public struct TOD_AmbientParameters
+    {
+        public const uint UpdateInterval = 0x14; // [14] UpdateInterval : Single
+    }
+
+    public struct TOD_MoonParameters
+    {
+        public const uint MeshSize = 0x20; // [20] MeshSize : Single
+        public const uint MeshBrightness = 0x24; // [24] MeshBrightness : Single
+        public const uint MeshContrast = 0x28; // [28] MeshContrast : Single
+    }
+
+    public struct TOD_SunParameters
+    {
+        public const uint MeshSize = 0x18; // [18] MeshSize : Single
+        public const uint MeshBrightness = 0x1C; // [1C] MeshBrightness : Single
+        public const uint MeshContrast = 0x20; // [20] MeshContrast : Single
+    }
+
+    public struct WeatherController
+    {
+        public const uint WeatherDebug = 0x68; // [68] WeatherDebug : EFT.Weather.WeatherDebug
+    }
+
+    public struct WeatherDebug
+    {
+        public const uint IsEnabled = 0x18; // [18] isEnabled : Boolean
+        public const uint CloudDensity = 0x2C; // [2C] CloudDensity : Single
+        public const uint Fog = 0x30; // [30] Fog : Single
+        public const uint Rain = 0x34; // [34] Rain : Single
     }
 }

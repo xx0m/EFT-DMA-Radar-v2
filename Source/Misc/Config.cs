@@ -36,9 +36,6 @@ namespace eft_dma_radar
         [JsonPropertyName("fov")]
         public int FOV { get; set; }
 
-        [JsonPropertyName("freezeTimeOfDay")]
-        public bool FreezeTimeOfDay { get; set; }
-
         [JsonPropertyName("frostBite")]
         public bool FrostBite { get; set; }
 
@@ -210,9 +207,6 @@ namespace eft_dma_radar
         [JsonPropertyName("throwPowerStrength")]
         public int ThrowPowerStrength { get; set; }
 
-        [JsonPropertyName("timeOfDay")]
-        public float TimeOfDay { get; set; }
-
         [JsonPropertyName("timeScale")]
         public bool TimeScale { get; set; }
 
@@ -233,6 +227,9 @@ namespace eft_dma_radar
 
         [JsonPropertyName("weaponSwayPercent")]
         public float WeaponSwayPercent { get; set; }
+
+        [JsonPropertyName("worldSettings")]
+        public WorldSettings WorldSettings { get; set; }
 
         [JsonPropertyName("zoomSensitivity")]
         public int ZoomSensitivity { get; set; }
@@ -412,6 +409,12 @@ namespace eft_dma_radar
         };
 
         [JsonIgnore]
+        public ThermalSettings DefaultThermalSettings = new ThermalSettings(1f, 0.0011f, -0.1f, 0);
+
+        [JsonIgnore]
+        public WorldSettings DefaultWorldSettings = new WorldSettings(false, false, false, false, false, false, false, false, false, 1, 1, 1);
+
+        [JsonIgnore]
         public List<LootFilterManager.Filter> Filters
         {
             get => LootFilterManager.Filters;
@@ -466,7 +469,6 @@ namespace eft_dma_radar
             ExtendedReachDistance = 2f;
             ExtendedReachDistancePvE = 2f;
             FOV = 75;
-            FreezeTimeOfDay = false;
             FrostBite = false;
             GlobalFont = 0;
             GlobalFontSize = 13;
@@ -491,7 +493,7 @@ namespace eft_dma_radar
             LootThroughWallsDistancePvE = 2f;
             LootValue = false;
             MagDrillSpeed = 1;
-            MainThermalSetting = new ThermalSettings(1f, 0.0011f, -0.1f, 0);
+            MainThermalSetting = DefaultThermalSettings;
             MasterSwitch = false;
             MaxDistance = 325;
             MaxSkills = DefaultMaxSkillsSettings;
@@ -503,7 +505,7 @@ namespace eft_dma_radar
             NightVision = false;           
             NoVisor = false;
             NoWeaponMalfunctions = false;
-            OpticThermalSetting = new ThermalSettings(1f, 0.0011f, -0.1f, 0);
+            OpticThermalSetting = DefaultThermalSettings;
             OpticThermalVision = false;
             PaintColors = DefaultPaintColors;
             ParallelOptions = new ParallelOptions { MaxDegreeOfParallelism = 2 };
@@ -524,7 +526,6 @@ namespace eft_dma_radar
             ThermalVision = false;
             Thirdperson = false;
             ThrowPowerStrength = 1;
-            TimeOfDay = 12f;
             TimeScale = false;
             TimeScaleFactor = 1.8f;
             UIScale = 100;
@@ -532,6 +533,7 @@ namespace eft_dma_radar
             VSync = true;
             WeaponSway = false;
             WeaponSwayPercent = 1f;
+            WorldSettings = DefaultWorldSettings;
             ZoomSensitivity = 25;
         }
 

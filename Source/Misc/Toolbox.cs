@@ -11,8 +11,6 @@ namespace eft_dma_radar
 
         private bool medInfoPanel = false;
         private bool extendedReach = false;
-        private bool freezeTime = false;
-        private float timeOfDay = -1f;
         private bool infiniteStamina = false;
         
         private bool thermalVision = false;
@@ -49,16 +47,8 @@ namespace eft_dma_radar
         private CameraManager _cameraManager { get => Memory.CameraManager; }
         private PlayerManager _playerManager { get => Memory.PlayerManager; }
         private Chams _chams { get => Memory.Chams; }
+        private World _world{ get => Memory.World; }
 
-        private ulong TOD_Sky_static;
-        private ulong TOD_Sky_cached_ptr;
-        private ulong TOD_Sky_inst_ptr;
-        private ulong TOD_Components;
-        private ulong TOD_Time;
-        private ulong GameDateTime;
-        private ulong Cycle;
-        private ulong WeatherController;
-        private ulong WeatherControllerDebug;
         private ulong GameWorld;
         private ulong HardSettings;
         private ulong TimeScale;
@@ -66,10 +56,13 @@ namespace eft_dma_radar
         private bool ToolboxMonoInitialized = false;
         private bool FoundEFTHardSettings = false;
         private bool FoundTOD_Sky = false;
+        private bool FoundWeatherController = false;
         private bool ShouldInitializeToolboxMono => !this.ToolboxMonoInitialized && Memory.InGame && Memory.LocalPlayer is not null;
 
         public bool UpdateExtendedReachDistance { get; set; } = false;
         public bool UpdateThermalSettings{ get; set; } = false;
+
+        private bool IsSafeToWriteMemory => Memory.InGame && Memory.LocalPlayer is not null;
 
         public Toolbox(ulong unityBase)
         {
@@ -89,7 +82,7 @@ namespace eft_dma_radar
                     }
                 });
 
-                this.InitiateTimeScale(unityBase);
+                //this.InitiateTimeScale(unityBase);
                 this.StartToolbox();
             }
         }
@@ -153,8 +146,6 @@ namespace eft_dma_radar
             Program.Log("[ToolBox] Refresh thread stopped.");
         }
 
-        private bool IsSafeToWriteMemory => Memory.InGame && Memory.LocalPlayer is not null;
-
         private void InitiateMonoAddresses()
         {
             if (this.ShouldInitializeToolboxMono)
@@ -165,15 +156,11 @@ namespace eft_dma_radar
                 {
                     try
                     {
-                        this.TOD_Sky_static = MonoSharp.GetStaticFieldDataOfClass("Assembly-CSharp", "TOD_Sky");
-                        this.TOD_Sky_cached_ptr = Memory.ReadValue<ulong>(this.TOD_Sky_static + Offsets.TOD_SKY.CachedPtr);
-                        this.TOD_Sky_inst_ptr = Memory.ReadValue<ulong>(this.TOD_Sky_cached_ptr + Offsets.TOD_SKY.Instance);
-                        this.TOD_Components = Memory.ReadValue<ulong>(this.TOD_Sky_inst_ptr + Offsets.TOD_SKY.TOD_Components);
-                        this.TOD_Time = Memory.ReadValue<ulong>(this.TOD_Components + Offsets.TOD_Components.Time);
-                        this.GameDateTime = Memory.ReadValue<ulong>(this.TOD_Time + Offsets.TOD_Time.GameDateTime);
-                        this.Cycle = Memory.ReadValue<ulong>(this.TOD_Sky_inst_ptr + Offsets.TOD_SKY.Cycle);
-
-                        this.FoundTOD_Sky = true;
+                        if (this._world.InitializeTOD_Sky())
+                        {
+                            this.FoundTOD_Sky = true;
+                            break;
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -212,7 +199,33 @@ namespace eft_dma_radar
                     }
                 }
 
-                if (this.FoundTOD_Sky || this.FoundEFTHardSettings)
+                attempts = 0;
+
+                while (attempts < MAX_ATTEMPTS && !this.FoundWeatherController)
+                {
+                    try
+                    {
+                        if (this._world.InitializeWeatherController())
+                        {
+                            this.FoundWeatherController = true;
+                            break;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        attempts++;
+                        Program.Log("[ToolBox] Failed to get EFT.Weather.WeatherController, retrying in 500ms!");
+                        Thread.Sleep(500);
+
+                        if (attempts == MAX_ATTEMPTS)
+                        {
+                            Program.Log("[Toolbox] Failed to get EFT.Weather.WeatherController 3 times, skipping!");
+                            break;
+                        }
+                    }
+                }
+
+                if (this.FoundTOD_Sky || this.FoundEFTHardSettings || this.FoundWeatherController)
                     this.ToolboxMonoInitialized = true;
             }
             else
@@ -395,25 +408,27 @@ namespace eft_dma_radar
                     }
 
                     // Lock time of day + set time of day
-                    if (this.FoundTOD_Sky)
+                    if (this.FoundTOD_Sky || this.FoundWeatherController)
                     {
-                        var freezeStateChanged = this._config.FreezeTimeOfDay != this.freezeTime;
-                        var timeOfDayChanged = this._config.TimeOfDay != this.timeOfDay;
+                        var worldSettings = this._config.WorldSettings;
 
-                        if (freezeStateChanged || (this._config.FreezeTimeOfDay && timeOfDayChanged))
+                        if (this.FoundTOD_Sky)
                         {
-                            this.freezeTime = this._config.FreezeTimeOfDay;
-                            this.FreezeTime(this.freezeTime, ref entries);
+                            this._world.FreezeTime(worldSettings.FreezeTime, ref entries);
+                            this._world.SetTimeOfDay(worldSettings.TimeOfDay, ref entries);
+                            this._world.ModifySunSize(worldSettings.Sun, ref entries);
+                            this._world.ModifyMoonSize(worldSettings.Moon, ref entries);
+                            this._world.ModifyShadows(worldSettings.Shadows, ref entries);
 
-                            if (this.freezeTime)
-                            {
-                                if (timeOfDayChanged)
-                                    this.SetTimeOfDay(this._config.TimeOfDay, ref entries);
-                            }
-                            else
-                            {
-                                this.timeOfDay = -1;
-                            }
+                            this._world.ModifyDayLightIntensity(worldSettings.SunLight, worldSettings.SunLightIntensity, ref entries);
+                            this._world.ModifyNightLightIntensity(worldSettings.MoonLight, worldSettings.MoonLightIntensity, ref entries);
+                        }
+
+                        if (this.FoundWeatherController)
+                        {
+                            this._world.ModifyCloudDensity(worldSettings.Clouds, ref entries);
+                            this._world.ModifyFog(worldSettings.Fog, ref entries);
+                            this._world.ModifyRain(worldSettings.Rain, ref entries);
                         }
                     }
                 }
@@ -491,18 +506,18 @@ namespace eft_dma_radar
                 }
 
                 // Time Scale
-                var timeScaleChanged = (this._config.TimeScale != this.timeScale);
-                var factorChanged = this._config.TimeScaleFactor != this.timeScaleFactor;
+                //var timeScaleChanged = (this._config.TimeScale != this.timeScale);
+                //var factorChanged = this._config.TimeScaleFactor != this.timeScaleFactor;
 
-                if (timeScaleChanged || (this._config.TimeScale && factorChanged))
-                {
-                    this.timeScale = this._config.TimeScale;
+                //if (timeScaleChanged || (this._config.TimeScale && factorChanged))
+                //{
+                //    this.timeScale = this._config.TimeScale;
 
-                    var factor = this.timeScale ? this._config.TimeScaleFactor : 1f;
+                //    var factor = this.timeScale ? this._config.TimeScaleFactor : 1f;
 
-                    if (factor != this.timeScaleFactor)
-                        this.SetTimeScaleFactor(factor, ref entries);
-                }
+                //    if (factor != this.timeScaleFactor)
+                //        this.SetTimeScaleFactor(factor, ref entries);
+                //}
 
                 if (entries.Any())
                     Memory.WriteScatter(entries);
@@ -540,36 +555,17 @@ namespace eft_dma_radar
             entries.Add(new ScatterWriteDataEntry<bool>(this.HardSettings + Offsets.EFTHardSettings.MED_EFFECT_USING_PANEL, on));
         }
 
-        /// <summary>
-        /// Locks the time of day so it can be set manually
-        /// </summary>
-        private void FreezeTime(bool state, ref List<IScatterWriteEntry> entries)
-        {
-            if (state != !freezeTime)
-            {
-                freezeTime = state;
-                entries.Add(new ScatterWriteDataEntry<bool>(this.TOD_Time + 0x68, freezeTime));
-                entries.Add(new ScatterWriteDataEntry<bool>(this.GameDateTime, freezeTime));
-            }
-        }
-
-        /// <summary>
-        /// Manually sets the time of day
-        /// </summary>
-        /// <param name="time"></param>
-        private void SetTimeOfDay(float time, ref List<IScatterWriteEntry> entries)
-        {
-            this.timeOfDay = time;
-            entries.Add(new ScatterWriteDataEntry<float>(this.Cycle + 0x10, this.timeOfDay));
-        }
-
         private void InitiateTimeScale(ulong unityBase)
         {
+            return;
+
             this.TimeScale = Memory.ReadValue<ulong>(unityBase + Offsets.ModuleBase.TimeScale + 7 * 8);
         }
 
         private void SetTimeScaleFactor(float factor, ref List<IScatterWriteEntry> entries)
         {
+            return;
+
             entries.Add(new ScatterWriteDataEntry<float>(this.TimeScale + Offsets.TimeScale.Value, factor));
         }
     }

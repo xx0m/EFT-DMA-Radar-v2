@@ -96,6 +96,42 @@ namespace eft_dma_radar
         }
     }
 
+    public class WorldSettings
+    {
+        public bool Fog { get; set; }
+        public bool Rain { get; set; }
+        public bool Clouds { get; set; }
+        public bool Shadows { get; set; }
+        public bool Sun { get; set; }
+        public bool Moon { get; set; }
+        public bool FreezeTime { get; set; }
+
+        public bool SunLight { get; set; }
+        public bool MoonLight { get; set; }
+        public int SunLightIntensity { get; set; }
+        public int MoonLightIntensity { get; set; }
+        public int TimeOfDay { get; set; }
+
+        public WorldSettings() { }
+
+        public WorldSettings(bool fog, bool rain, bool clouds, bool shadows, bool sun, bool moon, bool sunLight, bool moonLight, bool freezeTime, int sunLightIntensity, int moonLightIntensity, int timeOfDay)
+        {
+            this.Fog = fog;
+            this.Rain = rain;
+            this.Clouds = clouds;
+            this.Shadows = shadows;
+            this.Sun = sun;
+            this.Moon = moon;
+            this.SunLight = sunLight;
+            this.MoonLight = moonLight;
+            this.FreezeTime = freezeTime;
+
+            this.SunLightIntensity = sunLightIntensity;
+            this.MoonLightIntensity = moonLightIntensity;
+            this.TimeOfDay = timeOfDay;
+        }
+    }
+
     public class PlayerInformationSettings
     {
         public bool Name { get; set; }

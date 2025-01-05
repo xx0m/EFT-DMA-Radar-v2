@@ -21,6 +21,7 @@ namespace eft_dma_radar
         private CameraManager _cameraManager;
         private QuestManager _questManager;
         private Toolbox _toolbox;
+        private World _world;
         private Chams _chams;
         private CorpseManager _corpseManager;
         private ulong _localGameWorld;
@@ -134,6 +135,11 @@ namespace eft_dma_radar
         {
 
             get => _questManager;
+        }
+
+        public World World
+        {
+            get => _world;
         }
 
         public Chams Chams
@@ -459,6 +465,18 @@ namespace eft_dma_radar
 
                 if (this._config.MasterSwitch && Memory.GameStatus == Game.GameStatus.InGame)
                 {
+                    if (this._world is null)
+                    {
+                        try
+                        {
+                            this._world = new World();
+                        }
+                        catch (Exception ex)
+                        {
+                            Program.Log($"ERROR loading World: {ex}");
+                        }
+                    }
+
                     if (this._cameraManager is null)
                     {
                         try
