@@ -42,6 +42,15 @@ namespace eft_dma_radar
         private int _dayLightIntensity = -1;
         private int _nightLightIntensity = -1;
 
+        private float _worldDayShadowStrength = -1;
+        private float _worldDayLightIntensity = -1;
+        private float _worldNightShadowStrength = -1;
+        private float _worldNightLightIntensity = -1;
+
+        private float _worldCloud = -1;
+        private float _worldFog = -1;
+        private float _worldRain = -1;
+
         public World()
         {
 
@@ -53,6 +62,9 @@ namespace eft_dma_radar
             this.WeatherController = MonoSharp.GetStaticFieldDataOfClass("Assembly-CSharp", "EFT.Weather.WeatherController");
             this.WeatherControllerDebug = Memory.ReadValue<ulong>(this.WeatherController + Offsets.WeatherController.WeatherDebug);
 
+            this._worldCloud = Memory.ReadValue<float>(this.WeatherControllerDebug + Offsets.WeatherDebug.CloudDensity);
+            this._worldFog = Memory.ReadValue<float>(this.WeatherControllerDebug + Offsets.WeatherDebug.Fog);
+            this._worldRain = Memory.ReadValue<float>(this.WeatherControllerDebug + Offsets.WeatherDebug.Rain);
             return true;
         }
 
@@ -65,7 +77,7 @@ namespace eft_dma_radar
                 this._removeClouds = state;
 
                 this.CheckDebugWeatherEnabled(ref entries);
-                entries.Add(new ScatterWriteDataEntry<float>(this.WeatherControllerDebug + Offsets.WeatherDebug.CloudDensity, (state ? -1f : -0.089f)));
+                entries.Add(new ScatterWriteDataEntry<float>(this.WeatherControllerDebug + Offsets.WeatherDebug.CloudDensity, (state ? -1f : this._worldCloud)));
             }
         }
 
@@ -78,7 +90,7 @@ namespace eft_dma_radar
                 this._removeFog = state;
 
                 this.CheckDebugWeatherEnabled(ref entries);
-                entries.Add(new ScatterWriteDataEntry<float>(this.WeatherControllerDebug + Offsets.WeatherDebug.Fog, (state ? 0.001f : 0.01f)));
+                entries.Add(new ScatterWriteDataEntry<float>(this.WeatherControllerDebug + Offsets.WeatherDebug.Fog, (state ? 0.001f : this._worldFog)));
             }
         }
 
@@ -91,7 +103,7 @@ namespace eft_dma_radar
                 this._removeRain = state;
 
                 this.CheckDebugWeatherEnabled(ref entries);
-                entries.Add(new ScatterWriteDataEntry<float>(this.WeatherControllerDebug + Offsets.WeatherDebug.Rain, (state ? 0f : 0.1f)));
+                entries.Add(new ScatterWriteDataEntry<float>(this.WeatherControllerDebug + Offsets.WeatherDebug.Rain, (state ? 0f : this._worldRain)));
             }
         }
 
@@ -130,6 +142,12 @@ namespace eft_dma_radar
             this.TOD_Time = Memory.ReadValue<ulong>(this.TOD_Components + Offsets.TOD_Components.Time);
             this.GameDateTime = Memory.ReadValue<ulong>(this.TOD_Time + Offsets.TOD_Time.GameDateTime);
 
+            this._worldDayShadowStrength = Memory.ReadValue<float>(this.TOD_DayParameters + Offsets.TOD_DayParameters.ShadowStrength);
+            this._worldDayLightIntensity = Memory.ReadValue<float>(this.TOD_DayParameters + Offsets.TOD_DayParameters.LightIntensity);
+
+            this._worldNightShadowStrength = Memory.ReadValue<float>(this.TOD_NightParameters + Offsets.TOD_NightParameters.ShadowStrength);
+            this._worldNightLightIntensity = Memory.ReadValue<float>(this.TOD_NightParameters + Offsets.TOD_NightParameters.LightIntensity);
+
             return true;
         }
 
@@ -166,8 +184,8 @@ namespace eft_dma_radar
             if (shadowStateChanged)
             {
                 this._removeShadows = state;
-                entries.Add(new ScatterWriteDataEntry<float>(this.TOD_DayParameters + Offsets.TOD_DayParameters.ShadowStrength, (state ? 0f : 1f)));
-                entries.Add(new ScatterWriteDataEntry<float>(this.TOD_NightParameters + Offsets.TOD_NightParameters.ShadowStrength, (state ? 0f : 1f)));
+                entries.Add(new ScatterWriteDataEntry<float>(this.TOD_DayParameters + Offsets.TOD_DayParameters.ShadowStrength, (state ? 0f : this._worldDayShadowStrength))) ;
+                entries.Add(new ScatterWriteDataEntry<float>(this.TOD_NightParameters + Offsets.TOD_NightParameters.ShadowStrength, (state ? 0f : this._worldNightShadowStrength)));
             }
         }
 
@@ -188,10 +206,9 @@ namespace eft_dma_radar
                     if (!state && this._dayLightIntensity != -1)
                     {
                         this._dayLightIntensity = -1;
-                        entries.Add(new ScatterWriteDataEntry<float>(this.TOD_DayParameters + Offsets.TOD_DayParameters.LightIntensity, 1f));
+                        entries.Add(new ScatterWriteDataEntry<float>(this.TOD_DayParameters + Offsets.TOD_DayParameters.LightIntensity, this._worldDayLightIntensity));
                     }
                 }
-                    
 
                 if (state && dayLightIntensityChanged)
                 {
@@ -218,7 +235,7 @@ namespace eft_dma_radar
                     if (!state && this._nightLightIntensity != -1)
                     {
                         this._nightLightIntensity = -1;
-                        entries.Add(new ScatterWriteDataEntry<float>(this.TOD_NightParameters + Offsets.TOD_NightParameters.LightIntensity, 0.2f));
+                        entries.Add(new ScatterWriteDataEntry<float>(this.TOD_NightParameters + Offsets.TOD_NightParameters.LightIntensity, this._worldNightLightIntensity));
                     }
                 }
 

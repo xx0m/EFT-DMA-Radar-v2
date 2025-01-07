@@ -179,7 +179,6 @@
     public struct InventoryController // -.Player.PlayerInventoryController
     {
         public const uint Inventory = 0x118; // [118] <Inventory>k__BackingField : EFT.InventoryLogic.Inventory
-        public const uint ObservedPlayerInventory = 0x138; // to Inventory
     }
 
     public struct Inventory
@@ -306,7 +305,7 @@
 
     public struct HandsController
     {
-        public const uint Item = 0x68; // [68] item_0x60 : EFT.InventoryLogic.Item
+        public const uint Item = 0x68; // [68] item_0x68 : EFT.InventoryLogic.Item
     }
 
     public struct ObservedHandsController

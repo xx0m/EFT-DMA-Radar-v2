@@ -265,7 +265,6 @@ namespace eft_dma_radar
         /// <summary>
         /// Waits until Raid has started before returning to caller.
         /// </summary>
-        /// 
         public void WaitForGame()
         {
             while (!this.GetGOM() || !this.GetLGW())

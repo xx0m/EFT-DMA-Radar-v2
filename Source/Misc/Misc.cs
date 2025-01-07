@@ -224,7 +224,7 @@ namespace eft_dma_radar
         Rogue,
         Boss,
         PlayerScav,
-        SpecialPlayer,
+        Special,
         BEAR,
         USEC,
         OfflineScav,

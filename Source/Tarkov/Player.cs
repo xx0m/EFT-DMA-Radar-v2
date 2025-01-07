@@ -153,7 +153,7 @@ namespace eft_dma_radar
                 this.Type is PlayerType.LocalPlayer ||
                 this.Type is PlayerType.Teammate ||
                 this.Type is PlayerType.PMC ||
-                this.Type is PlayerType.SpecialPlayer ||
+                this.Type is PlayerType.Special ||
                 this.Type is PlayerType.PlayerScav ||
                 this.Type is PlayerType.BEAR ||
                 this.Type is PlayerType.USEC);
@@ -167,7 +167,7 @@ namespace eft_dma_radar
                 this.Type is PlayerType.LocalPlayer ||
                 this.Type is PlayerType.Teammate ||
                 this.Type is PlayerType.PMC ||
-                this.Type is PlayerType.SpecialPlayer ||
+                this.Type is PlayerType.Special ||
                 this.Type is PlayerType.PlayerScav ||
                 this.Type is PlayerType.BEAR ||
                 this.Type is PlayerType.USEC) && IsActive && IsAlive;
@@ -179,7 +179,7 @@ namespace eft_dma_radar
         {
             get => (
                 this.Type is PlayerType.PMC ||
-                this.Type is PlayerType.SpecialPlayer ||
+                this.Type is PlayerType.Special ||
                 this.Type is PlayerType.PlayerScav ||
                 this.Type is PlayerType.BEAR ||
                 this.Type is PlayerType.USEC);
@@ -192,7 +192,7 @@ namespace eft_dma_radar
             get => (
                 this.Type is PlayerType.BEAR ||
                 this.Type is PlayerType.USEC ||
-                this.Type is PlayerType.SpecialPlayer ||
+                this.Type is PlayerType.Special ||
                 this.Type is PlayerType.PlayerScav) && this.IsActive && this.IsAlive;
         }
         /// <summary>
@@ -241,7 +241,7 @@ namespace eft_dma_radar
                 this.Type is PlayerType.PMC ||
                 this.Type is PlayerType.BEAR ||
                 this.Type is PlayerType.USEC ||
-                this.Type is PlayerType.SpecialPlayer ||
+                this.Type is PlayerType.Special ||
                 this.Type is PlayerType.PlayerScav ||
                 this.Type is PlayerType.Scav ||
                 this.Type is PlayerType.Raider ||
@@ -471,9 +471,9 @@ namespace eft_dma_radar
             }
         }
 
-        public void SetItemInHands(ulong pointer)
+        public void UpdateItemInHands()
         {
-            this.ItemInHands = this.GearManager.GearItems.FirstOrDefault(x => x.Pointer == pointer);
+            this.ItemInHands = this.GearManager.ActiveWeapon;
         }
 
         public void CheckForRequiredGear()
@@ -788,7 +788,7 @@ namespace eft_dma_radar
         public async void RefreshWatchlistStatus()
         {
             var isOnWatchlist = _watchlistManager.IsOnWatchlist(this.AccountID, out Watchlist.Entry entry);
-            var isSpecialPlayer = this.Type == PlayerType.SpecialPlayer;
+            var isSpecialPlayer = this.Type == PlayerType.Special;
 
             if ((!isSpecialPlayer || isSpecialPlayer) && isOnWatchlist)
             {
@@ -810,7 +810,7 @@ namespace eft_dma_radar
                 if (!string.IsNullOrEmpty(entry.Tag))
                 {
                     this.Tag = entry.Tag;
-                    this.Type = PlayerType.SpecialPlayer;
+                    this.Type = PlayerType.Special;
                 }
             }
             else if (isSpecialPlayer && !isOnWatchlist)

@@ -25,7 +25,6 @@ namespace eft_dma_radar
         private static InputManager _inputManager;
 
         public static Game.GameStatus GameStatus = Game.GameStatus.NotFound;
-
         public static Game Game => _game;
 
         #region Getters
@@ -302,6 +301,11 @@ namespace eft_dma_radar
                     throw new DMAException("Unable to obtain Base Module Address. Game may not be running");
                 else
                 {
+                    try
+                    {
+                        MonoSharp.InitializeFunctions();
+                    }
+                    catch { }
                     Program.Log($"Found UnityPlayer.dll at 0x{_unityBase.ToString("x")}");
                     return true;
                 }

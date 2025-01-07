@@ -115,7 +115,7 @@ namespace eft_dma_radar
                 PlayerType.Teammate => Extensions.SKColorFromPaintColor("Teammate"),
                 PlayerType.BEAR => Extensions.SKColorFromPaintColor("BEAR"),
                 PlayerType.USEC => Extensions.SKColorFromPaintColor("USEC"),
-                PlayerType.SpecialPlayer => Extensions.SKColorFromPaintColor("Special"),
+                PlayerType.Special => Extensions.SKColorFromPaintColor("Special"),
 
                 // Event/Temporary
                 PlayerType.FollowerOfMorana => Extensions.SKColorFromPaintColor("FollowerOfMorana"),
@@ -289,7 +289,7 @@ namespace eft_dma_radar
                 PlayerType.Teammate => Extensions.SKColorFromPaintColor("Teammate"),
                 PlayerType.BEAR => Extensions.SKColorFromPaintColor("BEAR"),
                 PlayerType.USEC => Extensions.SKColorFromPaintColor("USEC"),
-                PlayerType.SpecialPlayer => Extensions.SKColorFromPaintColor("Special"),
+                PlayerType.Special => Extensions.SKColorFromPaintColor("Special"),
 
                 // Event/Temporary
                 PlayerType.FollowerOfMorana => Extensions.SKColorFromPaintColor("FollowerOfMorana"),
@@ -432,7 +432,7 @@ namespace eft_dma_radar
                 PlayerType.Teammate => Extensions.SKColorFromPaintColor("Teammate"),
                 PlayerType.BEAR => Extensions.SKColorFromPaintColor("BEAR"),
                 PlayerType.USEC => Extensions.SKColorFromPaintColor("USEC"),
-                PlayerType.SpecialPlayer => Extensions.SKColorFromPaintColor("Special"),
+                PlayerType.Special => Extensions.SKColorFromPaintColor("Special"),
 
                 // default to yellow
                 _ => new SKColor(255, 0, 255, 255),

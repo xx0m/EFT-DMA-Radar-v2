@@ -33,7 +33,6 @@ namespace eft_dma_radar
 
         public Gear ActiveWeapon { get; set; }
 
-        private int _tempValue { get; set; }
         public int Value { get; set; }
         public bool HasNVG { get; set; }
         public bool HasThermal { get; set; }
@@ -83,6 +82,7 @@ namespace eft_dma_radar
                     var itemToRemove = this.GearItems.FirstOrDefault(x => x.Slot.Key == slot.Key);
                     this.GearItems.Remove(itemToRemove);
 
+                    //slotsToRefresh.Add(new GearSlot { Key = slot.Key, Pointer = slot.Pointer, ContainedItem = containedItem }); // update these gear slots
                     slotsToRefresh.Add(new GearSlot { Key = slot.Key, Pointer = slot.Pointer }); // update these gear slots
                 }
             }
@@ -139,8 +139,8 @@ namespace eft_dma_radar
 
                     if (TarkovDevManager.AllItems.TryGetValue(id, out LootItem lootItem))
                     {
-                        string longName = lootItem.Item.name;
-                        string shortName = lootItem.Item.shortName;
+                        var longName = lootItem.Item.name;
+                        var shortName = lootItem.Item.shortName;
                         var tmpGearItemMods = new ConcurrentBag<LootItem>();
                         var totalGearValue = lootItem.Value;
 
@@ -172,7 +172,8 @@ namespace eft_dma_radar
                             {
                                 Slot = slot,
                                 Item = gear,
-                                Pointer = containedItem
+                                Pointer = containedItem,
+                                ID = id
                             });
                         }
                     }
@@ -362,12 +363,12 @@ namespace eft_dma_radar
             return slots;
         }
 
-        public void RefreshActiveWeaponAmmoInfo(ulong pointer)
+        public void RefreshActiveWeaponAmmoInfo(ulong pointer, string id)
         {
             if (this.GearItems is null)
                 return;
 
-            this.ActiveWeapon = this.GearItems.FirstOrDefault(x => x.Pointer == pointer);
+            this.ActiveWeapon = this.GearItems.FirstOrDefault(x => x.ID == id);
 
             if (this.ActiveWeapon.Item is null)
                 return;
@@ -483,6 +484,7 @@ namespace eft_dma_radar
             public GearSlot Slot;
             public GearItem Item;
             public ulong Pointer;
+            public string ID;
         }
     }
 }

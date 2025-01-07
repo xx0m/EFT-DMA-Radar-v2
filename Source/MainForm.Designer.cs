@@ -206,6 +206,7 @@
             sldrMoonIntensity = new MaterialSkin.Controls.MaterialSlider();
             swSunIntensity = new MaterialSkin.Controls.MaterialSwitch();
             sldrSunIntensity = new MaterialSkin.Controls.MaterialSlider();
+            swTraderPrices = new MaterialSkin.Controls.MaterialSwitch();
             sldrThermalColorCoefficient = new MaterialSkin.Controls.MaterialSlider();
             sldrMinTemperature = new MaterialSkin.Controls.MaterialSlider();
             sldrThermalRampShift = new MaterialSkin.Controls.MaterialSlider();
@@ -551,7 +552,7 @@
             // 
             swExfilNames.Depth = 0;
             swExfilNames.Font = new Font("Segoe UI", 9F);
-            swExfilNames.Location = new Point(173, 45);
+            swExfilNames.Location = new Point(172, 45);
             swExfilNames.Margin = new Padding(0);
             swExfilNames.MouseLocation = new Point(-1, -1);
             swExfilNames.MouseState = MaterialSkin.MouseState.HOVER;
@@ -568,7 +569,7 @@
             // 
             swHoverArmor.Depth = 0;
             swHoverArmor.Font = new Font("Segoe UI", 9F);
-            swHoverArmor.Location = new Point(330, 45);
+            swHoverArmor.Location = new Point(324, 45);
             swHoverArmor.Margin = new Padding(0);
             swHoverArmor.MouseLocation = new Point(-1, -1);
             swHoverArmor.MouseState = MaterialSkin.MouseState.HOVER;
@@ -3941,6 +3942,23 @@
             sldrSunIntensity.ValueMax = 30;
             sldrSunIntensity.onValueChanged += sldrSunIntensity_onValueChanged;
             // 
+            // swTraderPrices
+            // 
+            swTraderPrices.Depth = 0;
+            swTraderPrices.Font = new Font("Segoe UI", 9F);
+            swTraderPrices.Location = new Point(476, 45);
+            swTraderPrices.Margin = new Padding(0);
+            swTraderPrices.MouseLocation = new Point(-1, -1);
+            swTraderPrices.MouseState = MaterialSkin.MouseState.HOVER;
+            swTraderPrices.Name = "swTraderPrices";
+            swTraderPrices.Ripple = true;
+            swTraderPrices.Size = new Size(152, 28);
+            swTraderPrices.TabIndex = 42;
+            swTraderPrices.Text = "Trader Prices";
+            toolTip.SetToolTip(swTraderPrices, "Show prices for traders only (ignores flea market) (restart to take effect)");
+            swTraderPrices.UseVisualStyleBackColor = true;
+            swTraderPrices.CheckedChanged += swTraderPrices_CheckedChanged;
+            // 
             // sldrThermalColorCoefficient
             // 
             sldrThermalColorCoefficient.Depth = 0;
@@ -4597,6 +4615,7 @@
             // mcSettingsGeneralUI
             // 
             mcSettingsGeneralUI.BackColor = Color.FromArgb(255, 255, 255);
+            mcSettingsGeneralUI.Controls.Add(swTraderPrices);
             mcSettingsGeneralUI.Controls.Add(sldrZoomSensitivity);
             mcSettingsGeneralUI.Controls.Add(cboGlobalFont);
             mcSettingsGeneralUI.Controls.Add(sldrFontSize);
@@ -7750,6 +7769,7 @@
         private MaterialSkin.Controls.MaterialSwitch swNoFog;
         private MaterialSkin.Controls.MaterialSwitch swSunIntensity;
         private MaterialSkin.Controls.MaterialSlider sldrSunIntensity;
+        private MaterialSkin.Controls.MaterialSwitch swTraderPrices;
     }
 }
 

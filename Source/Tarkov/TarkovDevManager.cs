@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Net;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 
@@ -493,14 +494,20 @@ namespace eft_dma_radar
 
         public static int GetItemValue(TarkovItem item)
         {
-            int bestPrice = item.avg24hPrice ?? 0;
+            var bestPrice = item.avg24hPrice ?? 0;
+            var useTraderPrices = Program.Config.TraderPrices;
+
             foreach (var vendor in item.sellFor)
+            {
+                var isFleaMarket = vendor.vendor.normalizedName.Equals("flea-market", StringComparison.OrdinalIgnoreCase);
+                if (vendor.price > bestPrice)
                 {
-                    if (vendor.price > bestPrice)
-                    {
-                        bestPrice = vendor.price;
-                    }
+                    if (useTraderPrices && isFleaMarket)
+                        continue;
+
+                    bestPrice = vendor.price;
                 }
+            }
 
             return bestPrice;
         }
@@ -522,11 +529,16 @@ namespace eft_dma_radar
         public int? high24hPrice { get; set; }
         public double weight { get; set; } 
         public List<Category> categories { get; set; } = new List<Category>();
-        public List<VendorPrice> sellFor { get; set; } = new List<VendorPrice>(); 
+        public List<VendorPrice> sellFor { get; set; } = new List<VendorPrice>();
+
+        public class Vendor
+        {
+            public string normalizedName { get; set; }
+        }
 
         public class VendorPrice
         {
-            public string vendorName { get; set; }
+            public Vendor vendor { get; set; }
             public int price { get; set; }
         }
 

@@ -686,6 +686,7 @@ namespace eft_dma_radar
             swAimview.Checked = this.config.Aimview;
             swExfilNames.Checked = this.config.ExfilNames;
             swHoverArmor.Checked = this.config.HoverArmor;
+            swTraderPrices.Checked = this.config.TraderPrices;
             txtTeammateID.Text = this.config.PrimaryTeammateId;
             sldrZoomSensitivity.Value = this.config.ZoomSensitivity;
 
@@ -1036,7 +1037,11 @@ namespace eft_dma_radar
                         var gearName = gearItem.Long;
 
                         if (!string.IsNullOrEmpty(gearItem.GearInfo.AmmoType))
-                            gearName += $" ({gearItem.GearInfo.AmmoType}/{gearItem.GearInfo.AmmoCount})";
+                        {
+                            var ammoMsg = (player.isOfflinePlayer ? $"/{gearItem.GearInfo.AmmoCount}" : "");
+                            //gearName += $" ({gearItem.GearInfo.AmmoType}/{gearItem.GearInfo.AmmoCount})";
+                            gearName += $" ({gearItem.GearInfo.AmmoType}{ammoMsg})";
+                        }
 
                         if (!string.IsNullOrEmpty(gearItem.GearInfo.Thermal))
                             gearName += $" ({gearItem.GearInfo.Thermal})";
@@ -1476,7 +1481,11 @@ namespace eft_dma_radar
                         rightLines.Add(player.ItemInHands.Item.Short);
 
                     if (playerSettings.AmmoType && !string.IsNullOrEmpty(player.ItemInHands.Item.GearInfo.AmmoType))
-                        rightLines.Add($"{player.ItemInHands.Item.GearInfo.AmmoType}/{player.ItemInHands.Item.GearInfo.AmmoCount}");
+                    {
+                        var ammoMsg = (player.isOfflinePlayer ? $"/{player.ItemInHands.Item.GearInfo.AmmoCount}" : "");
+                        //rightLines.Add($"{player.ItemInHands.Item.GearInfo.AmmoType}/{player.ItemInHands.Item.GearInfo.AmmoCount}");
+                        rightLines.Add($"{player.ItemInHands.Item.GearInfo.AmmoType}{ammoMsg}");
+                    }
                 }
 
                 if (playerSettings.Thermal && player.HasThermal)
@@ -2862,6 +2871,11 @@ namespace eft_dma_radar
         private void swHoverArmor_CheckedChanged(object sender, EventArgs e)
         {
             this.config.HoverArmor = swHoverArmor.Checked;
+        }
+
+        private void swTraderPrices_CheckedChanged(object sender, EventArgs e)
+        {
+            this.config.TraderPrices = swTraderPrices.Checked;
         }
 
         private void sldrUIScale_onValueChanged(object sender, int newValue)

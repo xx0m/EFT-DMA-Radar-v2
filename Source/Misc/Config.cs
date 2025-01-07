@@ -213,6 +213,9 @@ namespace eft_dma_radar
         [JsonPropertyName("timeScaleFactor")]
         public float TimeScaleFactor { get; set; }
 
+        [JsonPropertyName("traderPrices")]
+        public bool TraderPrices { get; set; }
+
         [JsonPropertyName("uiScale")]
         public int UIScale { get; set; }
 
@@ -528,6 +531,7 @@ namespace eft_dma_radar
             ThrowPowerStrength = 1;
             TimeScale = false;
             TimeScaleFactor = 1.8f;
+            TraderPrices = false;
             UIScale = 100;
             UnknownQuestItems = false;
             VSync = true;

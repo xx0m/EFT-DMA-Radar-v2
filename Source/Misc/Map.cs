@@ -689,7 +689,7 @@ namespace eft_dma_radar
 
             lines.Insert(0, player.Name);
 
-            if (player.Type == PlayerType.SpecialPlayer)
+            if (player.Type == PlayerType.Special)
                 lines.Insert(0, $"Tag: {player.Tag}");
 
             if (player.Gear is not null)

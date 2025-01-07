@@ -7,7 +7,7 @@ namespace eft_dma_radar
         private Thread autoRefreshThread;
         private CancellationTokenSource autoRefreshCancellationTokenSource;
 
-        private const int MAX_ATTEMPTS = 3;
+        private const int MAX_ATTEMPTS = 4;
 
         private bool medInfoPanel = false;
         private bool extendedReach = false;
@@ -49,7 +49,6 @@ namespace eft_dma_radar
         private Chams _chams { get => Memory.Chams; }
         private World _world{ get => Memory.World; }
 
-        private ulong GameWorld;
         private ulong HardSettings;
         private ulong TimeScale;
 
@@ -170,7 +169,7 @@ namespace eft_dma_radar
 
                         if (attempts == MAX_ATTEMPTS)
                         {
-                            Program.Log("[Toolbox] Failed to get TOD_Sky 3 times, skipping!");
+                            Program.Log($"[Toolbox] Failed to get TOD_Sky {MAX_ATTEMPTS} times, skipping!");
                             break;
                         }
                     }
@@ -193,7 +192,7 @@ namespace eft_dma_radar
 
                         if (attempts == MAX_ATTEMPTS)
                         {
-                            Program.Log("[Toolbox] Failed to get EFTHardSettings 3 times, skipping!");
+                            Program.Log($"[Toolbox] Failed to get EFTHardSettings {MAX_ATTEMPTS} times, skipping!");
                             break;
                         }
                     }
@@ -219,7 +218,7 @@ namespace eft_dma_radar
 
                         if (attempts == MAX_ATTEMPTS)
                         {
-                            Program.Log("[Toolbox] Failed to get EFT.Weather.WeatherController 3 times, skipping!");
+                            Program.Log($"[Toolbox] Failed to get EFT.Weather.WeatherController {MAX_ATTEMPTS} times, skipping!");
                             break;
                         }
                     }
