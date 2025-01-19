@@ -1,8 +1,12 @@
 ﻿
+using System.Diagnostics;
+using System.Numerics;
+
 namespace eft_dma_radar
 {
     public class CameraManager
     {
+        private readonly Stopwatch _swRefreshVM = new();
 
         private ulong visorComponent;
         private ulong nvgComponent;
@@ -24,6 +28,9 @@ namespace eft_dma_radar
         private ulong _opticCamera;
         private ulong _fpsCamera;
         private ulong _fovPtr;
+        private ulong _viewMatrixPtr;
+
+        private Matrix4x4 _viewMatrix;
 
         public bool IsReady
         {
@@ -50,6 +57,11 @@ namespace eft_dma_radar
             get => this._fpsCamera;
         }
 
+        public Matrix4x4 ViewMatrix
+        {
+            get => this._viewMatrix;
+        }
+
         private Config _config
         {
             get => Program.Config;
@@ -59,6 +71,7 @@ namespace eft_dma_radar
         {
             this._unityBase = unityBase;
             this.GetCamera();
+            this._swRefreshVM.Start();
         }
 
         private bool GetCamera()
@@ -148,7 +161,10 @@ namespace eft_dma_radar
                         this.inventoryBlurCompontentFound = this.inventoryBlurComponent != 0;
                     }
 
-                    foundFPSCamera = this.nvgComponentFound && this.visorComponentFound && this.fpsThermalComponentFound && this.frostBiteComponentFound;
+                    if (this._viewMatrixPtr == 0)
+                        this._viewMatrixPtr = Memory.ReadPtrChain(this._fpsCamera, Offsets.FPSCamera.To_ViewMatrix);
+
+                    foundFPSCamera = this.nvgComponentFound && this.visorComponentFound && this.fpsThermalComponentFound && this.frostBiteComponentFound && this._viewMatrixPtr != 0;
                 }
 
                 if (foundFPSCamera && foundOpticCamera)
@@ -459,6 +475,15 @@ namespace eft_dma_radar
             catch (Exception ex)
             {
                 Program.Log($"CameraManager - (InventoryBlur) {ex.Message}\n{ex.StackTrace}");
+            }
+        }
+
+        public void UpdateViewMatrix()
+        {
+            if (this._swRefreshVM.ElapsedMilliseconds >= 10 && Memory.LocalPlayer is not null)
+            {
+                this._viewMatrix = Memory.ReadValue<Matrix4x4>(this._viewMatrixPtr + Offsets.ViewMatrix.Matrix);
+                this._swRefreshVM.Restart();
             }
         }
     }

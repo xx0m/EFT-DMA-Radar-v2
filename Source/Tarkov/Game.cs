@@ -182,6 +182,7 @@ namespace eft_dma_radar
 
                 this._rgtPlayers.UpdateList();
                 this._rgtPlayers.UpdateAllPlayers();
+
                 this.UpdateMisc();
             }
             catch (DMAShutdown)
@@ -476,18 +477,6 @@ namespace eft_dma_radar
                         }
                     }
 
-                    if (this._cameraManager is null)
-                    {
-                        try
-                        {
-                            this._cameraManager = new CameraManager(this._unityBase);
-                        }
-                        catch (Exception ex)
-                        {
-                            Program.Log($"ERROR loading CameraManager: {ex}");
-                        }
-                    }
-
                     if (this._playerManager is null)
                     {
                         try
@@ -527,6 +516,20 @@ namespace eft_dma_radar
                         }
                     }
                 }
+
+                if (this._cameraManager is null)
+                {
+                    try
+                    {
+                        this._cameraManager = new CameraManager(this._unityBase);
+                    }
+                    catch (Exception ex)
+                    {
+                        Program.Log($"ERROR loading CameraManager: {ex}");
+                    }
+                }
+                else
+                    this._cameraManager.UpdateViewMatrix();
 
                 if (this._exfilManager is null)
                 {

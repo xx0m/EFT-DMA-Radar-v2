@@ -112,8 +112,8 @@ namespace eft_dma_radar
 
         public Tripwire(Vector3 fromPos, Vector3 toPos)
         {
-            FromPos = new Vector3(fromPos.X, fromPos.Z, fromPos.Y);
-            ToPos = new Vector3(toPos.X, toPos.Z, toPos.Y);
+            this.FromPos = fromPos;
+            this.ToPos = toPos;
         }
     }
 

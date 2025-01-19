@@ -11,6 +11,10 @@ using System.Data;
 using System.Runtime.CompilerServices;
 using System.Globalization;
 using Offsets;
+using System.Security.Policy;
+using System.ComponentModel;
+using System.Collections.Generic;
+using static eft_dma_radar.LootFilterManager;
 
 namespace eft_dma_radar
 {
@@ -44,7 +48,6 @@ namespace eft_dma_radar
 
         private bool isFreeMapToggled = false;
         private float uiScale = 1.0f;
-        private float aimviewWindowSize = 200;
         private Player closestPlayerToMouse = null;
         private LootableObject closestItemToMouse = null;
         private QuestItem closestTaskItemToMouse = null;
@@ -66,6 +69,8 @@ namespace eft_dma_radar
 
         private const int TARGET_FPS = 144;
         private const int FRAME_DELAY = 1000 / TARGET_FPS;
+        private const int MIN_AIMVIEW_SIZE = 100;
+        private const int MAX_AIMVIEW_SIZE = 4000;
 
         private SKPoint currentPanPosition;
         private SKPoint targetPanPosition;
@@ -74,12 +79,18 @@ namespace eft_dma_radar
         private float targetZoom = 1f;
         private bool isZooming = false;
         private bool isPanning = false;
-        private bool isDragging = false;
+        private bool isDraggingMap = false;
+        private bool isDraggingAimview = false;
+        private bool isResizingAimview = false;
 
         private const float MAX_ZOOM = 0.5f;
         private const float MIN_ZOOM = 10f;
         private const float DRAG_SENSITIVITY = 1.5f;
         private const float PAN_SENSITIVITY = 0.3f;
+
+        private Point aimviewMouseDownPosition;
+
+        private const int AIMVIEW_OBJECT_SPACING = 8;
 
         private MapParameters cachedMapParams;
         private DateTime lastMapParamsUpdate = DateTime.MinValue;
@@ -94,6 +105,7 @@ namespace eft_dma_radar
 
         private System.Timers.Timer inputCheckTimer;
         private System.Timers.Timer itemPingAnimationTimer;
+        private System.Timers.Timer playerlistUpdateTimer;
 
         private HashSet<Keys> previouslyPressedKeys = new HashSet<Keys>();
         private Dictionary<HotkeyAction, Action<bool>> hotkeyActions;
@@ -232,7 +244,6 @@ namespace eft_dma_radar
             materialSkinManager.ColorScheme = new ColorScheme(Primary.Grey800, Primary.Grey800, Primary.Indigo100, Accent.Orange400, TextShade.WHITE);
 
             this.mapCanvas = skMapCanvas;
-            this.mapCanvas.VSync = this.config.VSync;
         }
         #endregion
 
@@ -296,6 +307,13 @@ namespace eft_dma_radar
                 this.inputCheckTimer.Elapsed += this.InputCheckTimer_Tick;
                 this.inputCheckTimer.Start();
             }
+        }
+
+        private void InitializePlayerlistTimer()
+        {
+            this.playerlistUpdateTimer = new System.Timers.Timer(5000);
+            this.playerlistUpdateTimer.Elapsed += this.PlayerListUpdateTimer_Tick;
+            this.playerlistUpdateTimer.Start();
         }
 
         private void InitializeDoubleBuffering()
@@ -459,8 +477,6 @@ namespace eft_dma_radar
             SKPaints.PaintExfilPending.StrokeWidth = 1 * this.uiScale;
             SKPaints.PaintExfilClosed.StrokeWidth = 1 * this.uiScale;
             #endregion
-
-            this.aimviewWindowSize = 200 * this.uiScale;
 
             this.InitializeFontSizes();
         }
@@ -642,13 +658,13 @@ namespace eft_dma_radar
 
         private void CheckConfigDictionaries()
         {
-            this.UpdateDictionary(this.config.PaintColors, this.config.DefaultPaintColors);
-            this.UpdateDictionary(this.config.LootItemRefreshSettings, this.config.DefaultAutoRefreshSettings);
-            this.UpdateDictionary(this.config.Chams, this.config.DefaultChamsSettings);
-            this.UpdateDictionary(this.config.LootContainerSettings, this.config.DefaultContainerSettings);
-            this.UpdateDictionary(this.config.LootPing, this.config.DefaultLootPingSettings);
-            this.UpdateDictionary(this.config.MaxSkills, this.config.DefaultMaxSkillsSettings);
-            this.UpdateDictionary(this.config.PlayerInformationSettings, this.config.DefaultPlayerInformationSettings);
+            this.UpdateDictionary(this.config.PaintColors, Config.DefaultPaintColors);
+            this.UpdateDictionary(this.config.LootItemRefreshSettings, Config.DefaultAutoRefreshSettings);
+            this.UpdateDictionary(this.config.Chams, Config.DefaultChamsSettings);
+            this.UpdateDictionary(this.config.LootContainerSettings, Config.DefaultContainerSettings);
+            this.UpdateDictionary(this.config.LootPing, Config.DefaultLootPingSettings);
+            this.UpdateDictionary(this.config.MaxSkills, Config.DefaultMaxSkillsSettings);
+            this.UpdateDictionary(this.config.PlayerInformationSettings, Config.DefaultPlayerInformationSettings);
         }
 
         private void UpdateDictionary<TKey, TValue>(Dictionary<TKey, TValue> dictionary, Dictionary<TKey, TValue> defaultDictionary)
@@ -683,7 +699,6 @@ namespace eft_dma_radar
             btnTriggerUnityCrash.Visible = this.config.PvEMode;
 
             // User Interface
-            swAimview.Checked = this.config.Aimview;
             swExfilNames.Checked = this.config.ExfilNames;
             swHoverArmor.Checked = this.config.HoverArmor;
             swTraderPrices.Checked = this.config.TraderPrices;
@@ -693,6 +708,73 @@ namespace eft_dma_radar
             sldrUIScale.Value = this.config.UIScale;
             cboGlobalFont.SelectedIndex = this.config.GlobalFont;
             sldrFontSize.Value = this.config.GlobalFontSize;
+
+            // Aimview
+            var aimviewSettings = this.config.AimviewSettings;
+            swAimview.Checked = aimviewSettings.Enabled;
+            sldrAVWidth.Value = aimviewSettings.Width;
+            sldrAVHeight.Value = aimviewSettings.Height;
+            txtTeammateID.Text = aimviewSettings.TeammateID;
+
+            var playerSettings = aimviewSettings.ObjectSettings["Player"];
+            swAVPlayers.Checked = playerSettings.Enabled;
+            swAVPlayerDistance.Checked = playerSettings.Distance;
+            sldrAVPlayerPaintDistance.Value = playerSettings.PaintDistance;
+            sldrAVPlayerTextDistance.Value = playerSettings.TextDistance;
+
+            var looseLootSettings = aimviewSettings.ObjectSettings["LooseLoot"];
+            swAVLooseLoot.Checked = looseLootSettings.Enabled;
+            swAVLooseLootDistance.Checked = looseLootSettings.Distance;
+            swAVLooseLootName.Checked = looseLootSettings.Name;
+            swAVLooseLootValue.Checked = looseLootSettings.Value;
+            sldrAVLooseLootPaintDistance.Value = looseLootSettings.PaintDistance;
+            sldrAVLooseLootTextDistance.Value = looseLootSettings.TextDistance;
+
+            var corpseSettings = aimviewSettings.ObjectSettings["Corpse"];
+            swAVCorpses.Checked = corpseSettings.Enabled;
+            swAVCorpseDistance.Checked = corpseSettings.Distance;
+            swAVCorpseName.Checked = corpseSettings.Name;
+            swAVCorpseValue.Checked = corpseSettings.Value;
+            sldrAVCorpsePaintDistance.Value = corpseSettings.PaintDistance;
+            sldrAVCorpseTextDistance.Value = corpseSettings.TextDistance;
+
+            var questItemSettings = aimviewSettings.ObjectSettings["QuestItem"];
+            swAVQuestItems.Checked = questItemSettings.Enabled;
+            swAVQuestItemDistance.Checked = questItemSettings.Distance;
+            swAVQuestItemName.Checked = questItemSettings.Name;
+            sldrAVQuestItemPaintDistance.Value = questItemSettings.PaintDistance;
+            sldrAVQuestItemTextDistance.Value = questItemSettings.TextDistance;
+
+            var containerSettings = aimviewSettings.ObjectSettings["Container"];
+            swAVContainers.Checked = containerSettings.Enabled;
+            swAVContainerDistance.Checked = containerSettings.Distance;
+            swAVContainerName.Checked = containerSettings.Name;
+            sldrAVContainerPaintDistance.Value = containerSettings.PaintDistance;
+            sldrAVContainerTextDistance.Value = containerSettings.TextDistance;
+
+            var tripwireSettings = aimviewSettings.ObjectSettings["Tripwire"];
+            swAVTripwire.Checked = tripwireSettings.Enabled;
+            swAVTripwireDistance.Checked = tripwireSettings.Distance;
+            sldrAVTripwirePaintDistance.Value = tripwireSettings.PaintDistance;
+            sldrAVTripwireTextDistance.Value = tripwireSettings.TextDistance;
+
+            var questZoneSettings = aimviewSettings.ObjectSettings["QuestZone"];
+            swAVQuestZones.Checked = questZoneSettings.Enabled;
+            swAVQuestZoneDistance.Checked = questZoneSettings.Distance;
+            swAVQuestZoneName.Checked = questZoneSettings.Name;
+            sldrAVQuestZoneTextDistance.Value = questZoneSettings.TextDistance;
+
+            var exfilSettings = aimviewSettings.ObjectSettings["Exfil"];
+            swAVExfils.Checked = exfilSettings.Enabled;
+            swAVExfilDistance.Checked = exfilSettings.Distance;
+            swAVExfilName.Checked = exfilSettings.Name;
+            sldrAVExfilTextDistance.Value = exfilSettings.TextDistance;
+
+            var transitSettings = aimviewSettings.ObjectSettings["Transit"];
+            swAVTransits.Checked = transitSettings.Enabled;
+            swAVTransitDistance.Checked = transitSettings.Distance;
+            swAVTransitName.Checked = transitSettings.Name;
+            sldrAVTransitTextDistance.Value = transitSettings.TextDistance;
             #endregion
 
             #region Memory Writing
@@ -708,7 +790,6 @@ namespace eft_dma_radar
             sldrLootThroughWallsDistance.Enabled = this.config.LootThroughWalls;
             swExtendedReach.Checked = this.config.ExtendedReach;
             sldrExtendedReachDistance.Enabled = this.config.ExtendedReach;
-            sldrFOV.Value = this.config.FOV;
             swInventoryBlur.Checked = this.config.InventoryBlur;
             swMedPanel.Checked = this.config.MedInfoPanel;
 
@@ -719,7 +800,7 @@ namespace eft_dma_radar
             sldrXFactor.Enabled = this.config.Recoil;
             sldrXFactor.Value = (int)Math.Round(this.config.RecoilXPercent * 100);
             sldrYFactor.Enabled = this.config.Recoil;
-            sldrYFactor.Value = (int)Math.Round(this.config.RecoilXPercent * 100);
+            sldrYFactor.Value = (int)Math.Round(this.config.RecoilYPercent * 100);
             sldrSwayFactor.Enabled = this.config.WeaponSway;
             sldrSwayFactor.Value = (int)Math.Round(this.config.WeaponSwayPercent * 100);
             swInstantADS.Checked = this.config.InstantADS;
@@ -843,12 +924,14 @@ namespace eft_dma_radar
             // Container settings
             swContainers.Checked = this.config.LootContainerSettings["Enabled"];
             lstContainers.Enabled = this.config.LootContainerSettings["Enabled"];
+            sldrContainerDistance.Enabled = this.config.LootContainerSettings["Enabled"];
             #endregion
             #endregion
 
             this.InitiateContainerList();
             this.UpdatePlayerInformationSettings();
             this.UpdatePvEControls();
+            this.UpdateAimviewSettings();
             this.InitializeAutoMapRefreshItems();
             this.InitializeFactions();
             this.InitializeLootFilter();
@@ -874,6 +957,16 @@ namespace eft_dma_radar
                     this.HandleKeyUp(hotkey.Key);
                     this.previouslyPressedKeys.Remove(hotkey.Key);
                 }
+            }
+        }
+
+        private void PlayerListUpdateTimer_Tick(object sender, EventArgs e)
+        {
+            if (this.InGame)
+            {
+                this.BeginInvoke(new Action(() => {
+                    this.UpdateWatchlistPlayers();
+                }));
             }
         }
         #endregion
@@ -913,6 +1006,7 @@ namespace eft_dma_radar
             this.fpsWatch.Start();
 
             this.InitializeInputCheckTimer();
+            this.InitializePlayerlistTimer();
             this.InitializeDoubleBuffering();
         }
 
@@ -1330,18 +1424,18 @@ namespace eft_dma_radar
 
         private static bool IsAggressorFacingTarget(SKPoint aggressor, float aggressorDegrees, SKPoint target, float distance)
         {
-            double maxDiff = 31.3573 - 3.51726 * Math.Log(Math.Abs(0.626957 - 15.6948 * distance)); // Max degrees variance based on distance variable
+            double maxDiff = 31.3573 - 3.51726 * Math.Log(Math.Abs(0.626957 - 15.6948 * distance));
             if (maxDiff < 1f)
-                maxDiff = 1f; // Non linear equation, handle low/negative results
+                maxDiff = 1f;
 
-            var radians = Math.Atan2(target.Y - aggressor.Y, target.X - aggressor.X); // radians
+            var radians = Math.Atan2(target.Y - aggressor.Y, target.X - aggressor.X);
             var degs = radians.ToDegrees();
 
             if (degs < 0)
-                degs += 360f; // handle if negative
+                degs += 360f;
 
-            var diff = Math.Abs(degs - aggressorDegrees); // Get angular difference (in degrees)
-            return diff <= maxDiff; // See if calculated degrees is within max difference
+            var diff = Math.Abs(degs - aggressorDegrees);
+            return diff <= maxDiff;
         }
 
         private void DrawMap(SKCanvas canvas)
@@ -1350,13 +1444,9 @@ namespace eft_dma_radar
             var localPlayerPos = localPlayer.Position;
 
             if (mcRadarMapSetup.Visible) // Print coordinates (to make it easy to setup JSON configs)
-            {
                 lblRadarMapSetup.Text = $"Map Setup - Unity X,Y,Z: {localPlayerPos.X}, {localPlayerPos.Y}, {localPlayerPos.Z}";
-            }
             else if (lblRadarMapSetup.Text != "Map Setup" && !mcRadarMapSetup.Visible)
-            {
                 lblRadarMapSetup.Text = "Map Setup";
-            }
 
             // Prepare to draw Game Map
             var mapParams = this.GetMapLocation();
@@ -1597,15 +1687,25 @@ namespace eft_dma_radar
                                 this.RefreshLootListItems();
                         }
 
+                        var containersEnabled = this.config.LootContainerSettings["Enabled"];
+                        var corpsesEnabled = this.config.LootCorpses;
+                        var looseLootEnabled = this.config.LooseLoot;
+
                         foreach (var item in filter)
                         {
                             if (item is null || (this.config.ImportantLootOnly && !item.Important && !item.AlwaysShow))
                                 continue;
 
-                            if (item is LootContainer container && !container.IsWithinDistance)
+                            if (item is LootContainer container && (!container.IsWithinDistance || !containersEnabled))
                                 continue;
 
-                            var position = item.Position.Z - localPlayerMapPos.Height;
+                            if (item is LootCorpse corpse && !corpsesEnabled)
+                                continue;
+
+                            if (item is LootItem lootItem && !looseLootEnabled)
+                                continue;
+
+                            var position = item.Position.Y - localPlayerMapPos.Height;
                             var itemMapPos = item.Position.ToMapPos(this.selectedMap);
 
                             if (!this.IsInViewport(itemMapPos, mapParams))
@@ -1637,9 +1737,13 @@ namespace eft_dma_radar
                         var localPlayerMapPos = localPlayer.Position.ToMapPos(this.selectedMap);
                         var mapParams = this.GetMapLocation();
 
-                        var questItems = this.QuestManager.QuestItems;
-                        if (this.config.QuestItems && questItems is not null)
+                        if (this.config.QuestItems)
                         {
+                            var questItems = this.QuestManager.QuestItems;
+
+                            if (questItems is null)
+                                return;
+
                             var items = this.config.UnknownQuestItems ?
                                 questItems.Where(x => x?.Position.X != 0 && x?.Name == "????") :
                                 questItems.Where(x => x?.Position.X != 0 && x?.Name != "????");
@@ -1649,7 +1753,7 @@ namespace eft_dma_radar
                                 if (item is null || item.Complete)
                                     continue;
 
-                                var position = item.Position.Z - localPlayerMapPos.Height;
+                                var position = item.Position.Y - localPlayerMapPos.Height;
                                 var itemMapPos = item.Position.ToMapPos(this.selectedMap);
 
                                 if (!this.IsInViewport(itemMapPos, mapParams))
@@ -1667,12 +1771,16 @@ namespace eft_dma_radar
                             }
                         }
 
-                        var questZones = this.QuestManager.QuestZones;
-                        if (this.config.QuestLocations && questZones is not null)
+                        if (this.config.QuestLocations)
                         {
+                            var questZones = this.QuestManager.QuestZones;
+
+                            if (questZones is null)
+                                return;
+
                             foreach (var zone in questZones.Where(x => x.MapName.ToLower() == Memory.MapNameFormatted.ToLower() && !x.Complete))
                             {
-                                var position = zone.Position.Z - localPlayerMapPos.Height;
+                                var position = zone.Position.Y - localPlayerMapPos.Height;
                                 var questZoneMapPos = zone.Position.ToMapPos(this.selectedMap);
 
                                 if (!this.IsInViewport(questZoneMapPos, mapParams))
@@ -1840,7 +1948,7 @@ namespace eft_dma_radar
 
         private void DrawAimview(SKCanvas canvas)
         {
-            if (!this.config.Aimview || this.AllPlayers is null)
+            if (!this.config.AimviewSettings.Enabled || this.AllPlayers is null)
                 return;
 
             var aimviewPlayers = this.AllPlayers?
@@ -1851,16 +1959,14 @@ namespace eft_dma_radar
             if (!aimviewPlayers.Any())
                 return;
 
-            var isItemListVisible = lstLootItems.Visible;
-            var localPlayerAimviewBounds = this.CalculateAimviewBounds(isItemListVisible, mcRadarLootItemViewer);
-            var primaryTeammateAimviewBounds = this.CalculateAimviewBounds(mcRadarStats.Visible || mcRadarEnemyStats.Visible, mcRadarStats);
+            //var primaryTeammateAimviewBounds = this.CalculateAimviewBounds(mcRadarStats.Visible || mcRadarEnemyStats.Visible, mcRadarStats);
 
-            var primaryTeammate = this.AllPlayers?
-                .Select(x => x.Value)
-                .FirstOrDefault(x => x.AccountID == txtTeammateID.Text);
+            //var primaryTeammate = this.AllPlayers?
+            //    .Select(x => x.Value)
+            //    .FirstOrDefault(x => x.AccountID == txtTeammateID.Text);
 
-            this.RenderAimview(canvas, localPlayerAimviewBounds, this.LocalPlayer, aimviewPlayers);
-            this.RenderAimview(canvas, primaryTeammateAimviewBounds, primaryTeammate, aimviewPlayers);
+            this.RenderAimview(canvas, this.LocalPlayer, aimviewPlayers);
+            //this.RenderAimview(canvas, primaryTeammateAimviewBounds, primaryTeammate, aimviewPlayers);
         }
 
         private void DrawToolTips(SKCanvas canvas)
@@ -1953,266 +2059,600 @@ namespace eft_dma_radar
             canvas.DrawText(statusText, centerX, centerY, SKPaints.TextRadarStatus);
         }
 
-        private void RenderAimview(SKCanvas canvas, SKRect drawingLocation, Player sourcePlayer, IEnumerable<Player> aimviewPlayers)
+        private bool TryGetScreenPosition(Vector3 itemPos, SKRect drawingLocation, out Vector2 screenPos)
+        {
+            var isVisible = Extensions.WorldToScreen(itemPos, (int)drawingLocation.Width, (int)drawingLocation.Height, out screenPos);
+
+            if (isVisible)
+            {
+                screenPos.X += drawingLocation.Left;
+                screenPos.Y += drawingLocation.Top;
+            }
+
+            return isVisible;
+        }
+
+        private bool IsWithinDrawingBounds(Vector2 pos, SKRect bounds)
+        {
+            return pos.X >= bounds.Left &&
+                   pos.X <= bounds.Right &&
+                   pos.Y >= bounds.Top &&
+                   pos.Y <= bounds.Bottom;
+        }
+
+        private void RenderAimview(SKCanvas canvas, Player sourcePlayer, IEnumerable<Player> aimviewPlayers)
         {
             if (sourcePlayer is null || !sourcePlayer.IsActive || !sourcePlayer.IsAlive)
                 return;
 
-            canvas.DrawRect(drawingLocation, SKPaints.PaintTransparentBacker); // draw backer
+            var aimviewBounds = this.GetAimviewBounds();
+            canvas.DrawRect(aimviewBounds, SKPaints.PaintTransparentBacker);
+            this.DrawCrosshair(canvas, aimviewBounds);
+
+            if (aimviewPlayers is null || Memory.CameraManager?.ViewMatrix is null)
+                return;
 
             var myPosition = sourcePlayer.Position;
-            var myRotation = sourcePlayer.Rotation;
-            var normalizedDirection = this.NormalizeDirection(myRotation.X);
-            var pitch = this.CalculatePitch(myRotation.Y);
+            var aimviewSettings = this.config.AimviewSettings;
 
-            this.DrawCrosshair(canvas, drawingLocation);
+            // QUEST HELPER
+            var questItemSettings = aimviewSettings.ObjectSettings["QuestItem"];
+            var questZoneSettings = aimviewSettings.ObjectSettings["QuestZone"];
+            if (this.config.QuestHelper && (questItemSettings.Enabled || questZoneSettings.Enabled))
+            {
+                if (questItemSettings.Enabled && this.config.QuestItems)
+                {
+                    var questItems = this.QuestManager?.QuestItems;
 
-            if (aimviewPlayers is not null)
+                    if (questItems is not null)
+                    {
+                        var items = this.config.UnknownQuestItems ?
+                            questItems.Where(x => x?.Position.X != 0 && x?.Name == "????") :
+                            questItems.Where(x => x?.Position.X != 0 && x?.Name != "????");
+
+                        foreach (var item in items)
+                        {
+                            var itemPos = item.Position;
+                            var dist = Vector3.Distance(myPosition, itemPos);
+
+                            if (dist > questItemSettings.PaintDistance && dist > questItemSettings.TextDistance)
+                                continue;
+
+                            if (!this.TryGetScreenPosition(itemPos, aimviewBounds, out Vector2 screenPos))
+                                continue;
+
+                            if (this.IsWithinDrawingBounds(screenPos, aimviewBounds))
+                                this.DrawAimviewQuestItem(canvas, item, screenPos, dist, questItemSettings);
+                        }
+                    }
+                }
+
+                if (questZoneSettings.Enabled && this.config.QuestLocations)
+                {
+                    var questZones = this.QuestManager?.QuestZones;
+
+                    if (questZones is not null)
+                    {
+                        var mapName = Memory.MapNameFormatted.ToLower();
+
+                        foreach (var zone in questZones.Where(x => x.MapName.ToLower() == mapName && !x.Complete))
+                        {
+                            var zonePos = zone.Position;
+                            var dist = Vector3.Distance(myPosition, zonePos);
+
+                            if (dist > questZoneSettings.TextDistance)
+                                continue;
+
+                            if (!this.TryGetScreenPosition(zonePos, aimviewBounds, out Vector2 screenPos))
+                                continue;
+
+                            if (this.IsWithinDrawingBounds(screenPos, aimviewBounds))
+                                this.DrawAimviewQuestZone(canvas, zone, screenPos, dist, questZoneSettings);
+                        }
+                    }
+                }
+            }
+
+            // TRIPWIRES
+            var tripwireSettings = aimviewSettings.ObjectSettings["Tripwire"];
+            if (tripwireSettings.Enabled)
+            {
+                var tripwires = this.Tripwires;
+                if (tripwires is not null)
+                {
+                    foreach (var tripwire in tripwires)
+                    {
+                        var fromPos = tripwire.FromPos;
+                        var dist = Vector3.Distance(myPosition, fromPos);
+
+                        if (dist > tripwireSettings.PaintDistance && dist > tripwireSettings.TextDistance)
+                            continue;
+
+                        var toPos = tripwire.ToPos;
+
+                        if (!this.TryGetScreenPosition(fromPos, aimviewBounds, out Vector2 fromScreenPos))
+                            continue;
+                        if (!this.TryGetScreenPosition(toPos, aimviewBounds, out Vector2 toScreenPos))
+                            continue;
+
+                        if (this.IsWithinDrawingBounds(fromScreenPos, aimviewBounds))
+                            this.DrawAimviewTripwire(canvas, tripwire, fromScreenPos, toScreenPos, dist, tripwireSettings);
+                    }
+                }
+            }
+
+            // RENDER EXFIL
+            var exfilSettings = aimviewSettings.ObjectSettings["Exfil"];
+            if (exfilSettings.Enabled)
+            {
+                var exfils = this.Exfils;
+                if (exfils is not null)
+                {
+                    foreach (var exfil in exfils)
+                    {
+                        var exfilPos = exfil.Position;
+                        var dist = Vector3.Distance(myPosition, exfilPos);
+
+                        if (dist > exfilSettings.TextDistance)
+                            continue;
+
+                        if (!this.TryGetScreenPosition(exfilPos, aimviewBounds, out Vector2 screenPos))
+                            continue;
+
+                        if (this.IsWithinDrawingBounds(screenPos, aimviewBounds))
+                            this.DrawAimviewExfil(canvas, exfil, screenPos, dist, exfilSettings);
+                    }
+                }
+            }
+
+            // RENDER TRANSIT
+            var transitSettings = aimviewSettings.ObjectSettings["Transit"];
+            if (transitSettings.Enabled)
+            {
+                var transits = this.Transits;
+                if (transits is not null)
+                {
+                    foreach (var transit in transits)
+                    {
+                        var transitPos = transit.Position;
+                        var dist = Vector3.Distance(myPosition, transitPos);
+
+                        if (dist > transitSettings.TextDistance)
+                            continue;
+
+                        if (!this.TryGetScreenPosition(transitPos, aimviewBounds, out Vector2 screenPos))
+                            continue;
+
+                        if (this.IsWithinDrawingBounds(screenPos, aimviewBounds))
+                            this.DrawAimviewTransit(canvas, transit, screenPos, dist, transitSettings);
+                    }
+                }
+            }
+
+            // RENDER LOOT
+            var looseLootSettings = aimviewSettings.ObjectSettings["LooseLoot"];
+            var containerSettings = aimviewSettings.ObjectSettings["Container"];
+            var corpseSettings = aimviewSettings.ObjectSettings["Corpse"];
+            if (looseLootSettings.Enabled || containerSettings.Enabled || corpseSettings.Enabled)
+            {
+                if (this.config.ProcessLoot)
+                {
+                    var loot = this.Loot;
+                    if (loot is not null)
+                    {
+                        if (loot.Filter is null)
+                            loot.ApplyFilter();
+
+                        var filter = loot.Filter;
+
+                        if (filter is not null)
+                        {
+                            foreach (var item in filter)
+                            {
+                                if (item is null || (this.config.ImportantLootOnly && !item.Important && !item.AlwaysShow))
+                                    continue;
+
+                                var objectSettings = item switch
+                                {
+                                    LootItem => looseLootSettings,
+                                    LootContainer => containerSettings,
+                                    LootCorpse => corpseSettings
+                                };
+
+                                var itemPos = item.Position;
+                                var dist = Vector3.Distance(myPosition, itemPos);
+
+                                if (dist > objectSettings.PaintDistance && dist > objectSettings.TextDistance)
+                                    continue;
+
+                                if (!this.TryGetScreenPosition(itemPos, aimviewBounds, out Vector2 screenPos))
+                                    continue;
+
+                                if (this.IsWithinDrawingBounds(screenPos, aimviewBounds))
+                                    this.DrawLootableObject(canvas, item, screenPos, dist, objectSettings);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // RENDER PLAYERS - head only dot
+            var playerSettings = aimviewSettings.ObjectSettings["Player"];
+            if (playerSettings.Enabled)
             {
                 foreach (var player in aimviewPlayers)
                 {
                     if (player == sourcePlayer)
-                        continue; // don't draw self
+                        continue;
 
-                    if (this.ShouldDrawPlayer(myPosition, player.Position, this.config.MaxDistance))
-                        this.DrawPlayer(canvas, drawingLocation, myPosition, player, normalizedDirection, pitch);
+                    var playerPos = player.Position;
+                    var dist = Vector3.Distance(myPosition, playerPos);
+
+                    if (dist > playerSettings.PaintDistance && dist > playerSettings.TextDistance)
+                        continue;
+
+                    if (!player.Bones.TryGetValue(PlayerBones.HumanHead, out var bone))
+                        continue;
+
+                    if (!this.TryGetScreenPosition(bone.Position, aimviewBounds, out Vector2 screenPos))
+                        continue;
+
+                    if (this.IsWithinDrawingBounds(screenPos, aimviewBounds))
+                        this.DrawAimviewPlayer(canvas, player, screenPos, dist, playerSettings);
                 }
             }
-
-            // Draw loot objects
-            // requires rework for height difference
-            //var loot = this.Loot; // cache ref
-            //if (loot is not null && loot.Filter is not null)
-            //{
-            //    foreach (var item in loot.Filter)
-            //    {
-            //        if (ShouldDrawLootObject(myPosition, item.Position, this.config.MaxDistance))
-            //            DrawLootableObject(canvas, drawingLocation, myPosition, sourcePlayer.ZoomedPosition, item, normalizedDirection, pitch);
-            //    }
-            //}
         }
 
-        private float NormalizeDirection(float direction)
+        private SKRect GetAimviewBounds()
         {
-            var normalizedDirection = -direction;
-
-            if (normalizedDirection < 0)
-                normalizedDirection += 360;
-
-            return normalizedDirection;
-        }
-
-        private bool IsInFOV(float drawX, float drawY, SKRect drawingLocation)
-        {
-            return drawX < drawingLocation.Right
-                   && drawX > drawingLocation.Left
-                   && drawY > drawingLocation.Top
-                   && drawY < drawingLocation.Bottom;
-        }
-
-        private bool ShouldDrawPlayer(Vector3 myPosition, Vector3 playerPosition, float maxDistance)
-        {
-            var dist = Vector3.Distance(myPosition, playerPosition);
-            return dist <= maxDistance;
-        }
-
-        private bool ShouldDrawLootObject(Vector3 myPosition, Vector3 lootPosition, float maxDistance)
-        {
-            var dist = Vector3.Distance(myPosition, lootPosition);
-            return dist <= maxDistance;
-        }
-
-        private void HandleSplitPlanes(ref float angleX, float normalizedDirection)
-        {
-            if (angleX >= 360 - this.config.AimViewFOV && normalizedDirection <= this.config.AimViewFOV)
-            {
-                var diff = 360 + normalizedDirection;
-                angleX -= diff;
-            }
-            else if (angleX <= this.config.AimViewFOV && normalizedDirection >= 360 - this.config.AimViewFOV)
-            {
-                var diff = 360 - normalizedDirection;
-                angleX += diff;
-            }
-        }
-
-        private float CalculatePitch(float pitch)
-        {
-            if (pitch >= 270)
-                return 360 - pitch;
-            else
-                return -pitch;
-        }
-
-        private float CalculateAngleY(float heightDiff, float dist, float pitch)
-        {
-            return (float)(180 / Math.PI * Math.Atan(heightDiff / dist)) - pitch;
-        }
-
-        private float CalculateYPosition(float angleY, float windowSize)
-        {
-            return angleY / this.config.AimViewFOV * windowSize + windowSize / 2;
-        }
-
-        private float CalculateAngleX(float opposite, float adjacent, float normalizedDirection)
-        {
-            float angleX = (float)(180 / Math.PI * Math.Atan(opposite / adjacent));
-
-            if (adjacent < 0 && opposite > 0)
-                angleX += 180;
-            else if (adjacent < 0 && opposite < 0)
-                angleX += 180;
-            else if (adjacent > 0 && opposite < 0)
-                angleX += 360;
-
-            this.HandleSplitPlanes(ref angleX, normalizedDirection);
-
-            angleX -= normalizedDirection;
-            return angleX;
-        }
-
-        private float CalculateXPosition(float angleX, float windowSize)
-        {
-            return angleX / this.config.AimViewFOV * windowSize + windowSize / 2;
-        }
-
-        private float CalculateCircleSize(float dist)
-        {
-            return (float)(31.6437 - 5.09664 * Math.Log(0.591394 * dist + 70.0756));
-        }
-
-        private SKRect CalculateAimviewBounds(bool isVisible, Control control)
-        {
-            float left = isVisible ? control.Location.X : this.mapCanvas.Left;
-            float right = left + this.aimviewWindowSize;
-            float bottom = isVisible ? control.Location.Y - this.aimviewWindowSize - 5 + this.aimviewWindowSize : this.mapCanvas.Bottom;
-            float top = bottom - this.aimviewWindowSize;
-
-            return new SKRect(left, top, right, bottom);
+            return new SKRect(
+                this.config.AimviewSettings.X,
+                this.config.AimviewSettings.Y,
+                this.config.AimviewSettings.X + this.config.AimviewSettings.Width,
+                this.config.AimviewSettings.Y + this.config.AimviewSettings.Height
+            );
         }
 
         private void DrawCrosshair(SKCanvas canvas, SKRect drawingLocation)
         {
             canvas.DrawLine(
                 drawingLocation.Left,
-                drawingLocation.Bottom - (this.aimviewWindowSize / 2),
+                drawingLocation.Bottom - (this.config.AimviewSettings.Height / 2),
                 drawingLocation.Right,
-                drawingLocation.Bottom - (this.aimviewWindowSize / 2),
+                drawingLocation.Bottom - (this.config.AimviewSettings.Height / 2),
                 SKPaints.PaintAimviewCrosshair
             );
 
             canvas.DrawLine(
-                drawingLocation.Right - (this.aimviewWindowSize / 2),
+                drawingLocation.Right - (this.config.AimviewSettings.Width / 2),
                 drawingLocation.Top,
-                drawingLocation.Right - (this.aimviewWindowSize / 2),
+                drawingLocation.Right - (this.config.AimviewSettings.Width / 2),
                 drawingLocation.Bottom,
                 SKPaints.PaintAimviewCrosshair
             );
         }
 
-        private void DrawPlayer(SKCanvas canvas, SKRect drawingLocation, Vector3 myPosition, Player player, float normalizedDirection, float pitch)
+        private void DrawBoneConnection(SKCanvas canvas, Dictionary<PlayerBones, Vector2> bones, PlayerBones bone1, PlayerBones bone2, SKPaint paint)
         {
-            var playerPos = player.Position;
-            float dist = Vector3.Distance(myPosition, playerPos);
-            float heightDiff = playerPos.Z - myPosition.Z;
-            float angleY = this.CalculateAngleY(heightDiff, dist, pitch);
-            float y = this.CalculateYPosition(angleY, this.aimviewWindowSize);
+            var start = bones[bone1];
+            var end = bones[bone2];
+            canvas.DrawLine(start.X, start.Y, end.X, end.Y, paint);
+        }
 
-            float opposite = playerPos.Y - myPosition.Y;
-            float adjacent = playerPos.X - myPosition.X;
-            float angleX = this.CalculateAngleX(opposite, adjacent, normalizedDirection);
-            float x = this.CalculateXPosition(angleX, this.aimviewWindowSize);
-
-            float drawX = drawingLocation.Right - x;
-            float drawY = drawingLocation.Bottom - y;
-
-            if (this.IsInFOV(drawX, drawY, drawingLocation))
+        private void DrawLootableObject(SKCanvas canvas, LootableObject lootObject, Vector2 screenPos, float distance, AimviewObjectSettings objectSettings)
+        {
+            switch (lootObject)
             {
-                float circleSize = this.CalculateCircleSize(dist);
-                canvas.DrawCircle(drawX, drawY, circleSize * this.uiScale, player.GetAimviewPaint());
+                case LootItem item:
+                    this.DrawAimviewLootItem(canvas, item, screenPos, distance, objectSettings);
+                    break;
+                case LootContainer container:
+                    this.DrawAimviewLootContainer(canvas, container, screenPos, distance, objectSettings);
+                    break;
+                case LootCorpse corpse:
+                    this.DrawAimviewLootCorpse(canvas, corpse, screenPos, distance, objectSettings);
+                    break;
             }
         }
 
-        private SKPoint GetScreenPosition(SKCanvas canvas, SKRect drawingLocation, Vector3 myPosition, Vector3 bonePosition, float normalizedDirection, float pitch)
+        private void DrawAimviewPlayer(SKCanvas canvas, Player player, Vector2 screenPos, float distance, AimviewObjectSettings objectSettings)
         {
-            float dist = Vector3.Distance(myPosition, bonePosition);
-            float heightDiff = bonePosition.Z - myPosition.Z;
-            float angleY = CalculateAngleY(heightDiff, dist, pitch);
-            float y = CalculateYPosition(angleY, this.aimviewWindowSize);
+            var objectSize = this.CalculateObjectSize(distance);
+            var currentY = screenPos.Y;
 
-            float opposite = bonePosition.Y - myPosition.Y;
-            float adjacent = bonePosition.X - myPosition.X;
-            float angleX = CalculateAngleX(opposite, adjacent, normalizedDirection);
-            float x = CalculateXPosition(angleX, this.aimviewWindowSize);
+            if (distance < objectSettings.PaintDistance)
+            {
+                var paint = player.GetAimviewPaint();
+                canvas.DrawCircle(screenPos.X, currentY, objectSize, paint);
+                currentY += (objectSize + AIMVIEW_OBJECT_SPACING) * this.uiScale;
+            }
 
-            float drawX = drawingLocation.Right - x;
-            float drawY = drawingLocation.Bottom - y;
-
-            return new SKPoint(drawX, drawY);
+            if (objectSettings.Distance && distance < objectSettings.TextDistance)
+            {
+                var textPaint = player.GetAimviewTextPaint();
+                textPaint.TextSize = this.CalculateFontSize(distance, true);
+                canvas.DrawText($"{distance:F0}m", screenPos.X, currentY, textPaint);
+            }
         }
 
-        public Vector2 GetScreen(Vector3 playerPos, Vector3 localPos, Vector4 screen, Vector2 Angles, float fov)
+        private void DrawAimviewTripwire(SKCanvas canvas, Tripwire tripwire, Vector2 fromScreenPos, Vector2 toScreenPos, float distance, AimviewObjectSettings objectSettings)
         {
-            float num = playerPos.Z - localPos.Z;
-            float num2 = Vector3.Distance(localPos, playerPos);
-            float num3 = playerPos.X - localPos.X;
-            float num4 = playerPos.Y - localPos.Y;
-            float num5 = (float)(57.29577951308232 * Math.Atan((double)(num4 / num3)));
-            float num6 = (float)(57.29577951308232 * Math.Atan((double)(num / num2))) - Angles.Y;
-            if (num3 < 0f && num4 > 0f)
+            var currentY = toScreenPos.Y;
+
+            if (distance < objectSettings.PaintDistance)
             {
-                num5 += 180f;
+                var objectSize = this.CalculateObjectSize(distance);
+                var paint = tripwire.GetAimviewPaint();
+                var lineHeight = objectSize * (2.5f * this.uiScale);
+
+                canvas.DrawLine(
+                    fromScreenPos.X,
+                    fromScreenPos.Y - lineHeight / 2,
+                    fromScreenPos.X,
+                    fromScreenPos.Y + lineHeight / 2,
+                    paint
+                );
+
+                canvas.DrawLine(
+                    fromScreenPos.X,
+                    fromScreenPos.Y,
+                    toScreenPos.X,
+                    currentY,
+                    paint
+                );
+
+                paint.Style = SKPaintStyle.Fill;
+                canvas.DrawCircle(toScreenPos.X, currentY, objectSize, paint);
+
+                currentY += (objectSize + AIMVIEW_OBJECT_SPACING) * this.uiScale;
             }
-            else if (num3 < 0f && num4 < 0f)
+
+            if (distance < objectSettings.TextDistance)
             {
-                num5 += 180f;
+                var textPaint = tripwire.GetAimviewTextPaint();
+                textPaint.TextSize = this.CalculateFontSize(distance, true);
+
+                if (objectSettings.Distance)
+                    canvas.DrawText($"{distance:F0}m", toScreenPos.X, currentY, textPaint);
             }
-            else if (num3 > 0f && num4 < 0f)
+        }
+
+        private void DrawAimviewQuestItem(SKCanvas canvas, QuestItem item, Vector2 screenPos, float distance, AimviewObjectSettings objectSettings)
+        {
+            var currentY = screenPos.Y;
+
+            if (distance < objectSettings.PaintDistance)
             {
-                num5 += 360f;
+                var objectSize = this.CalculateObjectSize(distance);
+                var itemPaint = item.GetAimviewPaint();
+                canvas.DrawCircle(screenPos.X, currentY, objectSize, itemPaint);
+                currentY += (objectSize + AIMVIEW_OBJECT_SPACING) * this.uiScale;
             }
-            if (num5 >= 360f - fov && Angles.X <= fov)
+
+            if (distance < objectSettings.TextDistance)
             {
-                float num7 = 360f + Angles.X;
-                num5 -= num7;
+                var textPaint = item.GetAimviewTextPaint();
+                textPaint.TextSize = this.CalculateFontSize(distance, true);
+
+                if (objectSettings.Name)
+                {
+                    canvas.DrawText(item.Name, screenPos.X, currentY, textPaint);
+                    currentY += textPaint.TextSize * this.uiScale;
+                }
+
+                if (objectSettings.Distance)
+                    canvas.DrawText($"{distance:F0}m", screenPos.X, currentY, textPaint);
             }
-            else if (num5 <= fov && Angles.X >= 360f - fov)
+        }
+
+        private void DrawAimviewQuestZone(SKCanvas canvas, QuestZone zone, Vector2 screenPos, float distance, AimviewObjectSettings objectSettings)
+        {
+            var objectSize = this.CalculateFontSize(distance, true);
+            var textPaint = zone.GetAimviewTextPaint();
+            textPaint.TextSize = objectSize;
+
+            var currentY = screenPos.Y;
+
+            if (objectSettings.Name)
             {
-                float num8 = 360f - Angles.X;
-                num5 += num8;
+                canvas.DrawText(zone.ObjectiveType, screenPos.X, currentY, textPaint);
+                currentY += objectSize * this.uiScale;
+            }
+
+            if (objectSettings.Distance)
+                canvas.DrawText($"{distance:F0}m", screenPos.X, currentY, textPaint);
+        }
+
+        private void DrawAimviewExfil(SKCanvas canvas, Exfil exfil, Vector2 screenPos, float distance, AimviewObjectSettings objectSettings)
+        {
+            var objectSize = this.CalculateFontSize(distance);
+            var textPaint = exfil.GetAimviewTextPaint();
+            textPaint.TextSize = objectSize;
+
+            var currentY = screenPos.Y;
+
+            if (objectSettings.Name)
+            {
+                canvas.DrawText(exfil.Name, screenPos.X, currentY, textPaint);
+                currentY += objectSize * this.uiScale;
+            }
+
+            if (objectSettings.Distance)
+                canvas.DrawText($"{distance:F0}m", screenPos.X, currentY, textPaint);
+        }
+
+        private void DrawAimviewTransit(SKCanvas canvas, Transit transit, Vector2 screenPos, float distance, AimviewObjectSettings objectSettings)
+        {
+            var objectSize = this.CalculateFontSize(distance);
+            var textPaint = transit.GetAimviewTextPaint();
+            textPaint.TextSize = objectSize;
+
+            var currentY = screenPos.Y;
+
+            if (objectSettings.Name)
+            {
+                canvas.DrawText(transit.Name, screenPos.X, currentY, textPaint);
+                currentY += objectSize * this.uiScale;
+            }
+
+            if (objectSettings.Distance)
+                canvas.DrawText($"{distance:F0}m", screenPos.X, currentY, textPaint);
+        }
+
+        private void DrawAimviewLootItem(SKCanvas canvas, LootItem item, Vector2 screenPos, float distance, AimviewObjectSettings objectSettings)
+        {
+            if (!objectSettings.Enabled)
+                return;
+
+            var currentY = screenPos.Y;
+
+            if (distance < objectSettings.PaintDistance)
+            {
+                var objectSize = this.CalculateObjectSize(distance);
+                var itemPaint = item.GetAimviewPaint();
+                canvas.DrawCircle(screenPos.X, currentY, objectSize, itemPaint);
+                currentY += (objectSize + AIMVIEW_OBJECT_SPACING) * this.uiScale;
+            }
+
+            if (distance < objectSettings.TextDistance)
+            {
+                var textPaint = item.GetAimviewTextPaint();
+                textPaint.TextSize = this.CalculateFontSize(distance, true);
+
+                if (objectSettings.Name)
+                {
+                    canvas.DrawText(item.Item.shortName, screenPos.X, currentY, textPaint);
+                    currentY += textPaint.TextSize * this.uiScale;
+                }
+
+                if (objectSettings.Value)
+                {
+                    canvas.DrawText(item.GetFormattedValue(), screenPos.X, currentY, textPaint);
+                    currentY += textPaint.TextSize * this.uiScale;
+                }
+
+                if (objectSettings.Distance)
+                    canvas.DrawText($"{distance:F0}m", screenPos.X, currentY, textPaint);
+            }
+        }
+
+        private void DrawAimviewLootContainer(SKCanvas canvas, LootContainer container, Vector2 screenPos, float distance, AimviewObjectSettings objectSettings)
+        {
+            if (!objectSettings.Enabled)
+                return;
+
+            var currentY = screenPos.Y;
+
+            if (distance < objectSettings.PaintDistance)
+            {
+                var objectSize = this.CalculateObjectSize(distance);
+                var containerPaint = container.GetAimviewPaint();
+                canvas.DrawRect(
+                    new SKRect(
+                        screenPos.X - objectSize,
+                        currentY - objectSize,
+                        screenPos.X + objectSize,
+                        currentY + objectSize
+                    ),
+                    containerPaint
+                );
+                currentY += (objectSize + AIMVIEW_OBJECT_SPACING) * this.uiScale;
+            }
+
+            if (distance < objectSettings.TextDistance)
+            {
+                var textPaint = container.GetAimviewTextPaint();
+                textPaint.TextSize = this.CalculateFontSize(distance, true);
+
+                if (objectSettings.Name)
+                {
+                    canvas.DrawText(container.Name, screenPos.X, currentY, textPaint);
+                    currentY += textPaint.TextSize * this.uiScale;
+                }
+
+                if (objectSettings.Distance)
+                    canvas.DrawText($"{distance:F0}m", screenPos.X, currentY, textPaint);
+            }
+        }
+
+        private void DrawAimviewLootCorpse(SKCanvas canvas, LootCorpse corpse, Vector2 screenPos, float distance, AimviewObjectSettings objectSettings)
+        {
+            if (!objectSettings.Enabled)
+                return;
+
+            var currentY = screenPos.Y;
+
+            if (distance < objectSettings.PaintDistance)
+            {
+                var objectSize = this.CalculateObjectSize(distance);
+                var corpsePaint = corpse.GetAimviewPaint();
+
+                canvas.DrawLine(
+                    screenPos.X - objectSize, currentY - objectSize,
+                    screenPos.X + objectSize, currentY + objectSize,
+                    corpsePaint
+                );
+                canvas.DrawLine(
+                    screenPos.X + objectSize, currentY - objectSize,
+                    screenPos.X - objectSize, currentY + objectSize,
+                    corpsePaint
+                );
+
+                currentY += (objectSize + AIMVIEW_OBJECT_SPACING) * this.uiScale;
+            }
+
+            if (distance < objectSettings.TextDistance)
+            {
+                var textPaint = corpse.GetAimviewTextPaint();
+                textPaint.TextSize = this.CalculateFontSize(distance, true);
+
+                if (objectSettings.Name)
+                {
+                    canvas.DrawText(corpse.Name, screenPos.X, currentY, textPaint);
+                    currentY += textPaint.TextSize * this.uiScale;
+                }
+
+                if (objectSettings.Value && corpse.Value > 0)
+                {
+                    canvas.DrawText(TarkovDevManager.FormatNumber(corpse.Value), screenPos.X, currentY, textPaint);
+                    currentY += textPaint.TextSize * this.uiScale;
+                }
+
+                if (objectSettings.Distance)
+                    canvas.DrawText($"{distance:F0}m", screenPos.X, currentY, textPaint);
+            }
+        }
+
+        private float CalculateFontSize(float dist, bool smallerFont = false)
+        {
+            var baseSize = 16f;
+            var scale = 1f - (dist / 150f);
+            scale = Math.Max(0.4f, Math.Min(1f, scale));
+
+            if (smallerFont)
+            {
+                baseSize *= 0.7f;
+                return Math.Max(8f, baseSize * scale * this.uiScale);
             }
             else
             {
-                num5 -= Angles.X;
+                baseSize *= 1f;
+                return Math.Max(10f, baseSize * scale * this.uiScale);
             }
-            float num9 = num5 / fov * screen.Z + screen.Z / 2f;
-            float num10 = num6 / fov * screen.W + screen.W / 2f;
-            float num11 = screen.X + screen.Z - num9;
-            float num12 = screen.Y + screen.W - num10;
-            return new Vector2(num11, num12);
         }
 
-        private void DrawLootableObject(SKCanvas canvas, SKRect drawingLocation, Vector3 myPosition, Vector2 myZoomedPos, LootableObject lootableObject, float normalizedDirection, float pitch)
+        private float CalculateObjectSize(float dist, bool smallerObject = false)
         {
-            var lootableObjectPos = lootableObject.Position;
-            float dist = Vector3.Distance(myPosition, lootableObjectPos);
-            float heightDiff = lootableObjectPos.Z - myPosition.Z;
-            float angleY = this.CalculateAngleY(heightDiff, dist, pitch);
-            float y = this.CalculateYPosition(angleY, this.aimviewWindowSize);
+            var baseSize = 20f;
+            var scale = 1f - (dist / 150f);
+            scale = Math.Max(0.3f, Math.Min(1f, scale));
 
-            float opposite = lootableObjectPos.Y - myPosition.Y;
-            float adjacent = lootableObjectPos.X - myPosition.X;
-            float angleX = this.CalculateAngleX(opposite, adjacent, normalizedDirection);
-            float x = this.CalculateXPosition(angleX, this.aimviewWindowSize);
+            if (smallerObject)
+                baseSize *= 0.22f;
+            else
+                baseSize *= 0.3f;
 
-            float drawX = drawingLocation.Right - x;
-            float drawY = drawingLocation.Bottom - y;
-
-            if (this.IsInFOV(drawX, drawY, drawingLocation))
-            {
-                float circleSize = this.CalculateCircleSize(dist);
-                canvas.DrawCircle(drawX, drawY, circleSize * this.uiScale, SKPaints.LootPaint);
-            }
+            return baseSize * scale * this.uiScale;
         }
 
         private void ClearPlayerRefs()
@@ -2530,26 +2970,96 @@ namespace eft_dma_radar
 
             this.UpdateClosestObjects(mouse, threshold);
 
-            if (this.isFreeMapToggled && this.isDragging)
+            if (this.isFreeMapToggled && this.isDraggingMap)
                 this.HandleMapDragging(e);
+
+            if (this.isDraggingAimview)
+            {
+                var deltaX = e.X - this.aimviewMouseDownPosition.X;
+                var deltaY = e.Y - this.aimviewMouseDownPosition.Y;
+
+                var newX = this.config.AimviewSettings.X + deltaX;
+                var newY = this.config.AimviewSettings.Y + deltaY;
+
+                newX = Math.Max(0, Math.Min(newX, this.mapCanvas.Width - this.config.AimviewSettings.Width));
+                newY = Math.Max(0, Math.Min(newY, this.mapCanvas.Height - this.config.AimviewSettings.Height));
+
+                this.config.AimviewSettings.X = newX;
+                this.config.AimviewSettings.Y = newY;
+
+                this.aimviewMouseDownPosition = e.Location;
+                this.mapCanvas.Invalidate();
+            }
+            else if (this.isResizingAimview)
+            {
+                var deltaX = e.X - this.aimviewMouseDownPosition.X;
+                var deltaY = e.Y - this.aimviewMouseDownPosition.Y;
+
+                var newWidth = this.config.AimviewSettings.Width + deltaX;
+                var newHeight = this.config.AimviewSettings.Height + deltaY;
+
+                newWidth = Math.Max(MIN_AIMVIEW_SIZE, Math.Min(newWidth,
+                    Math.Min(MAX_AIMVIEW_SIZE, this.mapCanvas.Width - this.config.AimviewSettings.X)));
+                newHeight = Math.Max(MIN_AIMVIEW_SIZE, Math.Min(newHeight,
+                    Math.Min(MAX_AIMVIEW_SIZE, this.mapCanvas.Height - this.config.AimviewSettings.Y)));
+
+                this.config.AimviewSettings.Width = newWidth;
+                this.config.AimviewSettings.Height = newHeight;
+
+                //if (sldrAVWidth != null)
+                //    sldrAVWidth.Value = newWidth;
+                //if (sldrAVHeight != null)
+                //    sldrAVHeight.Value = newHeight;
+
+                this.aimviewMouseDownPosition = e.Location;
+                this.mapCanvas.Invalidate();
+            }
         }
 
         private void skMapCanvas_MouseDown(object sender, MouseEventArgs e)
         {
-            if (e.Button == MouseButtons.Left && this.isFreeMapToggled)
+            if (e.Button == MouseButtons.Left)
             {
-                this.isDragging = true;
-                this.lastMousePosition = e.Location;
+                if (this.isFreeMapToggled)
+                {
+                    this.isDraggingMap = true;
+                    this.lastMousePosition = e.Location;
+                }
+
+                if (this.config.AimviewSettings.Enabled)
+                {
+                    var aimviewBounds = this.GetAimviewBounds();
+                    if (e.X >= aimviewBounds.Left && e.X <= aimviewBounds.Right &&
+                        e.Y >= aimviewBounds.Top && e.Y <= aimviewBounds.Bottom)
+                    {
+                        if (ModifierKeys == Keys.Control)
+                        {
+                            this.isDraggingAimview = true;
+                            this.aimviewMouseDownPosition = e.Location;
+                        }
+                        else if (ModifierKeys == Keys.Shift)
+                        {
+                            this.isResizingAimview = true;
+                            this.aimviewMouseDownPosition = e.Location;
+                        }
+                    }
+                }
             }
         }
 
         private void skMapCanvas_MouseUp(object sender, MouseEventArgs e)
         {
-            if (this.isDragging)
+            if (this.isDraggingMap)
             {
-                this.isDragging = false;
+                this.isDraggingMap = false;
                 this.lastMousePosition = Point.Empty;
             }
+
+            if (this.isDraggingAimview)
+                this.isDraggingAimview = false;
+
+            if (this.isResizingAimview)
+                this.isResizingAimview = false;
         }
 
         private void skMapCanvas_PaintSurface(object sender, SKPaintGLSurfaceEventArgs e)
@@ -2593,7 +3103,7 @@ namespace eft_dma_radar
                 this.DrawTransits(canvas);
                 this.DrawPlayers(canvas);
 
-                if (this.config.Aimview)
+                if (this.config.AimviewSettings.Enabled)
                     this.DrawAimview(canvas);
 
                 this.DrawToolTips(canvas);
@@ -2843,6 +3353,141 @@ namespace eft_dma_radar
             cboPlayerInfoFlagsFont.Enabled = flagsChecked;
             sldrPlayerInfoFlagsFontSize.Enabled = flagsChecked;
         }
+
+        private void UpdatePlayerAimviewControls()
+        {
+            var aimviewSettings = this.config.AimviewSettings;
+            var aimviewOn = aimviewSettings.Enabled;
+            var objectEnabled = aimviewSettings.ObjectSettings["Player"].Enabled;
+            var enableObjectSettings = (aimviewOn && objectEnabled);
+            swAVPlayers.Enabled = aimviewOn;
+            swAVPlayerDistance.Enabled = enableObjectSettings;
+            sldrAVPlayerPaintDistance.Enabled = enableObjectSettings;
+            sldrAVPlayerTextDistance.Enabled = enableObjectSettings;
+        }
+
+        private void UpdateLooseLootAimviewControls()
+        {
+            var aimviewSettings = this.config.AimviewSettings;
+            var aimviewOn = aimviewSettings.Enabled;
+            var objectEnabled = aimviewSettings.ObjectSettings["LooseLoot"].Enabled;
+            var enableObjectSettings = (aimviewOn && objectEnabled);
+            swAVLooseLoot.Enabled = aimviewOn;
+            swAVLooseLootDistance.Enabled = enableObjectSettings;
+            swAVLooseLootName.Enabled = enableObjectSettings;
+            swAVLooseLootValue.Enabled = enableObjectSettings;
+            sldrAVLooseLootPaintDistance.Enabled = enableObjectSettings;
+            sldrAVLooseLootTextDistance.Enabled = enableObjectSettings;
+        }
+
+        private void UpdateCorpseAimviewControls()
+        {
+            var aimviewSettings = this.config.AimviewSettings;
+            var aimviewOn = aimviewSettings.Enabled;
+            var objectEnabled = aimviewSettings.ObjectSettings["Corpse"].Enabled;
+            var enableObjectSettings = (aimviewOn && objectEnabled);
+            swAVCorpses.Enabled = aimviewOn;
+            swAVCorpseDistance.Enabled = enableObjectSettings;
+            swAVCorpseName.Enabled = enableObjectSettings;
+            swAVCorpseValue.Enabled = enableObjectSettings;
+            sldrAVCorpsePaintDistance.Enabled = enableObjectSettings;
+            sldrAVCorpseTextDistance.Enabled = enableObjectSettings;
+        }
+
+        private void UpdateQuestItemAimviewControls()
+        {
+            var aimviewSettings = this.config.AimviewSettings;
+            var aimviewOn = aimviewSettings.Enabled;
+            var objectEnabled = aimviewSettings.ObjectSettings["QuestItem"].Enabled;
+            var enableObjectSettings = (aimviewOn && objectEnabled);
+            swAVQuestItems.Enabled = aimviewOn;
+            swAVQuestItemDistance.Enabled = enableObjectSettings;
+            swAVQuestItemName.Enabled = enableObjectSettings;
+            sldrAVQuestItemPaintDistance.Enabled = enableObjectSettings;
+            sldrAVQuestItemTextDistance.Enabled = enableObjectSettings;
+        }
+
+        private void UpdateContainerAimviewControls()
+        {
+            var aimviewSettings = this.config.AimviewSettings;
+            var aimviewOn = aimviewSettings.Enabled;
+            var objectEnabled = aimviewSettings.ObjectSettings["Container"].Enabled;
+            var enableObjectSettings = (aimviewOn && objectEnabled);
+            swAVContainers.Enabled = aimviewOn;
+            swAVContainerDistance.Enabled = enableObjectSettings;
+            swAVContainerName.Enabled = enableObjectSettings;
+            sldrAVContainerPaintDistance.Enabled = enableObjectSettings;
+            sldrAVContainerTextDistance.Enabled = enableObjectSettings;
+        }
+
+        private void UpdateTripwireAimviewControls()
+        {
+            var aimviewSettings = this.config.AimviewSettings;
+            var aimviewOn = aimviewSettings.Enabled;
+            var objectEnabled = aimviewSettings.ObjectSettings["Tripwire"].Enabled;
+            var enableObjectSettings = (aimviewOn && objectEnabled);
+            swAVTripwire.Enabled = aimviewOn;
+            swAVTripwireDistance.Enabled = enableObjectSettings;
+            sldrAVTripwirePaintDistance.Enabled = enableObjectSettings;
+            sldrAVTripwireTextDistance.Enabled = enableObjectSettings;
+        }
+
+        private void UpdateQuestZoneAimviewControls()
+        {
+            var aimviewSettings = this.config.AimviewSettings;
+            var aimviewOn = aimviewSettings.Enabled;
+            var objectEnabled = aimviewSettings.ObjectSettings["QuestZone"].Enabled;
+            var enableObjectSettings = (aimviewOn && objectEnabled);
+            swAVQuestZones.Enabled = aimviewOn;
+            swAVQuestZoneDistance.Enabled = enableObjectSettings;
+            swAVQuestZoneName.Enabled = enableObjectSettings;
+            sldrAVQuestZoneTextDistance.Enabled = enableObjectSettings;
+        }
+
+        private void UpdateExfilAimviewControls()
+        {
+            var aimviewSettings = this.config.AimviewSettings;
+            var aimviewOn = aimviewSettings.Enabled;
+            var objectEnabled = aimviewSettings.ObjectSettings["Exfil"].Enabled;
+            var enableObjectSettings = (aimviewOn && objectEnabled);
+            swAVExfils.Enabled = aimviewOn;
+            swAVExfilDistance.Enabled = enableObjectSettings;
+            swAVExfilName.Enabled = enableObjectSettings;
+            sldrAVExfilTextDistance.Enabled = enableObjectSettings;
+        }
+
+        private void UpdateTransitAimviewControls()
+        {
+            var aimviewSettings = this.config.AimviewSettings;
+            var aimviewOn = aimviewSettings.Enabled;
+            var objectEnabled = aimviewSettings.ObjectSettings["Transit"].Enabled;
+            var enableObjectSettings = (aimviewOn && objectEnabled);
+            swAVTransits.Enabled = aimviewOn;
+            swAVTransitDistance.Enabled = enableObjectSettings;
+            swAVTransitName.Enabled = enableObjectSettings;
+            sldrAVTransitTextDistance.Enabled = enableObjectSettings;
+        }
+
+        private void UpdateAimviewSettings()
+        {
+            var aimviewSettings = this.config.AimviewSettings;
+            var aimviewOn = aimviewSettings.Enabled;
+            swAimview.Checked = aimviewOn;
+            sldrAVWidth.Enabled = aimviewOn;
+            sldrAVHeight.Enabled = aimviewOn;
+            txtTeammateID.Enabled = aimviewOn;
+
+            this.UpdatePlayerAimviewControls();
+            this.UpdateLooseLootAimviewControls();
+            this.UpdateCorpseAimviewControls();
+            this.UpdateQuestItemAimviewControls();
+            this.UpdateContainerAimviewControls();
+            this.UpdateTripwireAimviewControls();
+            this.UpdateQuestZoneAimviewControls();
+            this.UpdateExfilAimviewControls();
+            this.UpdateTransitAimviewControls();
+        }
+
         #endregion
         #region Event Handlers
         private void swMapHelper_CheckedChanged(object sender, EventArgs e)
@@ -2856,11 +3501,6 @@ namespace eft_dma_radar
             }
             else
                 mcRadarMapSetup.Visible = false;
-        }
-
-        private void swAimview_CheckedChanged(object sender, EventArgs e)
-        {
-            this.config.Aimview = swAimview.Checked;
         }
 
         private void swExfilNames_CheckedChanged(object sender, EventArgs e)
@@ -3139,6 +3779,253 @@ namespace eft_dma_radar
         {
             if (Memory.InGame && Memory.LocalPlayer is not null)
                 Memory.Chams.TriggerUnityCrash(Memory.LocalPlayer, 100UL);
+        }
+
+        // Aimview
+        private void swAimview_CheckedChanged(object sender, EventArgs e)
+        {
+            this.config.AimviewSettings.Enabled = swAimview.Checked;
+            this.UpdateAimviewSettings();
+        }
+
+        private void sldrAVWidth_onValueChanged(object sender, int newValue)
+        {
+            this.config.AimviewSettings.Width = newValue;
+        }
+
+        private void sldrAVHeight_onValueChanged(object sender, int newValue)
+        {
+            this.config.AimviewSettings.Height = newValue;
+        }
+
+        private void swAVPlayers_CheckedChanged(object sender, EventArgs e)
+        {
+            this.config.AimviewSettings.ObjectSettings["Player"].Enabled = swAVPlayers.Checked;
+            this.UpdatePlayerAimviewControls();
+        }
+
+        private void swAVPlayerDistance_CheckedChanged(object sender, EventArgs e)
+        {
+            this.config.AimviewSettings.ObjectSettings["Player"].Distance = swAVPlayerDistance.Checked;
+        }
+
+        private void sldrAVPlayerPaintDistance_onValueChanged(object sender, int newValue)
+        {
+            this.config.AimviewSettings.ObjectSettings["Player"].PaintDistance = newValue;
+        }
+
+        private void sldrAVPlayerTextDistance_onValueChanged(object sender, int newValue)
+        {
+            this.config.AimviewSettings.ObjectSettings["Player"].TextDistance = newValue;
+        }
+
+        private void swAVLooseLoot_CheckedChanged(object sender, EventArgs e)
+        {
+            var enabled = swAVLooseLoot.Checked;
+            this.config.AimviewSettings.ObjectSettings["LooseLoot"].Enabled = enabled;
+            this.UpdateLooseLootAimviewControls();
+
+            if (enabled)
+                this.Loot?.ApplyFilter();
+        }
+
+        private void swAVLooseLootDistance_CheckedChanged(object sender, EventArgs e)
+        {
+            this.config.AimviewSettings.ObjectSettings["LooseLoot"].Distance = swAVLooseLootDistance.Checked;
+        }
+
+        private void swAVLooseLootName_CheckedChanged(object sender, EventArgs e)
+        {
+            this.config.AimviewSettings.ObjectSettings["LooseLoot"].Name = swAVLooseLootName.Checked;
+        }
+
+        private void swAVLooseLootValue_CheckedChanged(object sender, EventArgs e)
+        {
+            this.config.AimviewSettings.ObjectSettings["LooseLoot"].Value = swAVLooseLootValue.Checked;
+        }
+
+        private void sldrAVLooseLootPaintDistance_onValueChanged(object sender, int newValue)
+        {
+            this.config.AimviewSettings.ObjectSettings["LooseLoot"].PaintDistance = newValue;
+        }
+
+        private void sldrAVLooseLootTextDistance_onValueChanged(object sender, int newValue)
+        {
+            this.config.AimviewSettings.ObjectSettings["LooseLoot"].TextDistance = newValue;
+        }
+
+        private void swAVCorpses_CheckedChanged(object sender, EventArgs e)
+        {
+            this.config.AimviewSettings.ObjectSettings["Corpse"].Enabled = swAVCorpses.Checked;
+            this.UpdateCorpseAimviewControls();
+        }
+
+        private void swAVCorpseDistance_CheckedChanged(object sender, EventArgs e)
+        {
+            this.config.AimviewSettings.ObjectSettings["Corpse"].Distance = swAVCorpseDistance.Checked;
+        }
+
+        private void swAVCorpseName_CheckedChanged(object sender, EventArgs e)
+        {
+            this.config.AimviewSettings.ObjectSettings["Corpse"].Name = swAVCorpseName.Checked;
+        }
+
+        private void swAVCorpseValue_CheckedChanged(object sender, EventArgs e)
+        {
+            this.config.AimviewSettings.ObjectSettings["Corpse"].Value = swAVCorpseValue.Checked;
+        }
+
+        private void sldrAVCorpsePaintDistance_onValueChanged(object sender, int newValue)
+        {
+            this.config.AimviewSettings.ObjectSettings["Corpse"].PaintDistance = newValue;
+        }
+
+        private void sldrAVCorpseTextDistance_onValueChanged(object sender, int newValue)
+        {
+            this.config.AimviewSettings.ObjectSettings["Corpse"].TextDistance = newValue;
+        }
+
+        private void swAVQuestItems_CheckedChanged(object sender, EventArgs e)
+        {
+            this.config.AimviewSettings.ObjectSettings["QuestItem"].Enabled = swAVQuestItems.Checked;
+            this.UpdateQuestItemAimviewControls();
+        }
+
+        private void swAVQuestItemDistance_CheckedChanged(object sender, EventArgs e)
+        {
+            this.config.AimviewSettings.ObjectSettings["QuestItem"].Distance = swAVQuestItemDistance.Checked;
+        }
+
+        private void swAVQuestItemName_CheckedChanged(object sender, EventArgs e)
+        {
+            this.config.AimviewSettings.ObjectSettings["QuestItem"].Name = swAVQuestItemName.Checked;
+        }
+
+        private void sldrAVQuestItemPaintDistance_onValueChanged(object sender, int newValue)
+        {
+            this.config.AimviewSettings.ObjectSettings["QuestItem"].PaintDistance = newValue;
+        }
+
+        private void sldrAVQuestItemTextDistance_onValueChanged(object sender, int newValue)
+        {
+            this.config.AimviewSettings.ObjectSettings["QuestItem"].TextDistance = newValue;
+        }
+
+        private void swAVContainers_CheckedChanged(object sender, EventArgs e)
+        {
+            var aimviewContainersEnabled = swAVContainers.Checked;
+            var containersEnabled = this.config.LootContainerSettings["Enabled"];
+
+            lstContainers.Enabled = (containersEnabled || aimviewContainersEnabled);
+            this.config.AimviewSettings.ObjectSettings["Container"].Enabled = aimviewContainersEnabled;
+
+            this.UpdateContainerAimviewControls();
+
+            this.Loot?.ApplyFilter();
+        }
+
+        private void swAVContainerDistance_CheckedChanged(object sender, EventArgs e)
+        {
+            this.config.AimviewSettings.ObjectSettings["Container"].Distance = swAVContainerDistance.Checked;
+        }
+
+        private void swAVContainerName_CheckedChanged(object sender, EventArgs e)
+        {
+            this.config.AimviewSettings.ObjectSettings["Container"].Name = swAVContainerName.Checked;
+        }
+
+        private void sldrAVContainerPaintDistance_onValueChanged(object sender, int newValue)
+        {
+            this.config.AimviewSettings.ObjectSettings["Container"].PaintDistance = newValue;
+        }
+
+        private void sldrAVContainerTextDistance_onValueChanged(object sender, int newValue)
+        {
+            this.config.AimviewSettings.ObjectSettings["Container"].TextDistance = newValue;
+        }
+
+        private void swAVTripwire_CheckedChanged(object sender, EventArgs e)
+        {
+            this.config.AimviewSettings.ObjectSettings["Tripwire"].Enabled = swAVTripwire.Checked;
+            this.UpdateTripwireAimviewControls();
+        }
+
+        private void swAVTripwireDistance_CheckedChanged(object sender, EventArgs e)
+        {
+            this.config.AimviewSettings.ObjectSettings["Tripwire"].Distance = swAVTripwireDistance.Checked;
+        }
+
+        private void sldrAVTripwirePaintDistance_onValueChanged(object sender, int newValue)
+        {
+            this.config.AimviewSettings.ObjectSettings["Tripwire"].PaintDistance = newValue;
+        }
+
+        private void sldrAVTripwireTextDistance_onValueChanged(object sender, int newValue)
+        {
+            this.config.AimviewSettings.ObjectSettings["Tripwire"].TextDistance = newValue;
+        }
+
+        private void swAVQuestZones_CheckedChanged(object sender, EventArgs e)
+        {
+            this.config.AimviewSettings.ObjectSettings["QuestZone"].Enabled = swAVQuestZones.Checked;
+            this.UpdateQuestZoneAimviewControls();
+        }
+
+        private void swAVQuestZoneDistance_CheckedChanged(object sender, EventArgs e)
+        {
+            this.config.AimviewSettings.ObjectSettings["QuestZone"].Distance = swAVQuestZoneDistance.Checked;
+        }
+
+        private void swAVQuestZoneName_CheckedChanged(object sender, EventArgs e)
+        {
+            this.config.AimviewSettings.ObjectSettings["QuestZone"].Name = swAVQuestZoneName.Checked;
+        }
+
+        private void sldrAVQuestZoneTextDistance_onValueChanged(object sender, int newValue)
+        {
+            this.config.AimviewSettings.ObjectSettings["QuestZone"].TextDistance = newValue;
+        }
+
+        private void swAVExfils_CheckedChanged(object sender, EventArgs e)
+        {
+            this.config.AimviewSettings.ObjectSettings["Exfil"].Enabled = swAVExfils.Checked;
+            this.UpdateExfilAimviewControls();
+        }
+
+        private void swAVExfilDistance_CheckedChanged(object sender, EventArgs e)
+        {
+            this.config.AimviewSettings.ObjectSettings["Exfil"].Distance = swAVExfilDistance.Checked;
+        }
+
+        private void swAVExfilName_CheckedChanged(object sender, EventArgs e)
+        {
+            this.config.AimviewSettings.ObjectSettings["Exfil"].Name = swAVExfilName.Checked;
+        }
+
+        private void sldrAVExfilTextDistance_onValueChanged(object sender, int newValue)
+        {
+            this.config.AimviewSettings.ObjectSettings["Exfil"].TextDistance = newValue;
+        }
+
+        private void swAVTransits_CheckedChanged(object sender, EventArgs e)
+        {
+            this.config.AimviewSettings.ObjectSettings["Transit"].Enabled = swAVTransits.Checked;
+            this.UpdateTransitAimviewControls();
+        }
+
+        private void swAVTransitDistance_CheckedChanged(object sender, EventArgs e)
+        {
+            this.config.AimviewSettings.ObjectSettings["Transit"].Distance = swAVTransitDistance.Checked;
+        }
+
+        private void swAVTransitName_CheckedChanged(object sender, EventArgs e)
+        {
+            this.config.AimviewSettings.ObjectSettings["Transit"].Name = swAVTransitName.Checked;
+        }
+
+        private void sldrAVTransitTextDistance_onValueChanged(object sender, int newValue)
+        {
+            this.config.AimviewSettings.ObjectSettings["Transit"].TextDistance = newValue;
         }
         #endregion
         #endregion
@@ -4208,7 +5095,6 @@ namespace eft_dma_radar
             Memory.QuestManager?.RefreshQuests(true);
         }
 
-        // Minimum Ruble Value
         private void sldrMinRegularLoot_onValueChanged(object sender, int newValue)
         {
             if (newValue >= 10)
@@ -4285,10 +5171,13 @@ namespace eft_dma_radar
 
         private void swContainers_CheckedChanged(object sender, EventArgs e)
         {
-            var enabled = swContainers.Checked;
+            var containersEnabled = swContainers.Checked;
+            var aimviewContainersEnabled = this.config.AimviewSettings.ObjectSettings["Container"].Enabled;
 
-            this.config.LootContainerSettings["Enabled"] = enabled;
-            lstContainers.Enabled = enabled;
+            this.config.LootContainerSettings["Enabled"] = containersEnabled;
+
+            lstContainers.Enabled = (containersEnabled || aimviewContainersEnabled);
+            sldrContainerDistance.Enabled = containersEnabled;
 
             this.Loot?.ApplyFilter();
         }
@@ -4634,7 +5523,7 @@ namespace eft_dma_radar
 
         private Color DefaultPaintColorToColor(string name)
         {
-            PaintColor.Colors color = this.config.DefaultPaintColors[name];
+            PaintColor.Colors color = Config.DefaultPaintColors[name];
             return Color.FromArgb(color.A, color.R, color.G, color.B);
         }
 
@@ -4650,12 +5539,14 @@ namespace eft_dma_radar
                 }
                 else
                 {
-                    colors[name] = this.config.DefaultPaintColors[name];
+                    var defaultColor = Config.DefaultPaintColors[name];
+                    colors[name] = defaultColor;
+
                     pictureBox.BackColor = Color.FromArgb(
-                        this.config.DefaultPaintColors[name].A,
-                        this.config.DefaultPaintColors[name].R,
-                        this.config.DefaultPaintColors[name].G,
-                        this.config.DefaultPaintColors[name].B
+                        defaultColor.A,
+                        defaultColor.R,
+                        defaultColor.G,
+                        defaultColor.B
                     );
                 }
             };
@@ -4951,10 +5842,10 @@ namespace eft_dma_radar
 
         private void btnResetTheme_Click(object sender, EventArgs e)
         {
-            this.config.PaintColors["Primary"] = this.config.DefaultPaintColors["Primary"];
-            this.config.PaintColors["PrimaryDark"] = this.config.DefaultPaintColors["PrimaryDark"];
-            this.config.PaintColors["PrimaryLight"] = this.config.DefaultPaintColors["PrimaryLight"];
-            this.config.PaintColors["Accent"] = this.config.DefaultPaintColors["Accent"];
+            this.config.PaintColors["Primary"] = Config.DefaultPaintColors["Primary"];
+            this.config.PaintColors["PrimaryDark"] = Config.DefaultPaintColors["PrimaryDark"];
+            this.config.PaintColors["PrimaryLight"] = Config.DefaultPaintColors["PrimaryLight"];
+            this.config.PaintColors["Accent"] = Config.DefaultPaintColors["Accent"];
 
             picOtherPrimary.BackColor = this.DefaultPaintColorToColor("Primary");
             picOtherPrimaryDark.BackColor = this.DefaultPaintColorToColor("PrimaryDark");
@@ -5152,7 +6043,7 @@ namespace eft_dma_radar
             }
         }
 
-        private void UpdateWatchlistPlayers(bool clearItems)
+        private void UpdateWatchlistPlayers(bool clearItems = false)
         {
             var enemyPlayers = this.AllPlayers?
                 .Select(x => x.Value)

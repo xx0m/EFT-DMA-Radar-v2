@@ -87,6 +87,18 @@ namespace eft_dma_radar
             FilterQuality = SKFilterQuality.High
         };
 
+        public static readonly SKPaint AimviewText = new SKPaint()
+        {
+            Style = SKPaintStyle.Fill,
+            Color = SKColors.WhiteSmoke,
+            TextAlign = SKTextAlign.Center,
+            TextSize = 13,
+            TextEncoding = SKTextEncoding.Utf8,
+            IsAntialias = true,
+            Typeface = SKTypeface.FromFamilyName("Arial"),
+            FilterQuality = SKFilterQuality.High
+        };
+
         public static readonly SKPaint DeathMarker = new SKPaint()
         {
             Color = SKColors.Black,
@@ -104,12 +116,31 @@ namespace eft_dma_radar
             StrokeWidth = 1,
             Style = SKPaintStyle.Fill,
         };
+
         public static readonly SKPaint PaintAimviewCrosshair = new SKPaint()
         {
             Color = SKColors.White,
             StrokeWidth = 1,
             Style = SKPaintStyle.Stroke,
             IsAntialias = true
+        };
+
+        public static readonly SKPaint LootAimviewPaint = new SKPaint()
+        {
+            Color = SKColors.WhiteSmoke,
+            StrokeWidth = 1,
+            Style = SKPaintStyle.Stroke,
+            IsAntialias = true,
+            FilterQuality = SKFilterQuality.High
+        };
+
+        public static readonly SKPaint PlayerAimviewPaint = new SKPaint()
+        {
+            Color = SKColors.WhiteSmoke,
+            StrokeWidth = 1,
+            Style = SKPaintStyle.Fill,
+            IsAntialias = true,
+            FilterQuality = SKFilterQuality.High
         };
         #endregion
 
@@ -119,6 +150,7 @@ namespace eft_dma_radar
             IsAntialias = true,
             FilterQuality = SKFilterQuality.High
         };
+
         public static readonly SKPaint TextRadarStatus = new SKPaint()
         {
             Color = SKColors.Red,
@@ -129,6 +161,7 @@ namespace eft_dma_radar
             Typeface = SKTypeface.FromFamilyName("Arial", SKFontStyle.Bold),
             TextAlign = SKTextAlign.Center
         };
+
         public static readonly SKPaint PaintGrenades = new SKPaint()
         {
             Color = SKColors.OrangeRed,
@@ -137,6 +170,7 @@ namespace eft_dma_radar
             IsAntialias = true,
             FilterQuality = SKFilterQuality.High
         };
+
         public static readonly SKPaint PaintTripwires = new SKPaint()
         {
             Color = SKColors.OrangeRed,
@@ -145,6 +179,7 @@ namespace eft_dma_radar
             IsAntialias = true,
             FilterQuality = SKFilterQuality.High
         };
+
         public static readonly SKPaint PaintExfilOpen = new SKPaint()
         {
             Color = SKColors.LimeGreen,
@@ -153,6 +188,7 @@ namespace eft_dma_radar
             IsAntialias = true,
             FilterQuality = SKFilterQuality.High
         };
+
         public static readonly SKPaint PaintExfilPending = new SKPaint()
         {
             Color = SKColors.Yellow,
@@ -161,6 +197,7 @@ namespace eft_dma_radar
             IsAntialias = true,
             FilterQuality = SKFilterQuality.High
         };
+
         public static readonly SKPaint PaintExfilClosed = new SKPaint()
         {
             Color = SKColors.Red,

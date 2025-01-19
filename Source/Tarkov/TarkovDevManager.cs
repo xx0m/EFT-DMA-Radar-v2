@@ -39,10 +39,10 @@ namespace eft_dma_radar
         {
             TarkovDevResponse jsonResponse;
 
-            //if (ShouldFetchDataFromApi())
+            if (ShouldFetchDataFromApi())
                 jsonResponse = FetchDataFromApi();
-            //else
-                //jsonResponse = LoadDataFromFile();
+            else
+                jsonResponse = LoadDataFromFile();
 
             if (jsonResponse is not null)
             {
@@ -370,8 +370,8 @@ namespace eft_dma_radar
                             position = new ObjectiveZones.Position
                             {
                                 x = z.position.x,
-                                y = z.position.z,
-                                z = z.position.y
+                                y = z.position.y,
+                                z = z.position.z
                             }
                         }).ToList(),
                         Items = objective.items?.Select(i => new ObjectiveItem
@@ -460,7 +460,7 @@ namespace eft_dma_radar
                     var newExtract = new Maps.Extract()
                     {
                         name = extract.name,
-                        position = new Vector3(extract.position.x, extract.position.z, extract.position.y)
+                        position = new Vector3(extract.position.x, extract.position.y, extract.position.z)
                     };
 
                     newMap.extracts.Add(newExtract);
@@ -472,7 +472,7 @@ namespace eft_dma_radar
                     {
                         id = transit.id,
                         description = transit.description,
-                        position = new Vector3(transit.position.x, transit.position.z, transit.position.y)
+                        position = new Vector3(transit.position.x, transit.position.y, transit.position.z)
                     };
 
                     newMap.transits.Add(newTransit);

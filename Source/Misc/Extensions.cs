@@ -1,5 +1,6 @@
 ﻿using SkiaSharp;
 using System.Numerics;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace eft_dma_radar
 {
@@ -46,6 +47,35 @@ namespace eft_dma_radar
         {
             return (180 / Math.PI) * radians;
         }
+
+        /// <summary>
+        /// Converts a 3d position into a 2d position based on the localplayers view matrix
+        /// </summary>
+        /// <returns></returns>
+        public static bool WorldToScreen(Vector3 position, float width, float height, out Vector2 screenPos)
+        {
+            screenPos = new Vector2(0, 0);
+
+            var viewMatrix = Memory.CameraManager.ViewMatrix;
+            viewMatrix = Matrix4x4.Transpose(viewMatrix);
+
+            var translationVector = new Vector3(viewMatrix.M41, viewMatrix.M42, viewMatrix.M43);
+            var up = new Vector3(viewMatrix.M21, viewMatrix.M22, viewMatrix.M23);
+            var right = new Vector3(viewMatrix.M11, viewMatrix.M12, viewMatrix.M13);
+
+            var w = Vector3.Dot(translationVector, position) + viewMatrix.M44;
+
+            if (w < 0.098f)
+                return false;
+
+            var y = Vector3.Dot(up, position) + viewMatrix.M24;
+            var x = Vector3.Dot(right, position) + viewMatrix.M14;
+
+            screenPos.X = (width / 2f) * (1f + x / w);
+            screenPos.Y = (height / 2f) * (1f - y / w);
+
+            return true;
+        }
         #endregion
 
         #region GUI Extensions
@@ -62,8 +92,8 @@ namespace eft_dma_radar
             return new MapPosition()
             {
                 X = map.ConfigFile.X + (vector.X * map.ConfigFile.Scale),
-                Y = map.ConfigFile.Y - (vector.Y * map.ConfigFile.Scale), // Invert 'Y' unity 0,0 bottom left, C# top left
-                Height = vector.Z // Keep as float, calculation done later
+                Y = map.ConfigFile.Y - (vector.Z * map.ConfigFile.Scale), // Invert 'Y' unity 0,0 bottom left, C# top left
+                Height = vector.Y // Keep as float, calculation done later
             };
         }
 
@@ -97,7 +127,7 @@ namespace eft_dma_radar
         /// Gets drawing paintbrush based on Player Type
         /// </summary>
         public static SKPaint GetEntityPaint(this Player player) {
-            SKPaint basePaint = SKPaints.PaintBase.Clone();
+            var basePaint = SKPaints.PaintBase.Clone();
 
             basePaint.Color = player.Type switch {
                 // AI
@@ -146,8 +176,8 @@ namespace eft_dma_radar
         /// </summary>
         public static SKPaint GetEntityPaint(LootableObject item)
         {
-            bool isFiltered = !item.Color.Equals(DefaultPaintColor);
-            SKPaint paintToUse = SKPaints.LootPaint.Clone();
+            var isFiltered = !item.Color.Equals(DefaultPaintColor);
+            var paintToUse = SKPaints.LootPaint.Clone();
 
             if (item.RequiredByQuest)
                 paintToUse.Color = Extensions.SKColorFromPaintColor("RequiredQuestItem");
@@ -169,8 +199,8 @@ namespace eft_dma_radar
         /// </summary>
         public static SKPaint GetDeathMarkerPaint(LootCorpse corpse)
         {
-            bool isFiltered = !corpse.Color.Equals(DefaultPaintColor);
-            SKPaint paintToUse = SKPaints.DeathMarker.Clone();
+            var isFiltered = !corpse.Color.Equals(DefaultPaintColor);
+            var paintToUse = SKPaints.DeathMarker.Clone();
 
             if (isFiltered)
             {
@@ -187,7 +217,7 @@ namespace eft_dma_radar
 
         public static SKPaint GetDeathMarkerPaint()
         {
-            SKPaint paintToUse = SKPaints.DeathMarker.Clone();
+            var paintToUse = SKPaints.DeathMarker.Clone();
             paintToUse.Color = Extensions.SKColorFromPaintColor("DeathMarker");
             return paintToUse;
         }
@@ -197,7 +227,7 @@ namespace eft_dma_radar
         /// </summary>
         public static SKPaint GetEntityPaint(Grenade grenade)
         {
-            SKPaint paintToUse = SKPaints.PaintGrenades.Clone();
+            var paintToUse = SKPaints.PaintGrenades.Clone();
             paintToUse.Color = Extensions.SKColorFromPaintColor("Grenades");
             return paintToUse;
         }
@@ -207,7 +237,7 @@ namespace eft_dma_radar
         /// </summary>
         public static SKPaint GetEntityPaint(Tripwire tripwire)
         {
-            SKPaint paintToUse = SKPaints.PaintTripwires.Clone();
+            var paintToUse = SKPaints.PaintTripwires.Clone();
             paintToUse.Color = Extensions.SKColorFromPaintColor("Tripwires");
             return paintToUse;
         }
@@ -217,7 +247,7 @@ namespace eft_dma_radar
         /// </summary>
         public static SKPaint GetEntityPaint(QuestItem item)
         {
-            SKPaint paintToUse = SKPaints.LootPaint.Clone();
+            var paintToUse = SKPaints.LootPaint.Clone();
             paintToUse.Color = Extensions.SKColorFromPaintColor("QuestItem");
             return paintToUse;
         }
@@ -227,7 +257,7 @@ namespace eft_dma_radar
         /// </summary>
         public static SKPaint GetEntityPaint(QuestZone zone)
         {
-            SKPaint paintToUse = SKPaints.LootPaint.Clone();
+            var paintToUse = SKPaints.LootPaint.Clone();
             paintToUse.Color = Extensions.SKColorFromPaintColor("QuestZone");
             return paintToUse;
         }
@@ -237,7 +267,7 @@ namespace eft_dma_radar
         /// </summary>
         public static SKPaint GetEntityPaint(Exfil exfil)
         {
-            SKPaint paintToUse = SKPaints.LootPaint.Clone();
+            var paintToUse = SKPaints.LootPaint.Clone();
             paintToUse.Color = exfil.Status switch
             {
                 ExfilStatus.Open => Extensions.SKColorFromPaintColor("ExfilActiveIcon"),
@@ -254,7 +284,7 @@ namespace eft_dma_radar
         /// </summary>
         public static SKPaint GetEntityPaint(Transit transit)
         {
-            SKPaint paintToUse = SKPaints.LootPaint.Clone();
+            var paintToUse = SKPaints.LootPaint.Clone();
             paintToUse.Color = Extensions.SKColorFromPaintColor("TransitIcon");
             //paintToUse.Color = transit.Status switch
             //{
@@ -305,8 +335,8 @@ namespace eft_dma_radar
         /// </summary>
         public static SKPaint GetTextPaint(LootableObject item)
         {
-            bool isFiltered = !item.Color.Equals(DefaultPaintColor);
-            SKPaint paintToUse = SKPaints.LootText.Clone();
+            var isFiltered = !item.Color.Equals(DefaultPaintColor);
+            var paintToUse = SKPaints.LootText.Clone();
 
             if (item.RequiredByQuest)
                 paintToUse.Color = Extensions.SKColorFromPaintColor("RequiredQuestItem");
@@ -325,8 +355,8 @@ namespace eft_dma_radar
 
         public static SKPaint GetTextPaint(GearItem item)
         {
-            bool isFiltered = !item.Color.Equals(DefaultPaintColor);
-            SKPaint paintToUse = SKPaints.LootText.Clone();
+            var isFiltered = !item.Color.Equals(DefaultPaintColor);
+            var paintToUse = SKPaints.LootText.Clone();
 
             if (isFiltered)
             {
@@ -346,7 +376,7 @@ namespace eft_dma_radar
         /// </summary>
         public static SKPaint GetTextPaint(QuestItem item)
         {
-            SKPaint paintToUse = SKPaints.LootText.Clone();
+            var paintToUse = SKPaints.LootText.Clone();
             paintToUse.Color = Extensions.SKColorFromPaintColor("QuestItem");
             return paintToUse;
         }
@@ -356,7 +386,7 @@ namespace eft_dma_radar
         /// </summary>
         public static SKPaint GetTextPaint(QuestZone zone)
         {
-            SKPaint paintToUse = SKPaints.LootText.Clone();
+            var paintToUse = SKPaints.LootText.Clone();
             paintToUse.Color = Extensions.SKColorFromPaintColor("QuestZone");
             return paintToUse;
         }
@@ -366,7 +396,7 @@ namespace eft_dma_radar
         /// </summary>
         public static SKPaint GetTextPaint(Exfil exfil)
         {
-            SKPaint paintToUse = SKPaints.LootText.Clone();
+            var paintToUse = SKPaints.LootText.Clone();
             paintToUse.Color = exfil.Status switch
             {
                 ExfilStatus.Open => Extensions.SKColorFromPaintColor("ExfilActiveText"),
@@ -383,7 +413,7 @@ namespace eft_dma_radar
         /// </summary>
         public static SKPaint GetTextPaint(Transit transit)
         {
-            SKPaint paintToUse = SKPaints.LootText.Clone();
+            var paintToUse = SKPaints.LootText.Clone();
             paintToUse.Color = Extensions.SKColorFromPaintColor("TransitText");
             //paintToUse.Color = transit.Status switch
             //{
@@ -401,7 +431,7 @@ namespace eft_dma_radar
         /// </summary>
         public static SKPaint GetTextOutlinePaint()
         {
-            SKPaint paintToUse = SKPaints.TextBaseOutline.Clone();
+            var paintToUse = SKPaints.TextBaseOutline.Clone();
             paintToUse.Color = Extensions.SKColorFromPaintColor("TextOutline");
             return paintToUse;
         }
@@ -411,9 +441,7 @@ namespace eft_dma_radar
         /// </summary>
         public static SKPaint GetAimviewPaint(this Player player)
         {
-            SKPaint basePaint = SKPaints.PaintBase.Clone();
-            basePaint.StrokeWidth = 1;
-            basePaint.Style = SKPaintStyle.Fill;
+            var basePaint = SKPaints.PlayerAimviewPaint.Clone();
 
             basePaint.Color = player.Type switch {
                 // AI
@@ -439,6 +467,139 @@ namespace eft_dma_radar
             };
 
             return basePaint;
+        }
+
+        public static SKPaint GetAimviewPaint(this LootableObject item)
+        {
+            var isFiltered = !item.Color.Equals(DefaultPaintColor);
+            var paintToUse = SKPaints.LootAimviewPaint.Clone();
+
+            if (isFiltered)
+            {
+                var col = item.Color;
+                paintToUse.Color = new SKColor(col.R, col.G, col.B, col.A);
+            }
+            else if (item.Important)
+                paintToUse.Color = Extensions.SKColorFromPaintColor("ImportantLoot");
+            else
+                paintToUse.Color = Extensions.SKColorFromPaintColor("RegularLoot");
+
+            return paintToUse;
+        }
+
+        public static SKPaint GetAimviewPaint(this QuestItem item)
+        {
+            var paintToUse = SKPaints.LootAimviewPaint.Clone();
+            paintToUse.Color = Extensions.SKColorFromPaintColor("QuestItem");
+            return paintToUse;
+        }
+
+        public static SKPaint GetAimviewPaint(this QuestZone zone)
+        {
+            var paintToUse = SKPaints.LootAimviewPaint.Clone();
+            paintToUse.Color = Extensions.SKColorFromPaintColor("QuestZone");
+            return paintToUse;
+        }
+
+        public static SKPaint GetAimviewPaint(this Tripwire tripwire)
+        {
+            var paintToUse = SKPaints.PaintTripwires.Clone();
+            paintToUse.Color = Extensions.SKColorFromPaintColor("Tripwires");
+            return paintToUse;
+        }
+
+        public static SKPaint GetAimviewTextPaint(this Transit transit)
+        {
+            var paintToUse = SKPaints.AimviewText.Clone();
+            paintToUse.Color = Extensions.SKColorFromPaintColor("TransitText");
+
+            return paintToUse;
+        }
+
+        public static SKPaint GetAimviewTextPaint(this Exfil exfil)
+        {
+            var paintToUse = SKPaints.AimviewText.Clone();
+            paintToUse.Color = exfil.Status switch
+            {
+                ExfilStatus.Open => Extensions.SKColorFromPaintColor("ExfilActiveIcon"),
+                ExfilStatus.Pending => Extensions.SKColorFromPaintColor("ExfilPendingIcon"),
+                ExfilStatus.Closed => Extensions.SKColorFromPaintColor("ExfilClosedIcon"),
+                _ => Extensions.SKColorFromPaintColor("ExfilClosedIcon"),
+            };
+
+            return paintToUse;
+        }
+
+        public static SKPaint GetAimviewTextPaint(this LootableObject item)
+        {
+            var isFiltered = !item.Color.Equals(DefaultPaintColor);
+            var paintToUse = SKPaints.AimviewText.Clone();
+
+            if (item.RequiredByQuest)
+                paintToUse.Color = Extensions.SKColorFromPaintColor("RequiredQuestItem");
+            else if (isFiltered)
+            {
+                var col = item.Color;
+                paintToUse.Color = new SKColor(col.R, col.G, col.B, col.A);
+            }
+            else if (item.Important)
+                paintToUse.Color = Extensions.SKColorFromPaintColor("ImportantLoot");
+            else
+                paintToUse.Color = Extensions.SKColorFromPaintColor("RegularLoot");
+
+            return paintToUse;
+        }
+
+        public static SKPaint GetAimviewTextPaint(this Player player)
+        {
+            var paintToUse = SKPaints.AimviewText.Clone();
+
+            paintToUse.Color = player.Type switch
+            {
+                // AI
+                PlayerType.Boss => Extensions.SKColorFromPaintColor("Boss"),
+                PlayerType.BossGuard => Extensions.SKColorFromPaintColor("BossGuard"),
+                PlayerType.BossFollower => Extensions.SKColorFromPaintColor("BossFollower"),
+                PlayerType.Raider => Extensions.SKColorFromPaintColor("Raider"),
+                PlayerType.Rogue => Extensions.SKColorFromPaintColor("Rogue"),
+                PlayerType.Cultist => Extensions.SKColorFromPaintColor("Cultist"),
+                PlayerType.FollowerOfMorana => Extensions.SKColorFromPaintColor("FollowerOfMorana"),
+                PlayerType.Scav => Extensions.SKColorFromPaintColor("Scav"),
+
+                // Player
+                PlayerType.PlayerScav => Extensions.SKColorFromPaintColor("PlayerScav"),
+                PlayerType.LocalPlayer => Extensions.SKColorFromPaintColor("LocalPlayer"),
+                PlayerType.Teammate => Extensions.SKColorFromPaintColor("Teammate"),
+                PlayerType.BEAR => Extensions.SKColorFromPaintColor("BEAR"),
+                PlayerType.USEC => Extensions.SKColorFromPaintColor("USEC"),
+                PlayerType.Special => Extensions.SKColorFromPaintColor("Special"),
+
+                // default to yellow
+                _ => new SKColor(255, 0, 255, 255),
+            };
+
+            return paintToUse;
+        }
+
+        public static SKPaint GetAimviewTextPaint(this QuestItem item)
+        {
+            var paintToUse = SKPaints.AimviewText.Clone();
+            paintToUse.Color = Extensions.SKColorFromPaintColor("QuestItem");
+            return paintToUse;
+        }
+
+        public static SKPaint GetAimviewTextPaint(this QuestZone zone)
+        {
+            var paintToUse = SKPaints.AimviewText.Clone();
+            paintToUse.Color = Extensions.SKColorFromPaintColor("QuestZone");
+            return paintToUse;
+        }
+
+        public static SKPaint GetAimviewTextPaint(this Tripwire tripwire)
+        {
+            var paintToUse = SKPaints.AimviewText.Clone();
+            paintToUse.Color = Extensions.SKColorFromPaintColor("Tripwires");
+            return paintToUse;
         }
 
         /// <summary>

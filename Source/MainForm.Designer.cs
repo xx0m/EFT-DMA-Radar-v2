@@ -207,6 +207,50 @@
             swSunIntensity = new MaterialSkin.Controls.MaterialSwitch();
             sldrSunIntensity = new MaterialSkin.Controls.MaterialSlider();
             swTraderPrices = new MaterialSkin.Controls.MaterialSwitch();
+            swAVPlayers = new MaterialSkin.Controls.MaterialSwitch();
+            swAVLooseLoot = new MaterialSkin.Controls.MaterialSwitch();
+            swAVPlayerDistance = new MaterialSkin.Controls.MaterialSwitch();
+            swAVLooseLootDistance = new MaterialSkin.Controls.MaterialSwitch();
+            swAVLooseLootName = new MaterialSkin.Controls.MaterialSwitch();
+            swAVLooseLootValue = new MaterialSkin.Controls.MaterialSwitch();
+            swAVCorpseValue = new MaterialSkin.Controls.MaterialSwitch();
+            swAVCorpseName = new MaterialSkin.Controls.MaterialSwitch();
+            swAVCorpseDistance = new MaterialSkin.Controls.MaterialSwitch();
+            swAVCorpses = new MaterialSkin.Controls.MaterialSwitch();
+            swAVContainerDistance = new MaterialSkin.Controls.MaterialSwitch();
+            swAVContainerName = new MaterialSkin.Controls.MaterialSwitch();
+            swAVContainers = new MaterialSkin.Controls.MaterialSwitch();
+            swAVQuestZoneDistance = new MaterialSkin.Controls.MaterialSwitch();
+            swAVQuestZoneName = new MaterialSkin.Controls.MaterialSwitch();
+            swAVQuestZones = new MaterialSkin.Controls.MaterialSwitch();
+            swAVQuestItemName = new MaterialSkin.Controls.MaterialSwitch();
+            swAVQuestItemDistance = new MaterialSkin.Controls.MaterialSwitch();
+            swAVQuestItems = new MaterialSkin.Controls.MaterialSwitch();
+            swAVTripwireDistance = new MaterialSkin.Controls.MaterialSwitch();
+            swAVTripwire = new MaterialSkin.Controls.MaterialSwitch();
+            swAVExfilName = new MaterialSkin.Controls.MaterialSwitch();
+            swAVExfilDistance = new MaterialSkin.Controls.MaterialSwitch();
+            swAVExfils = new MaterialSkin.Controls.MaterialSwitch();
+            swAVTransits = new MaterialSkin.Controls.MaterialSwitch();
+            swAVTransitDistance = new MaterialSkin.Controls.MaterialSwitch();
+            swAVTransitName = new MaterialSkin.Controls.MaterialSwitch();
+            sldrAVTripwirePaintDistance = new MaterialSkin.Controls.MaterialSlider();
+            sldrAVContainerPaintDistance = new MaterialSkin.Controls.MaterialSlider();
+            sldrAVExfilTextDistance = new MaterialSkin.Controls.MaterialSlider();
+            sldrAVTripwireTextDistance = new MaterialSkin.Controls.MaterialSlider();
+            sldrAVQuestItemTextDistance = new MaterialSkin.Controls.MaterialSlider();
+            sldrAVTransitTextDistance = new MaterialSkin.Controls.MaterialSlider();
+            sldrAVQuestItemPaintDistance = new MaterialSkin.Controls.MaterialSlider();
+            sldrAVQuestZoneTextDistance = new MaterialSkin.Controls.MaterialSlider();
+            sldrAVContainerTextDistance = new MaterialSkin.Controls.MaterialSlider();
+            sldrAVCorpseTextDistance = new MaterialSkin.Controls.MaterialSlider();
+            sldrAVCorpsePaintDistance = new MaterialSkin.Controls.MaterialSlider();
+            sldrAVPlayerTextDistance = new MaterialSkin.Controls.MaterialSlider();
+            sldrAVLooseLootTextDistance = new MaterialSkin.Controls.MaterialSlider();
+            sldrAVLooseLootPaintDistance = new MaterialSkin.Controls.MaterialSlider();
+            sldrAVHeight = new MaterialSkin.Controls.MaterialSlider();
+            sldrAVWidth = new MaterialSkin.Controls.MaterialSlider();
+            sldrAVPlayerPaintDistance = new MaterialSkin.Controls.MaterialSlider();
             sldrThermalColorCoefficient = new MaterialSkin.Controls.MaterialSlider();
             sldrMinTemperature = new MaterialSkin.Controls.MaterialSlider();
             sldrThermalRampShift = new MaterialSkin.Controls.MaterialSlider();
@@ -249,6 +293,28 @@
             tabSelector = new MaterialSkin.Controls.MaterialTabSelector();
             tabControlSettings = new MaterialSkin.Controls.MaterialTabControl();
             tabSettingsGeneral = new TabPage();
+            mcSettingsGeneralAimview = new MaterialSkin.Controls.MaterialCard();
+            dvdrTransits = new MaterialSkin.Controls.MaterialDivider();
+            lblSettingsGeneralAimviewExfils = new MaterialSkin.Controls.MaterialLabel();
+            lblSettingsGeneralAimviewTripwire = new MaterialSkin.Controls.MaterialLabel();
+            dvdrExfils = new MaterialSkin.Controls.MaterialDivider();
+            dvdrContainers = new MaterialSkin.Controls.MaterialDivider();
+            lblSettingsGeneralAimviewTransits = new MaterialSkin.Controls.MaterialLabel();
+            lblSettingsGeneralAimviewQuestItems = new MaterialSkin.Controls.MaterialLabel();
+            dvdrQuestZones = new MaterialSkin.Controls.MaterialDivider();
+            lblSettingsGeneralAimviewQuestZones = new MaterialSkin.Controls.MaterialLabel();
+            dvdrTripwire = new MaterialSkin.Controls.MaterialDivider();
+            lblSettingsGeneralAimviewContainers = new MaterialSkin.Controls.MaterialLabel();
+            dvdrQuestItems = new MaterialSkin.Controls.MaterialDivider();
+            dvdrLooseLoot = new MaterialSkin.Controls.MaterialDivider();
+            lblSettingsGeneralAimviewLooseLoot = new MaterialSkin.Controls.MaterialLabel();
+            dvdrPlayers = new MaterialSkin.Controls.MaterialDivider();
+            dvdrRendering = new MaterialSkin.Controls.MaterialDivider();
+            lblSettingsGeneralAimviewCorpses = new MaterialSkin.Controls.MaterialLabel();
+            lblSettingsGeneralAimviewPlayers = new MaterialSkin.Controls.MaterialLabel();
+            dvdrCorpses = new MaterialSkin.Controls.MaterialDivider();
+            lblSettingsGeneralAimviewRendering = new MaterialSkin.Controls.MaterialLabel();
+            lblSettingsGeneralAimview = new MaterialSkin.Controls.MaterialLabel();
             mcSettingsGeneralPlayerInformation = new MaterialSkin.Controls.MaterialCard();
             lblSettingsGeneralPlayerInformation = new MaterialSkin.Controls.MaterialLabel();
             mcSettingsGeneralUI = new MaterialSkin.Controls.MaterialCard();
@@ -443,6 +509,7 @@
             tabSettings.SuspendLayout();
             tabControlSettings.SuspendLayout();
             tabSettingsGeneral.SuspendLayout();
+            mcSettingsGeneralAimview.SuspendLayout();
             mcSettingsGeneralPlayerInformation.SuspendLayout();
             mcSettingsGeneralUI.SuspendLayout();
             mcSettingsGeneralRadar.SuspendLayout();
@@ -552,7 +619,7 @@
             // 
             swExfilNames.Depth = 0;
             swExfilNames.Font = new Font("Segoe UI", 9F);
-            swExfilNames.Location = new Point(172, 45);
+            swExfilNames.Location = new Point(18, 45);
             swExfilNames.Margin = new Padding(0);
             swExfilNames.MouseLocation = new Point(-1, -1);
             swExfilNames.MouseState = MaterialSkin.MouseState.HOVER;
@@ -569,7 +636,7 @@
             // 
             swHoverArmor.Depth = 0;
             swHoverArmor.Font = new Font("Segoe UI", 9F);
-            swHoverArmor.Location = new Point(324, 45);
+            swHoverArmor.Location = new Point(173, 45);
             swHoverArmor.Margin = new Padding(0);
             swHoverArmor.MouseLocation = new Point(-1, -1);
             swHoverArmor.MouseState = MaterialSkin.MouseState.HOVER;
@@ -586,15 +653,15 @@
             // 
             swAimview.Depth = 0;
             swAimview.Font = new Font("Segoe UI", 9F);
-            swAimview.Location = new Point(15, 45);
+            swAimview.Location = new Point(17, 65);
             swAimview.Margin = new Padding(0);
             swAimview.MouseLocation = new Point(-1, -1);
             swAimview.MouseState = MaterialSkin.MouseState.HOVER;
             swAimview.Name = "swAimview";
             swAimview.Ripple = true;
-            swAimview.Size = new Size(159, 28);
+            swAimview.Size = new Size(129, 28);
             swAimview.TabIndex = 2;
-            swAimview.Text = "Aimview (F4)";
+            swAimview.Text = "Aimview";
             toolTip.SetToolTip(swAimview, "Displays the 3D aimview");
             swAimview.UseVisualStyleBackColor = true;
             swAimview.CheckedChanged += swAimview_CheckedChanged;
@@ -1261,7 +1328,7 @@
             txtTeammateID.HideSelection = true;
             txtTeammateID.Hint = "Teammate ID";
             txtTeammateID.LeadingIcon = null;
-            txtTeammateID.Location = new Point(453, 89);
+            txtTeammateID.Location = new Point(453, 93);
             txtTeammateID.MaxLength = 32767;
             txtTeammateID.MouseState = MaterialSkin.MouseState.OUT;
             txtTeammateID.Name = "txtTeammateID";
@@ -3946,7 +4013,7 @@
             // 
             swTraderPrices.Depth = 0;
             swTraderPrices.Font = new Font("Segoe UI", 9F);
-            swTraderPrices.Location = new Point(476, 45);
+            swTraderPrices.Location = new Point(330, 45);
             swTraderPrices.Margin = new Padding(0);
             swTraderPrices.MouseLocation = new Point(-1, -1);
             swTraderPrices.MouseState = MaterialSkin.MouseState.HOVER;
@@ -3958,6 +4025,754 @@
             toolTip.SetToolTip(swTraderPrices, "Show prices for traders only (ignores flea market) (restart to take effect)");
             swTraderPrices.UseVisualStyleBackColor = true;
             swTraderPrices.CheckedChanged += swTraderPrices_CheckedChanged;
+            // 
+            // swAVPlayers
+            // 
+            swAVPlayers.Depth = 0;
+            swAVPlayers.Font = new Font("Segoe UI", 9F);
+            swAVPlayers.Location = new Point(17, 135);
+            swAVPlayers.Margin = new Padding(0);
+            swAVPlayers.MouseLocation = new Point(-1, -1);
+            swAVPlayers.MouseState = MaterialSkin.MouseState.HOVER;
+            swAVPlayers.Name = "swAVPlayers";
+            swAVPlayers.Ripple = true;
+            swAVPlayers.Size = new Size(115, 28);
+            swAVPlayers.TabIndex = 36;
+            swAVPlayers.Text = "Enabled";
+            toolTip.SetToolTip(swAVPlayers, "Enable rendering of player objects on the aimview");
+            swAVPlayers.UseVisualStyleBackColor = true;
+            swAVPlayers.CheckedChanged += swAVPlayers_CheckedChanged;
+            // 
+            // swAVLooseLoot
+            // 
+            swAVLooseLoot.Depth = 0;
+            swAVLooseLoot.Font = new Font("Segoe UI", 9F);
+            swAVLooseLoot.Location = new Point(17, 240);
+            swAVLooseLoot.Margin = new Padding(0);
+            swAVLooseLoot.MouseLocation = new Point(-1, -1);
+            swAVLooseLoot.MouseState = MaterialSkin.MouseState.HOVER;
+            swAVLooseLoot.Name = "swAVLooseLoot";
+            swAVLooseLoot.Ripple = true;
+            swAVLooseLoot.Size = new Size(115, 28);
+            swAVLooseLoot.TabIndex = 40;
+            swAVLooseLoot.Text = "Enabled";
+            toolTip.SetToolTip(swAVLooseLoot, "Enable rendering of loose loot objects on the aimview");
+            swAVLooseLoot.UseVisualStyleBackColor = true;
+            swAVLooseLoot.CheckedChanged += swAVLooseLoot_CheckedChanged;
+            // 
+            // swAVPlayerDistance
+            // 
+            swAVPlayerDistance.Depth = 0;
+            swAVPlayerDistance.Font = new Font("Segoe UI", 9F);
+            swAVPlayerDistance.Location = new Point(160, 135);
+            swAVPlayerDistance.Margin = new Padding(0);
+            swAVPlayerDistance.MouseLocation = new Point(-1, -1);
+            swAVPlayerDistance.MouseState = MaterialSkin.MouseState.HOVER;
+            swAVPlayerDistance.Name = "swAVPlayerDistance";
+            swAVPlayerDistance.Ripple = true;
+            swAVPlayerDistance.Size = new Size(125, 28);
+            swAVPlayerDistance.TabIndex = 39;
+            swAVPlayerDistance.Text = "Distance";
+            toolTip.SetToolTip(swAVPlayerDistance, "Show the distance to players on the aimview");
+            swAVPlayerDistance.UseVisualStyleBackColor = true;
+            swAVPlayerDistance.CheckedChanged += swAVPlayerDistance_CheckedChanged;
+            // 
+            // swAVLooseLootDistance
+            // 
+            swAVLooseLootDistance.Depth = 0;
+            swAVLooseLootDistance.Font = new Font("Segoe UI", 9F);
+            swAVLooseLootDistance.Location = new Point(160, 240);
+            swAVLooseLootDistance.Margin = new Padding(0);
+            swAVLooseLootDistance.MouseLocation = new Point(-1, -1);
+            swAVLooseLootDistance.MouseState = MaterialSkin.MouseState.HOVER;
+            swAVLooseLootDistance.Name = "swAVLooseLootDistance";
+            swAVLooseLootDistance.Ripple = true;
+            swAVLooseLootDistance.Size = new Size(125, 28);
+            swAVLooseLootDistance.TabIndex = 45;
+            swAVLooseLootDistance.Text = "Distance";
+            toolTip.SetToolTip(swAVLooseLootDistance, "Show the distance to loose loot on the aimview");
+            swAVLooseLootDistance.UseVisualStyleBackColor = true;
+            swAVLooseLootDistance.CheckedChanged += swAVLooseLootDistance_CheckedChanged;
+            // 
+            // swAVLooseLootName
+            // 
+            swAVLooseLootName.Depth = 0;
+            swAVLooseLootName.Font = new Font("Segoe UI", 9F);
+            swAVLooseLootName.Location = new Point(314, 240);
+            swAVLooseLootName.Margin = new Padding(0);
+            swAVLooseLootName.MouseLocation = new Point(-1, -1);
+            swAVLooseLootName.MouseState = MaterialSkin.MouseState.HOVER;
+            swAVLooseLootName.Name = "swAVLooseLootName";
+            swAVLooseLootName.Ripple = true;
+            swAVLooseLootName.Size = new Size(100, 28);
+            swAVLooseLootName.TabIndex = 46;
+            swAVLooseLootName.Text = "Name";
+            toolTip.SetToolTip(swAVLooseLootName, "Show the name of loose loot on the aimview\r\n");
+            swAVLooseLootName.UseVisualStyleBackColor = true;
+            swAVLooseLootName.CheckedChanged += swAVLooseLootName_CheckedChanged;
+            // 
+            // swAVLooseLootValue
+            // 
+            swAVLooseLootValue.Depth = 0;
+            swAVLooseLootValue.Font = new Font("Segoe UI", 9F);
+            swAVLooseLootValue.Location = new Point(464, 240);
+            swAVLooseLootValue.Margin = new Padding(0);
+            swAVLooseLootValue.MouseLocation = new Point(-1, -1);
+            swAVLooseLootValue.MouseState = MaterialSkin.MouseState.HOVER;
+            swAVLooseLootValue.Name = "swAVLooseLootValue";
+            swAVLooseLootValue.Ripple = true;
+            swAVLooseLootValue.Size = new Size(100, 28);
+            swAVLooseLootValue.TabIndex = 47;
+            swAVLooseLootValue.Text = "Value";
+            toolTip.SetToolTip(swAVLooseLootValue, "Show the value of loose loot on the aimview");
+            swAVLooseLootValue.UseVisualStyleBackColor = true;
+            swAVLooseLootValue.CheckedChanged += swAVLooseLootValue_CheckedChanged;
+            // 
+            // swAVCorpseValue
+            // 
+            swAVCorpseValue.Depth = 0;
+            swAVCorpseValue.Font = new Font("Segoe UI", 9F);
+            swAVCorpseValue.Location = new Point(464, 345);
+            swAVCorpseValue.Margin = new Padding(0);
+            swAVCorpseValue.MouseLocation = new Point(-1, -1);
+            swAVCorpseValue.MouseState = MaterialSkin.MouseState.HOVER;
+            swAVCorpseValue.Name = "swAVCorpseValue";
+            swAVCorpseValue.Ripple = true;
+            swAVCorpseValue.Size = new Size(100, 28);
+            swAVCorpseValue.TabIndex = 55;
+            swAVCorpseValue.Text = "Value";
+            toolTip.SetToolTip(swAVCorpseValue, "Show the value of corpses on the aimview");
+            swAVCorpseValue.UseVisualStyleBackColor = true;
+            swAVCorpseValue.CheckedChanged += swAVCorpseValue_CheckedChanged;
+            // 
+            // swAVCorpseName
+            // 
+            swAVCorpseName.Depth = 0;
+            swAVCorpseName.Font = new Font("Segoe UI", 9F);
+            swAVCorpseName.Location = new Point(314, 345);
+            swAVCorpseName.Margin = new Padding(0);
+            swAVCorpseName.MouseLocation = new Point(-1, -1);
+            swAVCorpseName.MouseState = MaterialSkin.MouseState.HOVER;
+            swAVCorpseName.Name = "swAVCorpseName";
+            swAVCorpseName.Ripple = true;
+            swAVCorpseName.Size = new Size(100, 28);
+            swAVCorpseName.TabIndex = 54;
+            swAVCorpseName.Text = "Name";
+            toolTip.SetToolTip(swAVCorpseName, "Show the name of corpses on the aimview");
+            swAVCorpseName.UseVisualStyleBackColor = true;
+            swAVCorpseName.CheckedChanged += swAVCorpseName_CheckedChanged;
+            // 
+            // swAVCorpseDistance
+            // 
+            swAVCorpseDistance.Depth = 0;
+            swAVCorpseDistance.Font = new Font("Segoe UI", 9F);
+            swAVCorpseDistance.Location = new Point(160, 345);
+            swAVCorpseDistance.Margin = new Padding(0);
+            swAVCorpseDistance.MouseLocation = new Point(-1, -1);
+            swAVCorpseDistance.MouseState = MaterialSkin.MouseState.HOVER;
+            swAVCorpseDistance.Name = "swAVCorpseDistance";
+            swAVCorpseDistance.Ripple = true;
+            swAVCorpseDistance.Size = new Size(125, 28);
+            swAVCorpseDistance.TabIndex = 53;
+            swAVCorpseDistance.Text = "Distance";
+            toolTip.SetToolTip(swAVCorpseDistance, "Show the distance to corpses on the aimview");
+            swAVCorpseDistance.UseVisualStyleBackColor = true;
+            swAVCorpseDistance.CheckedChanged += swAVCorpseDistance_CheckedChanged;
+            // 
+            // swAVCorpses
+            // 
+            swAVCorpses.Depth = 0;
+            swAVCorpses.Font = new Font("Segoe UI", 9F);
+            swAVCorpses.Location = new Point(17, 345);
+            swAVCorpses.Margin = new Padding(0);
+            swAVCorpses.MouseLocation = new Point(-1, -1);
+            swAVCorpses.MouseState = MaterialSkin.MouseState.HOVER;
+            swAVCorpses.Name = "swAVCorpses";
+            swAVCorpses.Ripple = true;
+            swAVCorpses.Size = new Size(115, 28);
+            swAVCorpses.TabIndex = 52;
+            swAVCorpses.Text = "Enabled";
+            toolTip.SetToolTip(swAVCorpses, "Enable rendering of corpse objects on the aimview");
+            swAVCorpses.UseVisualStyleBackColor = true;
+            swAVCorpses.CheckedChanged += swAVCorpses_CheckedChanged;
+            // 
+            // swAVContainerDistance
+            // 
+            swAVContainerDistance.Depth = 0;
+            swAVContainerDistance.Font = new Font("Segoe UI", 9F);
+            swAVContainerDistance.Location = new Point(160, 555);
+            swAVContainerDistance.Margin = new Padding(0);
+            swAVContainerDistance.MouseLocation = new Point(-1, -1);
+            swAVContainerDistance.MouseState = MaterialSkin.MouseState.HOVER;
+            swAVContainerDistance.Name = "swAVContainerDistance";
+            swAVContainerDistance.Ripple = true;
+            swAVContainerDistance.Size = new Size(125, 28);
+            swAVContainerDistance.TabIndex = 64;
+            swAVContainerDistance.Text = "Distance";
+            toolTip.SetToolTip(swAVContainerDistance, "Show the distance to containers on the aimview");
+            swAVContainerDistance.UseVisualStyleBackColor = true;
+            swAVContainerDistance.CheckedChanged += swAVContainerDistance_CheckedChanged;
+            // 
+            // swAVContainerName
+            // 
+            swAVContainerName.Depth = 0;
+            swAVContainerName.Font = new Font("Segoe UI", 9F);
+            swAVContainerName.Location = new Point(314, 555);
+            swAVContainerName.Margin = new Padding(0);
+            swAVContainerName.MouseLocation = new Point(-1, -1);
+            swAVContainerName.MouseState = MaterialSkin.MouseState.HOVER;
+            swAVContainerName.Name = "swAVContainerName";
+            swAVContainerName.Ripple = true;
+            swAVContainerName.Size = new Size(100, 28);
+            swAVContainerName.TabIndex = 63;
+            swAVContainerName.Text = "Name";
+            toolTip.SetToolTip(swAVContainerName, "Show the name of containers on the aimview");
+            swAVContainerName.UseVisualStyleBackColor = true;
+            swAVContainerName.CheckedChanged += swAVContainerName_CheckedChanged;
+            // 
+            // swAVContainers
+            // 
+            swAVContainers.Depth = 0;
+            swAVContainers.Font = new Font("Segoe UI", 9F);
+            swAVContainers.Location = new Point(17, 555);
+            swAVContainers.Margin = new Padding(0);
+            swAVContainers.MouseLocation = new Point(-1, -1);
+            swAVContainers.MouseState = MaterialSkin.MouseState.HOVER;
+            swAVContainers.Name = "swAVContainers";
+            swAVContainers.Ripple = true;
+            swAVContainers.Size = new Size(115, 28);
+            swAVContainers.TabIndex = 60;
+            swAVContainers.Text = "Enabled";
+            toolTip.SetToolTip(swAVContainers, "Enable rendering of containers on the aimview");
+            swAVContainers.UseVisualStyleBackColor = true;
+            swAVContainers.CheckedChanged += swAVContainers_CheckedChanged;
+            // 
+            // swAVQuestZoneDistance
+            // 
+            swAVQuestZoneDistance.Depth = 0;
+            swAVQuestZoneDistance.Font = new Font("Segoe UI", 9F);
+            swAVQuestZoneDistance.Location = new Point(160, 765);
+            swAVQuestZoneDistance.Margin = new Padding(0);
+            swAVQuestZoneDistance.MouseLocation = new Point(-1, -1);
+            swAVQuestZoneDistance.MouseState = MaterialSkin.MouseState.HOVER;
+            swAVQuestZoneDistance.Name = "swAVQuestZoneDistance";
+            swAVQuestZoneDistance.Ripple = true;
+            swAVQuestZoneDistance.Size = new Size(125, 28);
+            swAVQuestZoneDistance.TabIndex = 70;
+            swAVQuestZoneDistance.Text = "Distance";
+            toolTip.SetToolTip(swAVQuestZoneDistance, "Show the distance to quest zones on the aimview");
+            swAVQuestZoneDistance.UseVisualStyleBackColor = true;
+            swAVQuestZoneDistance.CheckedChanged += swAVQuestZoneDistance_CheckedChanged;
+            // 
+            // swAVQuestZoneName
+            // 
+            swAVQuestZoneName.Depth = 0;
+            swAVQuestZoneName.Font = new Font("Segoe UI", 9F);
+            swAVQuestZoneName.Location = new Point(314, 765);
+            swAVQuestZoneName.Margin = new Padding(0);
+            swAVQuestZoneName.MouseLocation = new Point(-1, -1);
+            swAVQuestZoneName.MouseState = MaterialSkin.MouseState.HOVER;
+            swAVQuestZoneName.Name = "swAVQuestZoneName";
+            swAVQuestZoneName.Ripple = true;
+            swAVQuestZoneName.Size = new Size(100, 28);
+            swAVQuestZoneName.TabIndex = 69;
+            swAVQuestZoneName.Text = "Name";
+            toolTip.SetToolTip(swAVQuestZoneName, "Show the objective type of quest zones on the aimview");
+            swAVQuestZoneName.UseVisualStyleBackColor = true;
+            swAVQuestZoneName.CheckedChanged += swAVQuestZoneName_CheckedChanged;
+            // 
+            // swAVQuestZones
+            // 
+            swAVQuestZones.Depth = 0;
+            swAVQuestZones.Font = new Font("Segoe UI", 9F);
+            swAVQuestZones.Location = new Point(17, 765);
+            swAVQuestZones.Margin = new Padding(0);
+            swAVQuestZones.MouseLocation = new Point(-1, -1);
+            swAVQuestZones.MouseState = MaterialSkin.MouseState.HOVER;
+            swAVQuestZones.Name = "swAVQuestZones";
+            swAVQuestZones.Ripple = true;
+            swAVQuestZones.Size = new Size(115, 28);
+            swAVQuestZones.TabIndex = 66;
+            swAVQuestZones.Text = "Enabled";
+            toolTip.SetToolTip(swAVQuestZones, "Enable rendering of quest zones on the aimview");
+            swAVQuestZones.UseVisualStyleBackColor = true;
+            swAVQuestZones.CheckedChanged += swAVQuestZones_CheckedChanged;
+            // 
+            // swAVQuestItemName
+            // 
+            swAVQuestItemName.Depth = 0;
+            swAVQuestItemName.Font = new Font("Segoe UI", 9F);
+            swAVQuestItemName.Location = new Point(314, 450);
+            swAVQuestItemName.Margin = new Padding(0);
+            swAVQuestItemName.MouseLocation = new Point(-1, -1);
+            swAVQuestItemName.MouseState = MaterialSkin.MouseState.HOVER;
+            swAVQuestItemName.Name = "swAVQuestItemName";
+            swAVQuestItemName.Ripple = true;
+            swAVQuestItemName.Size = new Size(100, 28);
+            swAVQuestItemName.TabIndex = 74;
+            swAVQuestItemName.Text = "Name";
+            toolTip.SetToolTip(swAVQuestItemName, "Show the name of quest items on the aimview");
+            swAVQuestItemName.UseVisualStyleBackColor = true;
+            swAVQuestItemName.CheckedChanged += swAVQuestItemName_CheckedChanged;
+            // 
+            // swAVQuestItemDistance
+            // 
+            swAVQuestItemDistance.Depth = 0;
+            swAVQuestItemDistance.Font = new Font("Segoe UI", 9F);
+            swAVQuestItemDistance.Location = new Point(160, 450);
+            swAVQuestItemDistance.Margin = new Padding(0);
+            swAVQuestItemDistance.MouseLocation = new Point(-1, -1);
+            swAVQuestItemDistance.MouseState = MaterialSkin.MouseState.HOVER;
+            swAVQuestItemDistance.Name = "swAVQuestItemDistance";
+            swAVQuestItemDistance.Ripple = true;
+            swAVQuestItemDistance.Size = new Size(125, 28);
+            swAVQuestItemDistance.TabIndex = 73;
+            swAVQuestItemDistance.Text = "Distance";
+            toolTip.SetToolTip(swAVQuestItemDistance, "Show the distance to quest items on the aimview");
+            swAVQuestItemDistance.UseVisualStyleBackColor = true;
+            swAVQuestItemDistance.CheckedChanged += swAVQuestItemDistance_CheckedChanged;
+            // 
+            // swAVQuestItems
+            // 
+            swAVQuestItems.Depth = 0;
+            swAVQuestItems.Font = new Font("Segoe UI", 9F);
+            swAVQuestItems.Location = new Point(17, 450);
+            swAVQuestItems.Margin = new Padding(0);
+            swAVQuestItems.MouseLocation = new Point(-1, -1);
+            swAVQuestItems.MouseState = MaterialSkin.MouseState.HOVER;
+            swAVQuestItems.Name = "swAVQuestItems";
+            swAVQuestItems.Ripple = true;
+            swAVQuestItems.Size = new Size(115, 28);
+            swAVQuestItems.TabIndex = 72;
+            swAVQuestItems.Text = "Enabled";
+            toolTip.SetToolTip(swAVQuestItems, "Enable rendering of quest items on the aimview");
+            swAVQuestItems.UseVisualStyleBackColor = true;
+            swAVQuestItems.CheckedChanged += swAVQuestItems_CheckedChanged;
+            // 
+            // swAVTripwireDistance
+            // 
+            swAVTripwireDistance.Depth = 0;
+            swAVTripwireDistance.Font = new Font("Segoe UI", 9F);
+            swAVTripwireDistance.Location = new Point(160, 660);
+            swAVTripwireDistance.Margin = new Padding(0);
+            swAVTripwireDistance.MouseLocation = new Point(-1, -1);
+            swAVTripwireDistance.MouseState = MaterialSkin.MouseState.HOVER;
+            swAVTripwireDistance.Name = "swAVTripwireDistance";
+            swAVTripwireDistance.Ripple = true;
+            swAVTripwireDistance.Size = new Size(125, 28);
+            swAVTripwireDistance.TabIndex = 82;
+            swAVTripwireDistance.Text = "Distance";
+            toolTip.SetToolTip(swAVTripwireDistance, "Show the distance to tripwire on the aimview");
+            swAVTripwireDistance.UseVisualStyleBackColor = true;
+            swAVTripwireDistance.CheckedChanged += swAVTripwireDistance_CheckedChanged;
+            // 
+            // swAVTripwire
+            // 
+            swAVTripwire.Depth = 0;
+            swAVTripwire.Font = new Font("Segoe UI", 9F);
+            swAVTripwire.Location = new Point(17, 660);
+            swAVTripwire.Margin = new Padding(0);
+            swAVTripwire.MouseLocation = new Point(-1, -1);
+            swAVTripwire.MouseState = MaterialSkin.MouseState.HOVER;
+            swAVTripwire.Name = "swAVTripwire";
+            swAVTripwire.Ripple = true;
+            swAVTripwire.Size = new Size(115, 28);
+            swAVTripwire.TabIndex = 79;
+            swAVTripwire.Text = "Enabled";
+            toolTip.SetToolTip(swAVTripwire, "Enable rendering of tripwire on the aimview");
+            swAVTripwire.UseVisualStyleBackColor = true;
+            swAVTripwire.CheckedChanged += swAVTripwire_CheckedChanged;
+            // 
+            // swAVExfilName
+            // 
+            swAVExfilName.Depth = 0;
+            swAVExfilName.Font = new Font("Segoe UI", 9F);
+            swAVExfilName.Location = new Point(314, 870);
+            swAVExfilName.Margin = new Padding(0);
+            swAVExfilName.MouseLocation = new Point(-1, -1);
+            swAVExfilName.MouseState = MaterialSkin.MouseState.HOVER;
+            swAVExfilName.Name = "swAVExfilName";
+            swAVExfilName.Ripple = true;
+            swAVExfilName.Size = new Size(100, 28);
+            swAVExfilName.TabIndex = 43;
+            swAVExfilName.Text = "Name";
+            toolTip.SetToolTip(swAVExfilName, "Show the name of exfils on the aimview");
+            swAVExfilName.UseVisualStyleBackColor = true;
+            swAVExfilName.CheckedChanged += swAVExfilName_CheckedChanged;
+            // 
+            // swAVExfilDistance
+            // 
+            swAVExfilDistance.Depth = 0;
+            swAVExfilDistance.Font = new Font("Segoe UI", 9F);
+            swAVExfilDistance.Location = new Point(160, 870);
+            swAVExfilDistance.Margin = new Padding(0);
+            swAVExfilDistance.MouseLocation = new Point(-1, -1);
+            swAVExfilDistance.MouseState = MaterialSkin.MouseState.HOVER;
+            swAVExfilDistance.Name = "swAVExfilDistance";
+            swAVExfilDistance.Ripple = true;
+            swAVExfilDistance.Size = new Size(125, 28);
+            swAVExfilDistance.TabIndex = 44;
+            swAVExfilDistance.Text = "Distance";
+            toolTip.SetToolTip(swAVExfilDistance, "Show the distance to exfils on the aimview");
+            swAVExfilDistance.UseVisualStyleBackColor = true;
+            swAVExfilDistance.CheckedChanged += swAVExfilDistance_CheckedChanged;
+            // 
+            // swAVExfils
+            // 
+            swAVExfils.Depth = 0;
+            swAVExfils.Font = new Font("Segoe UI", 9F);
+            swAVExfils.Location = new Point(17, 870);
+            swAVExfils.Margin = new Padding(0);
+            swAVExfils.MouseLocation = new Point(-1, -1);
+            swAVExfils.MouseState = MaterialSkin.MouseState.HOVER;
+            swAVExfils.Name = "swAVExfils";
+            swAVExfils.Ripple = true;
+            swAVExfils.Size = new Size(115, 28);
+            swAVExfils.TabIndex = 38;
+            swAVExfils.Text = "Enabled";
+            toolTip.SetToolTip(swAVExfils, "Enable rendering of exfils on the aimview");
+            swAVExfils.UseVisualStyleBackColor = true;
+            swAVExfils.CheckedChanged += swAVExfils_CheckedChanged;
+            // 
+            // swAVTransits
+            // 
+            swAVTransits.Depth = 0;
+            swAVTransits.Font = new Font("Segoe UI", 9F);
+            swAVTransits.Location = new Point(17, 975);
+            swAVTransits.Margin = new Padding(0);
+            swAVTransits.MouseLocation = new Point(-1, -1);
+            swAVTransits.MouseState = MaterialSkin.MouseState.HOVER;
+            swAVTransits.Name = "swAVTransits";
+            swAVTransits.Ripple = true;
+            swAVTransits.Size = new Size(115, 28);
+            swAVTransits.TabIndex = 46;
+            swAVTransits.Text = "Enabled";
+            toolTip.SetToolTip(swAVTransits, "Enable rendering of transits on the aimview");
+            swAVTransits.UseVisualStyleBackColor = true;
+            swAVTransits.CheckedChanged += swAVTransits_CheckedChanged;
+            // 
+            // swAVTransitDistance
+            // 
+            swAVTransitDistance.Depth = 0;
+            swAVTransitDistance.Font = new Font("Segoe UI", 9F);
+            swAVTransitDistance.Location = new Point(160, 975);
+            swAVTransitDistance.Margin = new Padding(0);
+            swAVTransitDistance.MouseLocation = new Point(-1, -1);
+            swAVTransitDistance.MouseState = MaterialSkin.MouseState.HOVER;
+            swAVTransitDistance.Name = "swAVTransitDistance";
+            swAVTransitDistance.Ripple = true;
+            swAVTransitDistance.Size = new Size(125, 28);
+            swAVTransitDistance.TabIndex = 50;
+            swAVTransitDistance.Text = "Distance";
+            toolTip.SetToolTip(swAVTransitDistance, "Show the distance to distance on the aimview");
+            swAVTransitDistance.UseVisualStyleBackColor = true;
+            swAVTransitDistance.CheckedChanged += swAVTransitDistance_CheckedChanged;
+            // 
+            // swAVTransitName
+            // 
+            swAVTransitName.Depth = 0;
+            swAVTransitName.Font = new Font("Segoe UI", 9F);
+            swAVTransitName.Location = new Point(314, 975);
+            swAVTransitName.Margin = new Padding(0);
+            swAVTransitName.MouseLocation = new Point(-1, -1);
+            swAVTransitName.MouseState = MaterialSkin.MouseState.HOVER;
+            swAVTransitName.Name = "swAVTransitName";
+            swAVTransitName.Ripple = true;
+            swAVTransitName.Size = new Size(100, 28);
+            swAVTransitName.TabIndex = 49;
+            swAVTransitName.Text = "Name";
+            toolTip.SetToolTip(swAVTransitName, "Show the name of transits on the aimview");
+            swAVTransitName.UseVisualStyleBackColor = true;
+            swAVTransitName.CheckedChanged += swAVTransitName_CheckedChanged;
+            // 
+            // sldrAVTripwirePaintDistance
+            // 
+            sldrAVTripwirePaintDistance.Depth = 0;
+            sldrAVTripwirePaintDistance.ForeColor = Color.FromArgb(222, 0, 0, 0);
+            sldrAVTripwirePaintDistance.Location = new Point(17, 690);
+            sldrAVTripwirePaintDistance.MouseState = MaterialSkin.MouseState.HOVER;
+            sldrAVTripwirePaintDistance.Name = "sldrAVTripwirePaintDistance";
+            sldrAVTripwirePaintDistance.RangeMax = 500;
+            sldrAVTripwirePaintDistance.Size = new Size(290, 40);
+            sldrAVTripwirePaintDistance.TabIndex = 84;
+            sldrAVTripwirePaintDistance.Text = "Paint Distance";
+            toolTip.SetToolTip(sldrAVTripwirePaintDistance, "The maximum distance for paints to be drawn for tripwire in the aimview");
+            sldrAVTripwirePaintDistance.UseAccentColor = true;
+            sldrAVTripwirePaintDistance.Value = 150;
+            sldrAVTripwirePaintDistance.ValueSuffix = "m";
+            sldrAVTripwirePaintDistance.onValueChanged += sldrAVTripwirePaintDistance_onValueChanged;
+            // 
+            // sldrAVContainerPaintDistance
+            // 
+            sldrAVContainerPaintDistance.Depth = 0;
+            sldrAVContainerPaintDistance.ForeColor = Color.FromArgb(222, 0, 0, 0);
+            sldrAVContainerPaintDistance.Location = new Point(17, 585);
+            sldrAVContainerPaintDistance.MouseState = MaterialSkin.MouseState.HOVER;
+            sldrAVContainerPaintDistance.Name = "sldrAVContainerPaintDistance";
+            sldrAVContainerPaintDistance.RangeMax = 500;
+            sldrAVContainerPaintDistance.Size = new Size(290, 40);
+            sldrAVContainerPaintDistance.TabIndex = 83;
+            sldrAVContainerPaintDistance.Text = "Paint Distance";
+            toolTip.SetToolTip(sldrAVContainerPaintDistance, "The maximum distance for paints to be drawn for containers in the aimview");
+            sldrAVContainerPaintDistance.UseAccentColor = true;
+            sldrAVContainerPaintDistance.Value = 150;
+            sldrAVContainerPaintDistance.ValueSuffix = "m";
+            sldrAVContainerPaintDistance.onValueChanged += sldrAVContainerPaintDistance_onValueChanged;
+            // 
+            // sldrAVExfilTextDistance
+            // 
+            sldrAVExfilTextDistance.Depth = 0;
+            sldrAVExfilTextDistance.ForeColor = Color.FromArgb(222, 0, 0, 0);
+            sldrAVExfilTextDistance.Location = new Point(319, 900);
+            sldrAVExfilTextDistance.MouseState = MaterialSkin.MouseState.HOVER;
+            sldrAVExfilTextDistance.Name = "sldrAVExfilTextDistance";
+            sldrAVExfilTextDistance.RangeMax = 500;
+            sldrAVExfilTextDistance.Size = new Size(290, 40);
+            sldrAVExfilTextDistance.TabIndex = 39;
+            sldrAVExfilTextDistance.Text = "Text Distance";
+            toolTip.SetToolTip(sldrAVExfilTextDistance, "The maximum distance for text to be drawn for exfils in the aimview");
+            sldrAVExfilTextDistance.UseAccentColor = true;
+            sldrAVExfilTextDistance.Value = 150;
+            sldrAVExfilTextDistance.ValueSuffix = "m";
+            sldrAVExfilTextDistance.onValueChanged += sldrAVExfilTextDistance_onValueChanged;
+            // 
+            // sldrAVTripwireTextDistance
+            // 
+            sldrAVTripwireTextDistance.Depth = 0;
+            sldrAVTripwireTextDistance.ForeColor = Color.FromArgb(222, 0, 0, 0);
+            sldrAVTripwireTextDistance.Location = new Point(319, 690);
+            sldrAVTripwireTextDistance.MouseState = MaterialSkin.MouseState.HOVER;
+            sldrAVTripwireTextDistance.Name = "sldrAVTripwireTextDistance";
+            sldrAVTripwireTextDistance.RangeMax = 500;
+            sldrAVTripwireTextDistance.Size = new Size(290, 40);
+            sldrAVTripwireTextDistance.TabIndex = 80;
+            sldrAVTripwireTextDistance.Text = "Text Distance";
+            toolTip.SetToolTip(sldrAVTripwireTextDistance, "The maximum distance for text to be drawn for tripwire in the aimview");
+            sldrAVTripwireTextDistance.UseAccentColor = true;
+            sldrAVTripwireTextDistance.Value = 150;
+            sldrAVTripwireTextDistance.ValueSuffix = "m";
+            sldrAVTripwireTextDistance.onValueChanged += sldrAVTripwireTextDistance_onValueChanged;
+            // 
+            // sldrAVQuestItemTextDistance
+            // 
+            sldrAVQuestItemTextDistance.Depth = 0;
+            sldrAVQuestItemTextDistance.ForeColor = Color.FromArgb(222, 0, 0, 0);
+            sldrAVQuestItemTextDistance.Location = new Point(319, 480);
+            sldrAVQuestItemTextDistance.MouseState = MaterialSkin.MouseState.HOVER;
+            sldrAVQuestItemTextDistance.Name = "sldrAVQuestItemTextDistance";
+            sldrAVQuestItemTextDistance.RangeMax = 500;
+            sldrAVQuestItemTextDistance.Size = new Size(290, 40);
+            sldrAVQuestItemTextDistance.TabIndex = 76;
+            sldrAVQuestItemTextDistance.Text = "Text Distance";
+            toolTip.SetToolTip(sldrAVQuestItemTextDistance, "The maximum distance for text to be drawn for quest items in the aimview");
+            sldrAVQuestItemTextDistance.UseAccentColor = true;
+            sldrAVQuestItemTextDistance.Value = 150;
+            sldrAVQuestItemTextDistance.ValueSuffix = "m";
+            sldrAVQuestItemTextDistance.onValueChanged += sldrAVQuestItemTextDistance_onValueChanged;
+            // 
+            // sldrAVTransitTextDistance
+            // 
+            sldrAVTransitTextDistance.Depth = 0;
+            sldrAVTransitTextDistance.ForeColor = Color.FromArgb(222, 0, 0, 0);
+            sldrAVTransitTextDistance.Location = new Point(319, 1005);
+            sldrAVTransitTextDistance.MouseState = MaterialSkin.MouseState.HOVER;
+            sldrAVTransitTextDistance.Name = "sldrAVTransitTextDistance";
+            sldrAVTransitTextDistance.RangeMax = 500;
+            sldrAVTransitTextDistance.Size = new Size(290, 40);
+            sldrAVTransitTextDistance.TabIndex = 47;
+            sldrAVTransitTextDistance.Text = "Text Distance";
+            toolTip.SetToolTip(sldrAVTransitTextDistance, "The maximum distance for text to be drawn for transits in the aimview");
+            sldrAVTransitTextDistance.UseAccentColor = true;
+            sldrAVTransitTextDistance.Value = 150;
+            sldrAVTransitTextDistance.ValueSuffix = "m";
+            sldrAVTransitTextDistance.onValueChanged += sldrAVTransitTextDistance_onValueChanged;
+            // 
+            // sldrAVQuestItemPaintDistance
+            // 
+            sldrAVQuestItemPaintDistance.Depth = 0;
+            sldrAVQuestItemPaintDistance.ForeColor = Color.FromArgb(222, 0, 0, 0);
+            sldrAVQuestItemPaintDistance.Location = new Point(17, 480);
+            sldrAVQuestItemPaintDistance.MouseState = MaterialSkin.MouseState.HOVER;
+            sldrAVQuestItemPaintDistance.Name = "sldrAVQuestItemPaintDistance";
+            sldrAVQuestItemPaintDistance.RangeMax = 500;
+            sldrAVQuestItemPaintDistance.Size = new Size(290, 40);
+            sldrAVQuestItemPaintDistance.TabIndex = 75;
+            sldrAVQuestItemPaintDistance.Text = "Paint Distance";
+            toolTip.SetToolTip(sldrAVQuestItemPaintDistance, "The maximum distance for paints to be drawn for quest items in the aimview");
+            sldrAVQuestItemPaintDistance.UseAccentColor = true;
+            sldrAVQuestItemPaintDistance.Value = 150;
+            sldrAVQuestItemPaintDistance.ValueSuffix = "m";
+            sldrAVQuestItemPaintDistance.onValueChanged += sldrAVQuestItemPaintDistance_onValueChanged;
+            // 
+            // sldrAVQuestZoneTextDistance
+            // 
+            sldrAVQuestZoneTextDistance.Depth = 0;
+            sldrAVQuestZoneTextDistance.ForeColor = Color.FromArgb(222, 0, 0, 0);
+            sldrAVQuestZoneTextDistance.Location = new Point(319, 795);
+            sldrAVQuestZoneTextDistance.MouseState = MaterialSkin.MouseState.HOVER;
+            sldrAVQuestZoneTextDistance.Name = "sldrAVQuestZoneTextDistance";
+            sldrAVQuestZoneTextDistance.RangeMax = 500;
+            sldrAVQuestZoneTextDistance.Size = new Size(290, 40);
+            sldrAVQuestZoneTextDistance.TabIndex = 67;
+            sldrAVQuestZoneTextDistance.Text = "Text Distance";
+            toolTip.SetToolTip(sldrAVQuestZoneTextDistance, "The maximum distance for text to be drawn for quest zones in the aimview");
+            sldrAVQuestZoneTextDistance.UseAccentColor = true;
+            sldrAVQuestZoneTextDistance.Value = 150;
+            sldrAVQuestZoneTextDistance.ValueSuffix = "m";
+            sldrAVQuestZoneTextDistance.onValueChanged += sldrAVQuestZoneTextDistance_onValueChanged;
+            // 
+            // sldrAVContainerTextDistance
+            // 
+            sldrAVContainerTextDistance.Depth = 0;
+            sldrAVContainerTextDistance.ForeColor = Color.FromArgb(222, 0, 0, 0);
+            sldrAVContainerTextDistance.Location = new Point(319, 585);
+            sldrAVContainerTextDistance.MouseState = MaterialSkin.MouseState.HOVER;
+            sldrAVContainerTextDistance.Name = "sldrAVContainerTextDistance";
+            sldrAVContainerTextDistance.RangeMax = 500;
+            sldrAVContainerTextDistance.Size = new Size(290, 40);
+            sldrAVContainerTextDistance.TabIndex = 61;
+            sldrAVContainerTextDistance.Text = "Text Distance";
+            toolTip.SetToolTip(sldrAVContainerTextDistance, "The maximum distance for text to be drawn for containers in the aimview");
+            sldrAVContainerTextDistance.UseAccentColor = true;
+            sldrAVContainerTextDistance.Value = 150;
+            sldrAVContainerTextDistance.ValueSuffix = "m";
+            sldrAVContainerTextDistance.onValueChanged += sldrAVContainerTextDistance_onValueChanged;
+            // 
+            // sldrAVCorpseTextDistance
+            // 
+            sldrAVCorpseTextDistance.Depth = 0;
+            sldrAVCorpseTextDistance.ForeColor = Color.FromArgb(222, 0, 0, 0);
+            sldrAVCorpseTextDistance.Location = new Point(319, 375);
+            sldrAVCorpseTextDistance.MouseState = MaterialSkin.MouseState.HOVER;
+            sldrAVCorpseTextDistance.Name = "sldrAVCorpseTextDistance";
+            sldrAVCorpseTextDistance.RangeMax = 500;
+            sldrAVCorpseTextDistance.Size = new Size(290, 40);
+            sldrAVCorpseTextDistance.TabIndex = 57;
+            sldrAVCorpseTextDistance.Text = "Text Distance";
+            toolTip.SetToolTip(sldrAVCorpseTextDistance, "The maximum distance for text to be drawn for corpses in the aimview");
+            sldrAVCorpseTextDistance.UseAccentColor = true;
+            sldrAVCorpseTextDistance.Value = 150;
+            sldrAVCorpseTextDistance.ValueSuffix = "m";
+            sldrAVCorpseTextDistance.onValueChanged += sldrAVCorpseTextDistance_onValueChanged;
+            // 
+            // sldrAVCorpsePaintDistance
+            // 
+            sldrAVCorpsePaintDistance.Depth = 0;
+            sldrAVCorpsePaintDistance.ForeColor = Color.FromArgb(222, 0, 0, 0);
+            sldrAVCorpsePaintDistance.Location = new Point(17, 375);
+            sldrAVCorpsePaintDistance.MouseState = MaterialSkin.MouseState.HOVER;
+            sldrAVCorpsePaintDistance.Name = "sldrAVCorpsePaintDistance";
+            sldrAVCorpsePaintDistance.RangeMax = 500;
+            sldrAVCorpsePaintDistance.Size = new Size(290, 40);
+            sldrAVCorpsePaintDistance.TabIndex = 56;
+            sldrAVCorpsePaintDistance.Text = "Paint Distance";
+            toolTip.SetToolTip(sldrAVCorpsePaintDistance, "The maximum distance for paints to be drawn for corpses in the aimview");
+            sldrAVCorpsePaintDistance.UseAccentColor = true;
+            sldrAVCorpsePaintDistance.Value = 150;
+            sldrAVCorpsePaintDistance.ValueSuffix = "m";
+            sldrAVCorpsePaintDistance.onValueChanged += sldrAVCorpsePaintDistance_onValueChanged;
+            // 
+            // sldrAVPlayerTextDistance
+            // 
+            sldrAVPlayerTextDistance.Depth = 0;
+            sldrAVPlayerTextDistance.ForeColor = Color.FromArgb(222, 0, 0, 0);
+            sldrAVPlayerTextDistance.Location = new Point(319, 165);
+            sldrAVPlayerTextDistance.MouseState = MaterialSkin.MouseState.HOVER;
+            sldrAVPlayerTextDistance.Name = "sldrAVPlayerTextDistance";
+            sldrAVPlayerTextDistance.RangeMax = 500;
+            sldrAVPlayerTextDistance.Size = new Size(290, 40);
+            sldrAVPlayerTextDistance.TabIndex = 38;
+            sldrAVPlayerTextDistance.Text = "Text Distance";
+            toolTip.SetToolTip(sldrAVPlayerTextDistance, "The maximum distance for text to be drawn for players in the aimview");
+            sldrAVPlayerTextDistance.UseAccentColor = true;
+            sldrAVPlayerTextDistance.Value = 150;
+            sldrAVPlayerTextDistance.ValueSuffix = "m";
+            sldrAVPlayerTextDistance.onValueChanged += sldrAVPlayerTextDistance_onValueChanged;
+            // 
+            // sldrAVLooseLootTextDistance
+            // 
+            sldrAVLooseLootTextDistance.Depth = 0;
+            sldrAVLooseLootTextDistance.ForeColor = Color.FromArgb(222, 0, 0, 0);
+            sldrAVLooseLootTextDistance.Location = new Point(319, 270);
+            sldrAVLooseLootTextDistance.MouseState = MaterialSkin.MouseState.HOVER;
+            sldrAVLooseLootTextDistance.Name = "sldrAVLooseLootTextDistance";
+            sldrAVLooseLootTextDistance.RangeMax = 500;
+            sldrAVLooseLootTextDistance.Size = new Size(290, 40);
+            sldrAVLooseLootTextDistance.TabIndex = 49;
+            sldrAVLooseLootTextDistance.Text = "Text Distance";
+            toolTip.SetToolTip(sldrAVLooseLootTextDistance, "The maximum distance for text to be drawn for loose loot in the aimview");
+            sldrAVLooseLootTextDistance.UseAccentColor = true;
+            sldrAVLooseLootTextDistance.Value = 150;
+            sldrAVLooseLootTextDistance.ValueSuffix = "m";
+            sldrAVLooseLootTextDistance.onValueChanged += sldrAVLooseLootTextDistance_onValueChanged;
+            // 
+            // sldrAVLooseLootPaintDistance
+            // 
+            sldrAVLooseLootPaintDistance.Depth = 0;
+            sldrAVLooseLootPaintDistance.ForeColor = Color.FromArgb(222, 0, 0, 0);
+            sldrAVLooseLootPaintDistance.Location = new Point(17, 270);
+            sldrAVLooseLootPaintDistance.MouseState = MaterialSkin.MouseState.HOVER;
+            sldrAVLooseLootPaintDistance.Name = "sldrAVLooseLootPaintDistance";
+            sldrAVLooseLootPaintDistance.RangeMax = 500;
+            sldrAVLooseLootPaintDistance.Size = new Size(290, 40);
+            sldrAVLooseLootPaintDistance.TabIndex = 48;
+            sldrAVLooseLootPaintDistance.Text = "Paint Distance";
+            toolTip.SetToolTip(sldrAVLooseLootPaintDistance, "The maximum distance for paints to be drawn for loose loot in the aimview");
+            sldrAVLooseLootPaintDistance.UseAccentColor = true;
+            sldrAVLooseLootPaintDistance.Value = 150;
+            sldrAVLooseLootPaintDistance.ValueSuffix = "m";
+            sldrAVLooseLootPaintDistance.onValueChanged += sldrAVLooseLootPaintDistance_onValueChanged;
+            // 
+            // sldrAVHeight
+            // 
+            sldrAVHeight.Depth = 0;
+            sldrAVHeight.ForeColor = Color.FromArgb(222, 0, 0, 0);
+            sldrAVHeight.Location = new Point(371, 60);
+            sldrAVHeight.MouseState = MaterialSkin.MouseState.HOVER;
+            sldrAVHeight.Name = "sldrAVHeight";
+            sldrAVHeight.RangeMax = 600;
+            sldrAVHeight.Size = new Size(200, 40);
+            sldrAVHeight.TabIndex = 35;
+            sldrAVHeight.Text = "H";
+            toolTip.SetToolTip(sldrAVHeight, "The Height of the Aimview window");
+            sldrAVHeight.UseAccentColor = true;
+            sldrAVHeight.Value = 200;
+            sldrAVHeight.ValueSuffix = "px";
+            sldrAVHeight.onValueChanged += sldrAVHeight_onValueChanged;
+            // 
+            // sldrAVWidth
+            // 
+            sldrAVWidth.Depth = 0;
+            sldrAVWidth.ForeColor = Color.FromArgb(222, 0, 0, 0);
+            sldrAVWidth.Location = new Point(149, 60);
+            sldrAVWidth.MouseState = MaterialSkin.MouseState.HOVER;
+            sldrAVWidth.Name = "sldrAVWidth";
+            sldrAVWidth.RangeMax = 600;
+            sldrAVWidth.Size = new Size(200, 40);
+            sldrAVWidth.TabIndex = 34;
+            sldrAVWidth.Text = "W";
+            toolTip.SetToolTip(sldrAVWidth, "The Width of the Aimview window");
+            sldrAVWidth.UseAccentColor = true;
+            sldrAVWidth.Value = 200;
+            sldrAVWidth.ValueSuffix = "px";
+            sldrAVWidth.onValueChanged += sldrAVWidth_onValueChanged;
+            // 
+            // sldrAVPlayerPaintDistance
+            // 
+            sldrAVPlayerPaintDistance.Depth = 0;
+            sldrAVPlayerPaintDistance.ForeColor = Color.FromArgb(222, 0, 0, 0);
+            sldrAVPlayerPaintDistance.Location = new Point(17, 165);
+            sldrAVPlayerPaintDistance.MouseState = MaterialSkin.MouseState.HOVER;
+            sldrAVPlayerPaintDistance.Name = "sldrAVPlayerPaintDistance";
+            sldrAVPlayerPaintDistance.RangeMax = 500;
+            sldrAVPlayerPaintDistance.Size = new Size(290, 40);
+            sldrAVPlayerPaintDistance.TabIndex = 37;
+            sldrAVPlayerPaintDistance.Text = "Paint Distance";
+            toolTip.SetToolTip(sldrAVPlayerPaintDistance, "The maximum distance for paints to be drawn for players in the aimview");
+            sldrAVPlayerPaintDistance.UseAccentColor = true;
+            sldrAVPlayerPaintDistance.Value = 150;
+            sldrAVPlayerPaintDistance.ValueSuffix = "m";
+            sldrAVPlayerPaintDistance.onValueChanged += sldrAVPlayerPaintDistance_onValueChanged;
             // 
             // sldrThermalColorCoefficient
             // 
@@ -4551,6 +5366,7 @@
             // tabSettingsGeneral
             // 
             tabSettingsGeneral.BackColor = Color.White;
+            tabSettingsGeneral.Controls.Add(mcSettingsGeneralAimview);
             tabSettingsGeneral.Controls.Add(mcSettingsGeneralPlayerInformation);
             tabSettingsGeneral.Controls.Add(mcSettingsGeneralUI);
             tabSettingsGeneral.Controls.Add(mcSettingsGeneralRadar);
@@ -4561,6 +5377,342 @@
             tabSettingsGeneral.Size = new Size(1484, 640);
             tabSettingsGeneral.TabIndex = 0;
             tabSettingsGeneral.Text = "General";
+            // 
+            // mcSettingsGeneralAimview
+            // 
+            mcSettingsGeneralAimview.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
+            mcSettingsGeneralAimview.AutoScroll = true;
+            mcSettingsGeneralAimview.BackColor = Color.FromArgb(255, 255, 255);
+            mcSettingsGeneralAimview.Controls.Add(sldrAVTripwirePaintDistance);
+            mcSettingsGeneralAimview.Controls.Add(sldrAVContainerPaintDistance);
+            mcSettingsGeneralAimview.Controls.Add(swAVTripwireDistance);
+            mcSettingsGeneralAimview.Controls.Add(dvdrTransits);
+            mcSettingsGeneralAimview.Controls.Add(lblSettingsGeneralAimviewExfils);
+            mcSettingsGeneralAimview.Controls.Add(sldrAVExfilTextDistance);
+            mcSettingsGeneralAimview.Controls.Add(lblSettingsGeneralAimviewTripwire);
+            mcSettingsGeneralAimview.Controls.Add(swAVExfils);
+            mcSettingsGeneralAimview.Controls.Add(swAVTripwire);
+            mcSettingsGeneralAimview.Controls.Add(dvdrExfils);
+            mcSettingsGeneralAimview.Controls.Add(sldrAVTripwireTextDistance);
+            mcSettingsGeneralAimview.Controls.Add(swAVExfilName);
+            mcSettingsGeneralAimview.Controls.Add(dvdrContainers);
+            mcSettingsGeneralAimview.Controls.Add(swAVExfilDistance);
+            mcSettingsGeneralAimview.Controls.Add(sldrAVQuestItemTextDistance);
+            mcSettingsGeneralAimview.Controls.Add(sldrAVTransitTextDistance);
+            mcSettingsGeneralAimview.Controls.Add(sldrAVQuestItemPaintDistance);
+            mcSettingsGeneralAimview.Controls.Add(swAVTransits);
+            mcSettingsGeneralAimview.Controls.Add(swAVQuestItemName);
+            mcSettingsGeneralAimview.Controls.Add(lblSettingsGeneralAimviewTransits);
+            mcSettingsGeneralAimview.Controls.Add(swAVQuestItemDistance);
+            mcSettingsGeneralAimview.Controls.Add(swAVTransitName);
+            mcSettingsGeneralAimview.Controls.Add(swAVQuestItems);
+            mcSettingsGeneralAimview.Controls.Add(swAVTransitDistance);
+            mcSettingsGeneralAimview.Controls.Add(lblSettingsGeneralAimviewQuestItems);
+            mcSettingsGeneralAimview.Controls.Add(swAVQuestZoneDistance);
+            mcSettingsGeneralAimview.Controls.Add(swAVQuestZoneName);
+            mcSettingsGeneralAimview.Controls.Add(dvdrQuestZones);
+            mcSettingsGeneralAimview.Controls.Add(lblSettingsGeneralAimviewQuestZones);
+            mcSettingsGeneralAimview.Controls.Add(swAVQuestZones);
+            mcSettingsGeneralAimview.Controls.Add(sldrAVQuestZoneTextDistance);
+            mcSettingsGeneralAimview.Controls.Add(swAVContainerDistance);
+            mcSettingsGeneralAimview.Controls.Add(swAVContainerName);
+            mcSettingsGeneralAimview.Controls.Add(dvdrTripwire);
+            mcSettingsGeneralAimview.Controls.Add(lblSettingsGeneralAimviewContainers);
+            mcSettingsGeneralAimview.Controls.Add(swAVContainers);
+            mcSettingsGeneralAimview.Controls.Add(sldrAVContainerTextDistance);
+            mcSettingsGeneralAimview.Controls.Add(dvdrQuestItems);
+            mcSettingsGeneralAimview.Controls.Add(sldrAVCorpseTextDistance);
+            mcSettingsGeneralAimview.Controls.Add(dvdrLooseLoot);
+            mcSettingsGeneralAimview.Controls.Add(sldrAVCorpsePaintDistance);
+            mcSettingsGeneralAimview.Controls.Add(swAVCorpseValue);
+            mcSettingsGeneralAimview.Controls.Add(swAVCorpseName);
+            mcSettingsGeneralAimview.Controls.Add(lblSettingsGeneralAimviewLooseLoot);
+            mcSettingsGeneralAimview.Controls.Add(swAVCorpseDistance);
+            mcSettingsGeneralAimview.Controls.Add(dvdrPlayers);
+            mcSettingsGeneralAimview.Controls.Add(swAVLooseLoot);
+            mcSettingsGeneralAimview.Controls.Add(dvdrRendering);
+            mcSettingsGeneralAimview.Controls.Add(swAVCorpses);
+            mcSettingsGeneralAimview.Controls.Add(swAVLooseLootDistance);
+            mcSettingsGeneralAimview.Controls.Add(swAVPlayerDistance);
+            mcSettingsGeneralAimview.Controls.Add(lblSettingsGeneralAimviewCorpses);
+            mcSettingsGeneralAimview.Controls.Add(sldrAVPlayerTextDistance);
+            mcSettingsGeneralAimview.Controls.Add(swAVLooseLootName);
+            mcSettingsGeneralAimview.Controls.Add(lblSettingsGeneralAimviewPlayers);
+            mcSettingsGeneralAimview.Controls.Add(dvdrCorpses);
+            mcSettingsGeneralAimview.Controls.Add(lblSettingsGeneralAimviewRendering);
+            mcSettingsGeneralAimview.Controls.Add(swAVLooseLootValue);
+            mcSettingsGeneralAimview.Controls.Add(lblSettingsGeneralAimview);
+            mcSettingsGeneralAimview.Controls.Add(sldrAVLooseLootTextDistance);
+            mcSettingsGeneralAimview.Controls.Add(swAimview);
+            mcSettingsGeneralAimview.Controls.Add(sldrAVLooseLootPaintDistance);
+            mcSettingsGeneralAimview.Controls.Add(sldrAVHeight);
+            mcSettingsGeneralAimview.Controls.Add(sldrAVWidth);
+            mcSettingsGeneralAimview.Controls.Add(sldrAVPlayerPaintDistance);
+            mcSettingsGeneralAimview.Controls.Add(swAVPlayers);
+            mcSettingsGeneralAimview.Depth = 0;
+            mcSettingsGeneralAimview.ForeColor = Color.FromArgb(222, 0, 0, 0);
+            mcSettingsGeneralAimview.Location = new Point(15, 349);
+            mcSettingsGeneralAimview.Margin = new Padding(14);
+            mcSettingsGeneralAimview.MouseState = MaterialSkin.MouseState.HOVER;
+            mcSettingsGeneralAimview.Name = "mcSettingsGeneralAimview";
+            mcSettingsGeneralAimview.Padding = new Padding(14);
+            mcSettingsGeneralAimview.Size = new Size(633, 277);
+            mcSettingsGeneralAimview.TabIndex = 33;
+            // 
+            // dvdrTransits
+            // 
+            dvdrTransits.BackColor = Color.FromArgb(30, 0, 0, 0);
+            dvdrTransits.Depth = 0;
+            dvdrTransits.Location = new Point(0, 1045);
+            dvdrTransits.MouseState = MaterialSkin.MouseState.HOVER;
+            dvdrTransits.Name = "dvdrTransits";
+            dvdrTransits.Size = new Size(616, 2);
+            dvdrTransits.TabIndex = 81;
+            dvdrTransits.Text = "materialDivider10";
+            // 
+            // lblSettingsGeneralAimviewExfils
+            // 
+            lblSettingsGeneralAimviewExfils.AutoSize = true;
+            lblSettingsGeneralAimviewExfils.Depth = 0;
+            lblSettingsGeneralAimviewExfils.Font = new Font("Roboto Medium", 14F, FontStyle.Bold, GraphicsUnit.Pixel);
+            lblSettingsGeneralAimviewExfils.FontType = MaterialSkin.MaterialSkinManager.fontType.Subtitle2;
+            lblSettingsGeneralAimviewExfils.Location = new Point(17, 845);
+            lblSettingsGeneralAimviewExfils.MouseState = MaterialSkin.MouseState.HOVER;
+            lblSettingsGeneralAimviewExfils.Name = "lblSettingsGeneralAimviewExfils";
+            lblSettingsGeneralAimviewExfils.Size = new Size(36, 17);
+            lblSettingsGeneralAimviewExfils.TabIndex = 38;
+            lblSettingsGeneralAimviewExfils.Text = "Exfils";
+            // 
+            // lblSettingsGeneralAimviewTripwire
+            // 
+            lblSettingsGeneralAimviewTripwire.AutoSize = true;
+            lblSettingsGeneralAimviewTripwire.Depth = 0;
+            lblSettingsGeneralAimviewTripwire.Font = new Font("Roboto Medium", 14F, FontStyle.Bold, GraphicsUnit.Pixel);
+            lblSettingsGeneralAimviewTripwire.FontType = MaterialSkin.MaterialSkinManager.fontType.Subtitle2;
+            lblSettingsGeneralAimviewTripwire.Location = new Point(17, 635);
+            lblSettingsGeneralAimviewTripwire.MouseState = MaterialSkin.MouseState.HOVER;
+            lblSettingsGeneralAimviewTripwire.Name = "lblSettingsGeneralAimviewTripwire";
+            lblSettingsGeneralAimviewTripwire.Size = new Size(54, 17);
+            lblSettingsGeneralAimviewTripwire.TabIndex = 78;
+            lblSettingsGeneralAimviewTripwire.Text = "Tripwire";
+            // 
+            // dvdrExfils
+            // 
+            dvdrExfils.BackColor = Color.FromArgb(30, 0, 0, 0);
+            dvdrExfils.Depth = 0;
+            dvdrExfils.Location = new Point(0, 940);
+            dvdrExfils.MouseState = MaterialSkin.MouseState.HOVER;
+            dvdrExfils.Name = "dvdrExfils";
+            dvdrExfils.Size = new Size(616, 2);
+            dvdrExfils.TabIndex = 42;
+            dvdrExfils.Text = "materialDivider3";
+            // 
+            // dvdrContainers
+            // 
+            dvdrContainers.BackColor = Color.FromArgb(30, 0, 0, 0);
+            dvdrContainers.Depth = 0;
+            dvdrContainers.Location = new Point(0, 625);
+            dvdrContainers.MouseState = MaterialSkin.MouseState.HOVER;
+            dvdrContainers.Name = "dvdrContainers";
+            dvdrContainers.Size = new Size(616, 2);
+            dvdrContainers.TabIndex = 77;
+            dvdrContainers.Text = "materialDivider9";
+            // 
+            // lblSettingsGeneralAimviewTransits
+            // 
+            lblSettingsGeneralAimviewTransits.AutoSize = true;
+            lblSettingsGeneralAimviewTransits.Depth = 0;
+            lblSettingsGeneralAimviewTransits.Font = new Font("Roboto Medium", 14F, FontStyle.Bold, GraphicsUnit.Pixel);
+            lblSettingsGeneralAimviewTransits.FontType = MaterialSkin.MaterialSkinManager.fontType.Subtitle2;
+            lblSettingsGeneralAimviewTransits.Location = new Point(17, 950);
+            lblSettingsGeneralAimviewTransits.MouseState = MaterialSkin.MouseState.HOVER;
+            lblSettingsGeneralAimviewTransits.Name = "lblSettingsGeneralAimviewTransits";
+            lblSettingsGeneralAimviewTransits.Size = new Size(54, 17);
+            lblSettingsGeneralAimviewTransits.TabIndex = 45;
+            lblSettingsGeneralAimviewTransits.Text = "Transits";
+            // 
+            // lblSettingsGeneralAimviewQuestItems
+            // 
+            lblSettingsGeneralAimviewQuestItems.AutoSize = true;
+            lblSettingsGeneralAimviewQuestItems.Depth = 0;
+            lblSettingsGeneralAimviewQuestItems.Font = new Font("Roboto Medium", 14F, FontStyle.Bold, GraphicsUnit.Pixel);
+            lblSettingsGeneralAimviewQuestItems.FontType = MaterialSkin.MaterialSkinManager.fontType.Subtitle2;
+            lblSettingsGeneralAimviewQuestItems.Location = new Point(17, 425);
+            lblSettingsGeneralAimviewQuestItems.MouseState = MaterialSkin.MouseState.HOVER;
+            lblSettingsGeneralAimviewQuestItems.Name = "lblSettingsGeneralAimviewQuestItems";
+            lblSettingsGeneralAimviewQuestItems.Size = new Size(78, 17);
+            lblSettingsGeneralAimviewQuestItems.TabIndex = 71;
+            lblSettingsGeneralAimviewQuestItems.Text = "Quest Items";
+            // 
+            // dvdrQuestZones
+            // 
+            dvdrQuestZones.BackColor = Color.FromArgb(30, 0, 0, 0);
+            dvdrQuestZones.Depth = 0;
+            dvdrQuestZones.Location = new Point(0, 835);
+            dvdrQuestZones.MouseState = MaterialSkin.MouseState.HOVER;
+            dvdrQuestZones.Name = "dvdrQuestZones";
+            dvdrQuestZones.Size = new Size(616, 2);
+            dvdrQuestZones.TabIndex = 68;
+            dvdrQuestZones.Text = "materialDivider8";
+            // 
+            // lblSettingsGeneralAimviewQuestZones
+            // 
+            lblSettingsGeneralAimviewQuestZones.AutoSize = true;
+            lblSettingsGeneralAimviewQuestZones.Depth = 0;
+            lblSettingsGeneralAimviewQuestZones.Font = new Font("Roboto Medium", 14F, FontStyle.Bold, GraphicsUnit.Pixel);
+            lblSettingsGeneralAimviewQuestZones.FontType = MaterialSkin.MaterialSkinManager.fontType.Subtitle2;
+            lblSettingsGeneralAimviewQuestZones.Location = new Point(17, 740);
+            lblSettingsGeneralAimviewQuestZones.MouseState = MaterialSkin.MouseState.HOVER;
+            lblSettingsGeneralAimviewQuestZones.Name = "lblSettingsGeneralAimviewQuestZones";
+            lblSettingsGeneralAimviewQuestZones.Size = new Size(81, 17);
+            lblSettingsGeneralAimviewQuestZones.TabIndex = 65;
+            lblSettingsGeneralAimviewQuestZones.Text = "Quest Zones";
+            // 
+            // dvdrTripwire
+            // 
+            dvdrTripwire.BackColor = Color.FromArgb(30, 0, 0, 0);
+            dvdrTripwire.Depth = 0;
+            dvdrTripwire.Location = new Point(0, 730);
+            dvdrTripwire.MouseState = MaterialSkin.MouseState.HOVER;
+            dvdrTripwire.Name = "dvdrTripwire";
+            dvdrTripwire.Size = new Size(616, 2);
+            dvdrTripwire.TabIndex = 62;
+            dvdrTripwire.Text = "materialDivider7";
+            // 
+            // lblSettingsGeneralAimviewContainers
+            // 
+            lblSettingsGeneralAimviewContainers.AutoSize = true;
+            lblSettingsGeneralAimviewContainers.Depth = 0;
+            lblSettingsGeneralAimviewContainers.Font = new Font("Roboto Medium", 14F, FontStyle.Bold, GraphicsUnit.Pixel);
+            lblSettingsGeneralAimviewContainers.FontType = MaterialSkin.MaterialSkinManager.fontType.Subtitle2;
+            lblSettingsGeneralAimviewContainers.Location = new Point(17, 530);
+            lblSettingsGeneralAimviewContainers.MouseState = MaterialSkin.MouseState.HOVER;
+            lblSettingsGeneralAimviewContainers.Name = "lblSettingsGeneralAimviewContainers";
+            lblSettingsGeneralAimviewContainers.Size = new Size(71, 17);
+            lblSettingsGeneralAimviewContainers.TabIndex = 59;
+            lblSettingsGeneralAimviewContainers.Text = "Containers";
+            // 
+            // dvdrQuestItems
+            // 
+            dvdrQuestItems.BackColor = Color.FromArgb(30, 0, 0, 0);
+            dvdrQuestItems.Depth = 0;
+            dvdrQuestItems.Location = new Point(0, 520);
+            dvdrQuestItems.MouseState = MaterialSkin.MouseState.HOVER;
+            dvdrQuestItems.Name = "dvdrQuestItems";
+            dvdrQuestItems.Size = new Size(616, 2);
+            dvdrQuestItems.TabIndex = 58;
+            dvdrQuestItems.Text = "materialDivider5";
+            // 
+            // dvdrLooseLoot
+            // 
+            dvdrLooseLoot.BackColor = Color.FromArgb(30, 0, 0, 0);
+            dvdrLooseLoot.Depth = 0;
+            dvdrLooseLoot.Location = new Point(0, 310);
+            dvdrLooseLoot.MouseState = MaterialSkin.MouseState.HOVER;
+            dvdrLooseLoot.Name = "dvdrLooseLoot";
+            dvdrLooseLoot.Size = new Size(616, 2);
+            dvdrLooseLoot.TabIndex = 48;
+            dvdrLooseLoot.Text = "materialDivider6";
+            // 
+            // lblSettingsGeneralAimviewLooseLoot
+            // 
+            lblSettingsGeneralAimviewLooseLoot.AutoSize = true;
+            lblSettingsGeneralAimviewLooseLoot.Depth = 0;
+            lblSettingsGeneralAimviewLooseLoot.Font = new Font("Roboto Medium", 14F, FontStyle.Bold, GraphicsUnit.Pixel);
+            lblSettingsGeneralAimviewLooseLoot.FontType = MaterialSkin.MaterialSkinManager.fontType.Subtitle2;
+            lblSettingsGeneralAimviewLooseLoot.Location = new Point(17, 215);
+            lblSettingsGeneralAimviewLooseLoot.MouseState = MaterialSkin.MouseState.HOVER;
+            lblSettingsGeneralAimviewLooseLoot.Name = "lblSettingsGeneralAimviewLooseLoot";
+            lblSettingsGeneralAimviewLooseLoot.Size = new Size(72, 17);
+            lblSettingsGeneralAimviewLooseLoot.TabIndex = 40;
+            lblSettingsGeneralAimviewLooseLoot.Text = "Loose Loot";
+            // 
+            // dvdrPlayers
+            // 
+            dvdrPlayers.BackColor = Color.FromArgb(30, 0, 0, 0);
+            dvdrPlayers.Depth = 0;
+            dvdrPlayers.Location = new Point(0, 205);
+            dvdrPlayers.MouseState = MaterialSkin.MouseState.HOVER;
+            dvdrPlayers.Name = "dvdrPlayers";
+            dvdrPlayers.Size = new Size(616, 2);
+            dvdrPlayers.TabIndex = 41;
+            dvdrPlayers.Text = "materialDivider2";
+            // 
+            // dvdrRendering
+            // 
+            dvdrRendering.BackColor = Color.FromArgb(30, 0, 0, 0);
+            dvdrRendering.Depth = 0;
+            dvdrRendering.Location = new Point(0, 100);
+            dvdrRendering.MouseState = MaterialSkin.MouseState.HOVER;
+            dvdrRendering.Name = "dvdrRendering";
+            dvdrRendering.Size = new Size(616, 2);
+            dvdrRendering.TabIndex = 40;
+            dvdrRendering.Text = "materialDivider1";
+            // 
+            // lblSettingsGeneralAimviewCorpses
+            // 
+            lblSettingsGeneralAimviewCorpses.AutoSize = true;
+            lblSettingsGeneralAimviewCorpses.Depth = 0;
+            lblSettingsGeneralAimviewCorpses.Font = new Font("Roboto Medium", 14F, FontStyle.Bold, GraphicsUnit.Pixel);
+            lblSettingsGeneralAimviewCorpses.FontType = MaterialSkin.MaterialSkinManager.fontType.Subtitle2;
+            lblSettingsGeneralAimviewCorpses.Location = new Point(17, 320);
+            lblSettingsGeneralAimviewCorpses.MouseState = MaterialSkin.MouseState.HOVER;
+            lblSettingsGeneralAimviewCorpses.Name = "lblSettingsGeneralAimviewCorpses";
+            lblSettingsGeneralAimviewCorpses.Size = new Size(53, 17);
+            lblSettingsGeneralAimviewCorpses.TabIndex = 51;
+            lblSettingsGeneralAimviewCorpses.Text = "Corpses";
+            // 
+            // lblSettingsGeneralAimviewPlayers
+            // 
+            lblSettingsGeneralAimviewPlayers.AutoSize = true;
+            lblSettingsGeneralAimviewPlayers.Depth = 0;
+            lblSettingsGeneralAimviewPlayers.Font = new Font("Roboto Medium", 14F, FontStyle.Bold, GraphicsUnit.Pixel);
+            lblSettingsGeneralAimviewPlayers.FontType = MaterialSkin.MaterialSkinManager.fontType.Subtitle2;
+            lblSettingsGeneralAimviewPlayers.Location = new Point(17, 110);
+            lblSettingsGeneralAimviewPlayers.MouseState = MaterialSkin.MouseState.HOVER;
+            lblSettingsGeneralAimviewPlayers.Name = "lblSettingsGeneralAimviewPlayers";
+            lblSettingsGeneralAimviewPlayers.Size = new Size(49, 17);
+            lblSettingsGeneralAimviewPlayers.TabIndex = 37;
+            lblSettingsGeneralAimviewPlayers.Text = "Players";
+            // 
+            // dvdrCorpses
+            // 
+            dvdrCorpses.BackColor = Color.FromArgb(30, 0, 0, 0);
+            dvdrCorpses.Depth = 0;
+            dvdrCorpses.Location = new Point(0, 415);
+            dvdrCorpses.MouseState = MaterialSkin.MouseState.HOVER;
+            dvdrCorpses.Name = "dvdrCorpses";
+            dvdrCorpses.Size = new Size(616, 2);
+            dvdrCorpses.TabIndex = 50;
+            dvdrCorpses.Text = "materialDivider4";
+            // 
+            // lblSettingsGeneralAimviewRendering
+            // 
+            lblSettingsGeneralAimviewRendering.AutoSize = true;
+            lblSettingsGeneralAimviewRendering.Depth = 0;
+            lblSettingsGeneralAimviewRendering.Font = new Font("Roboto Medium", 14F, FontStyle.Bold, GraphicsUnit.Pixel);
+            lblSettingsGeneralAimviewRendering.FontType = MaterialSkin.MaterialSkinManager.fontType.Subtitle2;
+            lblSettingsGeneralAimviewRendering.Location = new Point(17, 45);
+            lblSettingsGeneralAimviewRendering.MouseState = MaterialSkin.MouseState.HOVER;
+            lblSettingsGeneralAimviewRendering.Name = "lblSettingsGeneralAimviewRendering";
+            lblSettingsGeneralAimviewRendering.Size = new Size(67, 17);
+            lblSettingsGeneralAimviewRendering.TabIndex = 36;
+            lblSettingsGeneralAimviewRendering.Text = "Rendering";
+            // 
+            // lblSettingsGeneralAimview
+            // 
+            lblSettingsGeneralAimview.AutoSize = true;
+            lblSettingsGeneralAimview.Depth = 0;
+            lblSettingsGeneralAimview.Font = new Font("Roboto Medium", 20F, FontStyle.Bold, GraphicsUnit.Pixel);
+            lblSettingsGeneralAimview.FontType = MaterialSkin.MaterialSkinManager.fontType.H6;
+            lblSettingsGeneralAimview.HighEmphasis = true;
+            lblSettingsGeneralAimview.Location = new Point(17, 12);
+            lblSettingsGeneralAimview.MouseState = MaterialSkin.MouseState.HOVER;
+            lblSettingsGeneralAimview.Name = "lblSettingsGeneralAimview";
+            lblSettingsGeneralAimview.Size = new Size(77, 24);
+            lblSettingsGeneralAimview.TabIndex = 33;
+            lblSettingsGeneralAimview.Text = "Aimview";
+            lblSettingsGeneralAimview.UseAccent = true;
             // 
             // mcSettingsGeneralPlayerInformation
             // 
@@ -4620,11 +5772,10 @@
             mcSettingsGeneralUI.Controls.Add(cboGlobalFont);
             mcSettingsGeneralUI.Controls.Add(sldrFontSize);
             mcSettingsGeneralUI.Controls.Add(swHoverArmor);
-            mcSettingsGeneralUI.Controls.Add(txtTeammateID);
             mcSettingsGeneralUI.Controls.Add(lblSettingsGeneralUI);
             mcSettingsGeneralUI.Controls.Add(sldrUIScale);
             mcSettingsGeneralUI.Controls.Add(swExfilNames);
-            mcSettingsGeneralUI.Controls.Add(swAimview);
+            mcSettingsGeneralUI.Controls.Add(txtTeammateID);
             mcSettingsGeneralUI.Depth = 0;
             mcSettingsGeneralUI.ForeColor = Color.FromArgb(222, 0, 0, 0);
             mcSettingsGeneralUI.Location = new Point(14, 165);
@@ -7248,6 +8399,8 @@
             tabSettings.ResumeLayout(false);
             tabControlSettings.ResumeLayout(false);
             tabSettingsGeneral.ResumeLayout(false);
+            mcSettingsGeneralAimview.ResumeLayout(false);
+            mcSettingsGeneralAimview.PerformLayout();
             mcSettingsGeneralPlayerInformation.ResumeLayout(false);
             mcSettingsGeneralPlayerInformation.PerformLayout();
             mcSettingsGeneralUI.ResumeLayout(false);
@@ -7755,9 +8908,9 @@
         private MaterialSkin.Controls.MaterialSwitch swFrostBite;
         private MaterialSkin.Controls.MaterialSlider sldrYFactor;
         private MaterialSkin.Controls.MaterialCard mcSettingsMemoryWritingWorld;
-        private MaterialSkin.Controls.MaterialLabel materialLabel2;
-        private MaterialSkin.Controls.MaterialLabel materialLabel3;
-        private MaterialSkin.Controls.MaterialLabel materialLabel4;
+        private MaterialSkin.Controls.MaterialLabel lblSettingsGeneralAimviewRendering;
+        private MaterialSkin.Controls.MaterialLabel lblSettingsGeneralAimviewPlayers;
+        private MaterialSkin.Controls.MaterialLabel lblSettingsGeneralAimviewCorpses;
         private MaterialSkin.Controls.MaterialLabel lblSettingsMemoryWritingWorld;
         private MaterialSkin.Controls.MaterialSwitch swMoonIntensity;
         private MaterialSkin.Controls.MaterialSlider sldrMoonIntensity;
@@ -7770,6 +8923,69 @@
         private MaterialSkin.Controls.MaterialSwitch swSunIntensity;
         private MaterialSkin.Controls.MaterialSlider sldrSunIntensity;
         private MaterialSkin.Controls.MaterialSwitch swTraderPrices;
+        private MaterialSkin.Controls.MaterialCard mcSettingsGeneralAimview;
+        private MaterialSkin.Controls.MaterialSlider sldrAVWidth;
+        private MaterialSkin.Controls.MaterialLabel lblSettingsGeneralAimview;
+        private MaterialSkin.Controls.MaterialSlider sldrAVHeight;
+        private MaterialSkin.Controls.MaterialSlider sldrAVPlayerPaintDistance;
+        private MaterialSkin.Controls.MaterialSwitch swAVPlayers;
+        private MaterialSkin.Controls.MaterialSwitch swAVLooseLoot;
+        private MaterialSkin.Controls.MaterialLabel lblSettingsGeneralAimviewLooseLoot;
+        private MaterialSkin.Controls.MaterialSlider sldrAVPlayerTextDistance;
+        private MaterialSkin.Controls.MaterialSwitch swAVPlayerDistance;
+        private MaterialSkin.Controls.MaterialDivider dvdrRendering;
+        private MaterialSkin.Controls.MaterialDivider dvdrPlayers;
+        private MaterialSkin.Controls.MaterialDivider dvdrCorpses;
+        private MaterialSkin.Controls.MaterialSlider sldrAVLooseLootTextDistance;
+        private MaterialSkin.Controls.MaterialSlider sldrAVLooseLootPaintDistance;
+        private MaterialSkin.Controls.MaterialSwitch swAVLooseLootValue;
+        private MaterialSkin.Controls.MaterialSwitch swAVLooseLootName;
+        private MaterialSkin.Controls.MaterialSwitch swAVLooseLootDistance;
+        private MaterialSkin.Controls.MaterialDivider dvdrQuestItems;
+        private MaterialSkin.Controls.MaterialSlider sldrAVCorpseTextDistance;
+        private MaterialSkin.Controls.MaterialSlider sldrAVCorpsePaintDistance;
+        private MaterialSkin.Controls.MaterialSwitch swAVCorpseValue;
+        private MaterialSkin.Controls.MaterialSwitch swAVCorpseName;
+        private MaterialSkin.Controls.MaterialSwitch swAVCorpseDistance;
+        private MaterialSkin.Controls.MaterialSwitch swAVCorpses;
+        private MaterialSkin.Controls.MaterialDivider dvdrLooseLoot;
+        private MaterialSkin.Controls.MaterialLabel lblSettingsGeneralAimviewTransits;
+        private MaterialSkin.Controls.MaterialSwitch swAVContainerDistance;
+        private MaterialSkin.Controls.MaterialSwitch swAVContainerName;
+        private MaterialSkin.Controls.MaterialDivider dvdrTripwire;
+        private MaterialSkin.Controls.MaterialLabel lblSettingsGeneralAimviewContainers;
+        private MaterialSkin.Controls.MaterialSwitch swAVContainers;
+        private MaterialSkin.Controls.MaterialSlider sldrAVContainerTextDistance;
+        private MaterialSkin.Controls.MaterialSwitch swAVQuestZoneDistance;
+        private MaterialSkin.Controls.MaterialSwitch swAVQuestZoneName;
+        private MaterialSkin.Controls.MaterialDivider dvdrQuestZones;
+        private MaterialSkin.Controls.MaterialLabel lblSettingsGeneralAimviewQuestZones;
+        private MaterialSkin.Controls.MaterialSwitch swAVQuestZones;
+        private MaterialSkin.Controls.MaterialSlider sldrAVQuestZoneTextDistance;
+        private MaterialSkin.Controls.MaterialDivider dvdrContainers;
+        private MaterialSkin.Controls.MaterialSlider sldrAVQuestItemTextDistance;
+        private MaterialSkin.Controls.MaterialSlider sldrAVQuestItemPaintDistance;
+        private MaterialSkin.Controls.MaterialSwitch swAVQuestItemName;
+        private MaterialSkin.Controls.MaterialSwitch swAVQuestItemDistance;
+        private MaterialSkin.Controls.MaterialSwitch swAVQuestItems;
+        private MaterialSkin.Controls.MaterialLabel lblSettingsGeneralAimviewQuestItems;
+        private MaterialSkin.Controls.MaterialSwitch swAVTripwireDistance;
+        private MaterialSkin.Controls.MaterialDivider dvdrTransits;
+        private MaterialSkin.Controls.MaterialLabel lblSettingsGeneralAimviewTripwire;
+        private MaterialSkin.Controls.MaterialSwitch swAVTripwire;
+        private MaterialSkin.Controls.MaterialSlider sldrAVTripwireTextDistance;
+        private MaterialSkin.Controls.MaterialLabel lblSettingsGeneralAimviewExfils;
+        private MaterialSkin.Controls.MaterialSlider sldrAVExfilTextDistance;
+        private MaterialSkin.Controls.MaterialSwitch swAVExfils;
+        private MaterialSkin.Controls.MaterialDivider dvdrExfils;
+        private MaterialSkin.Controls.MaterialSwitch swAVExfilName;
+        private MaterialSkin.Controls.MaterialSwitch swAVExfilDistance;
+        private MaterialSkin.Controls.MaterialSlider sldrAVTransitTextDistance;
+        private MaterialSkin.Controls.MaterialSwitch swAVTransits;
+        private MaterialSkin.Controls.MaterialSwitch swAVTransitName;
+        private MaterialSkin.Controls.MaterialSwitch swAVTransitDistance;
+        private MaterialSkin.Controls.MaterialSlider sldrAVContainerPaintDistance;
+        private MaterialSkin.Controls.MaterialSlider sldrAVTripwirePaintDistance;
     }
 }
 

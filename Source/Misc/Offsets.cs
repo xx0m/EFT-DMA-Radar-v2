@@ -27,7 +27,7 @@
     {
         public const uint GameObjectManager = 0x1CF93E0; // to GameObjectManager
         public const uint CameraObjectManager = 0x1BF8BC0; // to Camera
-        public const uint TimeScale = 0x17FFAE0; // to TimeScale
+        public const uint TimeScale = 0x1C91778; // to TimeScale
     }
 
     public struct TimeScale
@@ -125,6 +125,7 @@
         public const uint Location = 0x5C8; // [5C8] <Location>k__BackingField : String
         public const uint Profile = 0x600; // [600] <Profile>k__BackingField : EFT.Profile
         public const uint Physical = 0x610; // [610] Physical : -.GClass07FA
+        public const uint HealthController = 0x640; // [640] _healthController : EFT.HealthSystem.IHealthController
         public const uint InventoryController = 0x658; // [658] _inventoryController : -.Player.PlayerInventoryController
         public const uint HandsController = 0x660; // [660] _handsController : -.Player.AbstractHandsController
         public const uint IsExtracting = 0x9A2; // [9A2] <ExitTriggerZone>k__BackingField : Boolean
@@ -600,9 +601,9 @@
 
     public struct Hashset
     {
-        public const uint Size = 0x10;
+        public const uint Size = 0x20;
         public const uint Base = 0x18;
-        public const uint Start = 0x28;
+        public const uint Start = 0x38;
         public const uint Count = 0x3C;
     }
 
@@ -686,5 +687,25 @@
         public const uint CloudDensity = 0x2C; // [2C] CloudDensity : Single
         public const uint Fog = 0x30; // [30] Fog : Single
         public const uint Rain = 0x34; // [34] Rain : Single
+    }
+
+    public struct PlayerBody
+    {
+        public const uint SkeletonRootJoint = 0x30; // [30] SkeletonRootJoint : Diz.Skinning.Skeleton
+    }
+
+    public struct SkeletonRootJoint
+    {
+        public const uint Bones = 0x30; // [30] _values : System.Collections.Generic.List<Transform>
+    }
+
+    public struct FPSCamera
+    {
+        public static uint[] To_ViewMatrix = new uint[] { 0x30, 0x18 };
+    }
+
+    public struct ViewMatrix
+    {
+        public const uint Matrix = 0x100;
     }
 }

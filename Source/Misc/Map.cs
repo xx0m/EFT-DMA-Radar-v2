@@ -95,12 +95,12 @@ namespace eft_dma_radar
             var text = Extensions.GetTextPaint(exfil);
             var heightDiff = this.Height - localPlayerHeight;
 
-            if (heightDiff > 1.85) // exfil is above player
+            if (heightDiff > 2) // exfil is above player
             {
                 using var path = this.GetUpArrow(5);
                 canvas.DrawPath(path, paint);
             }
-            else if (heightDiff < -1.85) // exfil is below player
+            else if (heightDiff < -2) // exfil is below player
             {
                 using var path = this.GetDownArrow(5);
                 canvas.DrawPath(path, paint);
@@ -129,12 +129,12 @@ namespace eft_dma_radar
             var text = Extensions.GetTextPaint(transit);
             var heightDiff = this.Height - localPlayerHeight;
 
-            if (heightDiff > 1.85) // transit is above player
+            if (heightDiff > 2) // transit is above player
             {
                 using var path = this.GetUpArrow(5);
                 canvas.DrawPath(path, paint);
             }
-            else if (heightDiff < -1.85) // transit is below player
+            else if (heightDiff < -2) // transit is below player
             {
                 using var path = this.GetDownArrow(5);
                 canvas.DrawPath(path, paint);
@@ -178,12 +178,12 @@ namespace eft_dma_radar
 
             paint.Style = SKPaintStyle.Fill;
 
-            if (heightDiff > 1.85) // tripwire is above player
+            if (heightDiff > 2) // tripwire is above player
             {
                 using var path = toPosZoomedPos.GetUpArrow(7);
                 canvas.DrawPath(path, paint);
             }
-            else if (heightDiff < -1.85) // tripwire is below player
+            else if (heightDiff < -2) // tripwire is below player
             {
                 using var path = toPosZoomedPos.GetDownArrow(7);
                 canvas.DrawPath(path, paint);
@@ -216,12 +216,12 @@ namespace eft_dma_radar
             var text = Extensions.GetTextPaint(item);
             var label = _config.LootValue ? item.GetFormattedValueShortName() : item.Item.shortName;
 
-            if (heightDiff > 1.45)
+            if (heightDiff > 2)
             {
                 using var path = this.GetUpArrow();
                 canvas.DrawPath(path, paint);
             }
-            else if (heightDiff < -1.45)
+            else if (heightDiff < -2)
             {
                 using var path = this.GetDownArrow();
                 canvas.DrawPath(path, paint);
@@ -273,9 +273,9 @@ namespace eft_dma_radar
         /// </summary>
         public void DrawLootCorpse(SKCanvas canvas, LootCorpse corpse, float heightDiff)
         {
-            float length = 6 * UIScale;
+            var length = 6 * UIScale;
             var paint = Extensions.GetDeathMarkerPaint(corpse);
-            float offsetX = -15 * UIScale;
+            var offsetX = -15 * UIScale;
 
             if (heightDiff > 1.45)
             {
@@ -300,7 +300,7 @@ namespace eft_dma_radar
 
         public void DrawDeathMarker(SKCanvas canvas)
         {
-            float length = 6 * UIScale;
+            var length = 6 * UIScale;
             var paint = Extensions.GetDeathMarkerPaint();
             canvas.DrawLine(new SKPoint(this.X - length, this.Y + length), new SKPoint(this.X + length, this.Y - length), paint);
             canvas.DrawLine(new SKPoint(this.X - length, this.Y - length), new SKPoint(this.X + length, this.Y + length), paint);
@@ -312,16 +312,16 @@ namespace eft_dma_radar
         public void DrawQuestItem(SKCanvas canvas, QuestItem item, float heightDiff)
         {
             var label = item.Name;
-            SKPaint paint = Extensions.GetEntityPaint(item);
-            SKPaint text = Extensions.GetTextPaint(item);
+            var paint = Extensions.GetEntityPaint(item);
+            var text = Extensions.GetTextPaint(item);
 
-            if (heightDiff > 1.45) // loot is above player
+            if (heightDiff > 2) // loot is above player
             {
 
                 using var path = this.GetUpArrow();
                 canvas.DrawPath(path, paint);
             }
-            else if (heightDiff < -1.45) // loot is below player
+            else if (heightDiff < -2) // loot is below player
             {
                 using var path = this.GetDownArrow();
                 canvas.DrawPath(path, paint);
@@ -343,15 +343,15 @@ namespace eft_dma_radar
         public void DrawTaskZone(SKCanvas canvas, QuestZone zone, float heightDiff)
         {
             var label = zone.ObjectiveType;
-            SKPaint paint = Extensions.GetEntityPaint(zone);
-            SKPaint text = Extensions.GetTextPaint(zone);
+            var paint = Extensions.GetEntityPaint(zone);
+            var text = Extensions.GetTextPaint(zone);
 
-            if (heightDiff > 1.45) // above player
+            if (heightDiff > 2) // above player
             {
                 using var path = this.GetUpArrow();
                 canvas.DrawPath(path, paint);
             }
-            else if (heightDiff < -1.45) // below player
+            else if (heightDiff < -2) // below player
             {
                 using var path = this.GetDownArrow();
                 canvas.DrawPath(path, paint);

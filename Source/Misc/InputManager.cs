@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Reflection;
 using System.Text;
 using Vmmsharp;
 
@@ -97,19 +98,57 @@ namespace eft_dma_radar
                 {
                     var win32ksgdBase = csrss.GetModuleBase("win32ksgd.sys");
 
-                    if (win32ksgdBase == 0)
-                        continue;
+                    ulong gSessionGlobalSlots = 0;
 
-                    var gSessionGlobalSlots = win32ksgdBase + 0x3110;
-                    var t1 = csrss.MemReadAs<ulong>(gSessionGlobalSlots);
-                    var t2 = csrss.MemReadAs<ulong>(t1.Value);
-                    var t3 = csrss.MemReadAs<ulong>(t2.Value);
-                    var userSessionState = t3.Value;
+                    if (win32ksgdBase == 0 || (InputManager.currentBuild >= 26100 && InputManager.updateBuildRevision >= 2605))
+                    {
+                        ulong win32kbase = csrss.GetModuleBase("win32k.sys");
+
+                        if (win32kbase == 0)
+                            continue;
+
+                        gSessionGlobalSlots = win32kbase + 0x82538;
+                    }
+                    else
+                    {
+                        gSessionGlobalSlots = win32ksgdBase + 0x3110;
+                    }
+
+                    ulong userSessionState = 0;
+
+                    for (int i = 0; i < 4; i++)
+                    {
+                        var t1 = csrss.MemReadAs<ulong>(gSessionGlobalSlots);
+                        if (t1.Value == 0)
+                            continue;
+
+                        var t2 = csrss.MemReadAs<ulong>(t1.Value + (ulong)(8 * i));
+                        if (t2.Value == 0)
+                            continue;
+
+                        var t3 = csrss.MemReadAs<ulong>(t2.Value);
+
+                        userSessionState = t3.Value;
+
+                        if (userSessionState > 0x7FFFFFFFFFFF)
+                            break;
+                    }
 
                     if (userSessionState == 0)
                         continue;
 
-                    InputManager.gafAsyncKeyStateExport = userSessionState + (InputManager.currentBuild >= 22631 && InputManager.updateBuildRevision >= 3810 ? 0x36A8U : 0x3690U);
+                    var offset = 0x3690;
+                    var currentBuild = InputManager.currentBuild;
+                    var currentRevision = InputManager.updateBuildRevision;
+
+                    if (currentBuild >= 26100 && currentRevision >= 2605)
+                        offset = 0x3830;
+                    else if (currentBuild >= 26100)
+                        offset = currentRevision >= 2314 ? 0x3828 : 0x3820;
+                    else if (currentBuild >= 22631 && currentRevision >= 3810)
+                        offset = 0x36A8;
+
+                    InputManager.gafAsyncKeyStateExport = userSessionState + (ulong)offset;
 
                     if (InputManager.gafAsyncKeyStateExport > 0x7FFFFFFFFFFF)
                     {

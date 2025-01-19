@@ -679,7 +679,7 @@ namespace eft_dma_radar
             if (loot is null)
                 return;
 
-            var orderedActiveFilters = _config.Filters
+            var orderedActiveFilters = this._config.Filters
                 .Where(filter => filter.IsActive)
                 .OrderBy(filter => filter.Order)
                 .ToList();
@@ -690,12 +690,18 @@ namespace eft_dma_radar
                 .ToDictionary(group => group.Key, group => group.FirstOrDefault().Color);
 
             var filteredItems = new ConcurrentBag<LootableObject>();
+            var aimviewSettings = this._config.AimviewSettings;
+            var aimviewLooseLootOn = aimviewSettings.ObjectSettings["LooseLoot"].Enabled;
+            var aimviewCorpsesOn = aimviewSettings.ObjectSettings["Corpse"].Enabled;
+
+            var looseLootEnabled = (this._config.LooseLoot || (aimviewSettings.Enabled && aimviewLooseLootOn));
+            var corpsesEnabled = (this._config.LootCorpses || aimviewCorpsesOn);
 
             // Add loose loot
             foreach (var lootItem in loot.OfType<LootItem>())
             {
-                var isValuable = lootItem.Value > _config.MinLootValue;
-                var isImportant = lootItem.Value > _config.MinImportantLootValue;
+                var isValuable = lootItem.Value > this._config.MinLootValue;
+                var isImportant = lootItem.Value > this._config.MinImportantLootValue;
                 var isFiltered = this.RequiredFilterItems.ContainsKey(lootItem.ID);
                 var isRequired = (this._config.QuestHelper && this._config.QuestLootItems && this.RequiredQuestItems.Contains(lootItem.ID));
 
@@ -711,20 +717,20 @@ namespace eft_dma_radar
                         tmpLootItem.Color = this.RequiredFilterItems[lootItem.ID];
                 }
 
-                if (isRequired || (_config.LooseLoot && (isFiltered || isValuable || lootItem.AlwaysShow)))
+                if (isRequired || (looseLootEnabled && (isFiltered || isValuable || lootItem.AlwaysShow)))
                     filteredItems.Add(tmpLootItem);
             }
 
             // Add containers
-            if (_config.LootContainerSettings["Enabled"])
+            if (this._config.LootContainerSettings["Enabled"] || aimviewSettings.ObjectSettings["Container"].Enabled)
             {
                 foreach (var container in loot.OfType<LootContainer>())
                 {
                     var tmpContainer = new LootContainer(container);
                     tmpContainer.AlwaysShow = true;
 
-                    if (_config.LootContainerSettings.ContainsKey(tmpContainer.Name))
-                        if (_config.LootContainerSettings[tmpContainer.Name])
+                    if (this._config.LootContainerSettings.ContainsKey(tmpContainer.Name))
+                        if (this._config.LootContainerSettings[tmpContainer.Name])
                             filteredItems.Add(tmpContainer);
                 }
             }
@@ -732,7 +738,7 @@ namespace eft_dma_radar
             // Add corpses
             foreach (var corpse in loot.OfType<LootCorpse>())
             {
-                var addedCorpse = false;
+                var shouldAddCorpse = false;
                 var tmpCorpse = new LootCorpse(corpse);
                 LootItem lowestOrderLootItem = null;
                 GearItem lowestOrderGearItem = null;
@@ -792,15 +798,12 @@ namespace eft_dma_radar
                     {
                         tmpCorpse.Color = lowestOrderGearItem.Color;
                     }
-
-                    if (tmpCorpse.Value > _config.MinCorpseValue || tmpCorpse.Important)
-                    {
-                        addedCorpse = true;
-                        filteredItems.Add(tmpCorpse);
-                    }
                 }
+                
+                if ((corpsesEnabled && tmpCorpse.Value >= this._config.MinCorpseValue) || aimviewCorpsesOn  || tmpCorpse.Important)
+                    shouldAddCorpse = true;
 
-                if (!addedCorpse && (_config.LooseLoot && _config.LootCorpses || !_config.LooseLoot && _config.LootCorpses))
+                if (shouldAddCorpse && corpsesEnabled)
                     filteredItems.Add(tmpCorpse);
             }
 

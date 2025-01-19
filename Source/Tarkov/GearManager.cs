@@ -82,7 +82,6 @@ namespace eft_dma_radar
                     var itemToRemove = this.GearItems.FirstOrDefault(x => x.Slot.Key == slot.Key);
                     this.GearItems.Remove(itemToRemove);
 
-                    //slotsToRefresh.Add(new GearSlot { Key = slot.Key, Pointer = slot.Pointer, ContainedItem = containedItem }); // update these gear slots
                     slotsToRefresh.Add(new GearSlot { Key = slot.Key, Pointer = slot.Pointer }); // update these gear slots
                 }
             }

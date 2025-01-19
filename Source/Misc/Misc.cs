@@ -1,5 +1,9 @@
-﻿using System.Diagnostics;
+﻿using SkiaSharp;
+using System.Diagnostics;
+using System.Numerics;
+using System.Runtime.Intrinsics;
 using System.Text;
+using System.Text.Json.Serialization;
 
 namespace eft_dma_radar
 {
@@ -85,12 +89,10 @@ namespace eft_dma_radar
         public float RampShift { get; set; }
         public int ColorScheme { get; set; }
 
-        public ThermalSettings() { }
-
-        public ThermalSettings(float colorCoefficient, float minTemp, float rampShift, int colorScheme)
+        public ThermalSettings(float colorCoefficient, float minTemperature, float rampShift, int colorScheme)
         {
             this.ColorCoefficient = colorCoefficient;
-            this.MinTemperature = minTemp;
+            this.MinTemperature = minTemperature;
             this.RampShift = rampShift;
             this.ColorScheme = colorScheme;
         }
@@ -111,8 +113,6 @@ namespace eft_dma_radar
         public int SunLightIntensity { get; set; }
         public int MoonLightIntensity { get; set; }
         public int TimeOfDay { get; set; }
-
-        public WorldSettings() { }
 
         public WorldSettings(bool fog, bool rain, bool clouds, bool shadows, bool sun, bool moon, bool sunLight, bool moonLight, bool freezeTime, int sunLightIntensity, int moonLightIntensity, int timeOfDay)
         {
@@ -185,11 +185,116 @@ namespace eft_dma_radar
         }
     }
 
+    public class AimviewSettings
+    {
+        public bool Enabled { get; set; }
+        public int Width { get; set; }
+        public int Height { get; set; }
+        public int X { get; set; }
+        public int Y { get; set; }
+        public string TeammateID { get; set; }
+        public Dictionary<string, AimviewObjectSettings> ObjectSettings { get; set; }
+
+        public AimviewSettings(bool enabled, int width, int height, int x, int y, string teammateID, Dictionary<string, AimviewObjectSettings> objectSettings)
+        {
+            this.Enabled = enabled;
+            this.Width = width;
+            this.Height = height;
+            this.X = x;
+            this.Y = y;
+            this.TeammateID = teammateID;
+            this.ObjectSettings = objectSettings ?? Config.DefaultAimviewObjectSettings;
+        }
+    }
+
+    public class AimviewObjectSettings
+    {
+        public bool Enabled { get; set; }
+        public bool Distance { get; set; }
+        public bool Name { get; set; }
+        public bool Value { get; set; }
+        public int PaintDistance { get; set; }
+        public int TextDistance { get; set; }
+
+        public AimviewObjectSettings(bool enabled, bool distance, bool name, bool value, int paintDistance, int textDistance)
+        {
+            this.Enabled = enabled;
+            this.Distance = distance;
+            this.Name = name;
+            this.Value = value;
+            this.PaintDistance = paintDistance;
+            this.TextDistance = textDistance;
+        }
+    }
+
     public struct AimlineSettings
     {
         public bool Enabled;
         public int Length;
         public int Opacity;
+    }
+
+    public class Bone
+    {
+        private Transform _transform;
+        private ulong _pointer;
+        private Vector3 _position;
+        private readonly object _posLock = new();
+        private int _errors = 0;
+
+
+        public Bone(ulong pointer)
+        {
+            this._pointer = pointer;
+            this._transform = new Transform(pointer);
+        }
+
+        public ulong Pointer => this._pointer;
+
+        public bool InvalidBonePtr => this._errors >= 3;
+
+        public Vector3 Position
+        {
+            get
+            {
+                lock (this._posLock)
+                    return this._position;
+            }
+            private set
+            {
+                lock (this._posLock)
+                    this._position = value;
+            }
+        }
+
+        public bool UpdatePosition()
+        {
+            try
+            {
+                this.Position = this._transform.GetPosition();
+                
+                if (this._errors > 0)
+                    this._errors = 0;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Program.Log($"Bone failed transform.GetPosition, attempting to get new transform");
+                try
+                {
+                    this._transform  = new Transform(this._pointer);
+                }
+                catch { }
+
+                return false;
+            }
+        }
+
+        public void UpdateTransform(ulong pointer)
+        {
+            this._pointer = pointer;
+            this._transform = new Transform(pointer);
+        }
     }
     #endregion
 

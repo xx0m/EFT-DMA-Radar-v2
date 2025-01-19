@@ -4,45 +4,45 @@ using System.Runtime.Intrinsics.X86;
 
 namespace eft_dma_radar
 {
-	public class Transform
-	{
-		#region Xmm
-		private static readonly Vector128<float> Xmm300 = Vector128.Create(-2f, -2f, 2f, 0f);
-		private static readonly Vector128<float> Xmm320 = Vector128.Create(-2f, 2f, -2f, 0f);
-		private static readonly Vector128<float> Xmm330 = Vector128.Create(2f, -2f, -2f, 0f);
-		private static readonly Vector128<float> Xmm610 = Vector128.Create(0f, 0f, 0f, 0f);
-		private static readonly Vector128<float> Xmm520 = Vector128.Create(-1f, -1f, -1f, 0f);
-		private static readonly Vector128<float> Xmm690 = Vector128.Create(0f, 0f, 0f, 0f);
-		private static readonly Vector128<float> XmmDe0 = Vector128.Create(1f, 1f, 1f, 1f);
-		#endregion
+    public class Transform
+    {
+        #region Xmm
+        private static readonly Vector128<float> Xmm300 = Vector128.Create(-2f, -2f, 2f, 0f);
+        private static readonly Vector128<float> Xmm320 = Vector128.Create(-2f, 2f, -2f, 0f);
+        private static readonly Vector128<float> Xmm330 = Vector128.Create(2f, -2f, -2f, 0f);
+        private static readonly Vector128<float> Xmm610 = Vector128.Create(0f, 0f, 0f, 0f);
+        private static readonly Vector128<float> Xmm520 = Vector128.Create(-1f, -1f, -1f, 0f);
+        private static readonly Vector128<float> Xmm690 = Vector128.Create(0f, 0f, 0f, 0f);
+        private static readonly Vector128<float> XmmDe0 = Vector128.Create(1f, 1f, 1f, 1f);
+        #endregion
 
-		private readonly bool _isPlayerTransform;
+        private readonly bool _isPlayerTransform;
 
-		public Transform(ulong transformInternal, bool isPlayerTransform = false)
-		{
-			var hierarchy = Memory.ReadValue<ulong>(transformInternal + Offsets.TransformInternal.Hierarchy);
+        public Transform(ulong transformInternal, bool isPlayerTransform = false)
+        {
+            var hierarchy = Memory.ReadValue<ulong>(transformInternal + Offsets.TransformInternal.Hierarchy);
 
-			IndicesAddr = Memory.ReadValue<ulong>(hierarchy + Offsets.TransformHierarchy.Indices);
+            IndicesAddr = Memory.ReadValue<ulong>(hierarchy + Offsets.TransformHierarchy.Indices);
 
-			VerticesAddr = Memory.ReadValue<ulong>(hierarchy + Offsets.TransformHierarchy.Vertices); 
+            VerticesAddr = Memory.ReadValue<ulong>(hierarchy + Offsets.TransformHierarchy.Vertices);
 
-			_isPlayerTransform = isPlayerTransform;
+            _isPlayerTransform = isPlayerTransform;
 
-			if (isPlayerTransform)
-				HierarchyIndex = 1;
-			else
-				HierarchyIndex = Memory.ReadValue<int>(transformInternal + Offsets.TransformInternal.HierarchyIndex);
-		}
+            if (isPlayerTransform)
+                HierarchyIndex = 1;
+            else
+                HierarchyIndex = Memory.ReadValue<int>(transformInternal + Offsets.TransformInternal.HierarchyIndex);
+        }
 
-		public ulong IndicesAddr { get; }
-		public ulong VerticesAddr { get; }
-		private int HierarchyIndex { get; }
+        public ulong IndicesAddr { get; }
+        public ulong VerticesAddr { get; }
+        private int HierarchyIndex { get; }
 
         #region GetPos
         public Vector3 GetPosition(object[] obj = null)
-		{
-			try
-			{
+        {
+            try
+            {
                 List<int> indices;
                 List<Vector128<float>> vertices;
                 if (obj is null) // standalone constructor
@@ -56,12 +56,12 @@ namespace eft_dma_radar
                     vertices = (List<Vector128<float>>)obj[1];
                 }
 
-				if (indices is null || vertices is null)
-					throw new Exception("Invalid Position!");
+                if (indices is null || vertices is null)
+                    throw new Exception("Invalid Position!");
 
                 var index = indices[HierarchyIndex]; // Indices + 4 * capacity   (was index_relation)
                 if (_isPlayerTransform && index != 0)
-					throw new Exception("Invalid index!");
+                    throw new Exception("Invalid index!");
 
                 var result = vertices[3 * HierarchyIndex]; // Vertices + 0x30 * capacity
 
@@ -70,18 +70,18 @@ namespace eft_dma_radar
                 {
                     // perform validations....
                     if (_isPlayerTransform)
-					{
+                    {
                         if (index > 1)
                             throw new Exception("Invalid index!");
                     }
                     else
                     {
-						if (index >= vertices.Count / 3)
-							break;
+                        if (index >= vertices.Count / 3)
+                            break;
                     }
 
                     if (iterations++ >= 100)
-						throw new Exception("Max SIMD Iterations! Invalid state.");
+                        throw new Exception("Max SIMD Iterations! Invalid state.");
 
                     // begin iteration...
                     var v9 = vertices[3 * index + 1].AsInt32(); // Vertices + 0x30 * index + 0x10
@@ -122,78 +122,78 @@ namespace eft_dma_radar
                 // return result
                 var pos = result.AsVector3();
                 if (pos.X == 0 && pos.Y == 0 && pos.Z == 0)
-					throw new Exception("Invalid Position!");
+                    throw new Exception("Invalid Position!");
 
-                return new Vector3(pos.X, pos.Z, pos.Y); // Z & Y flipped
+                return pos;
             }
-			catch (Exception ex)
-			{
+            catch (Exception ex)
+            {
                 throw new Exception("Invalid Position!");
             }
-		}
-		#endregion
+        }
+        #endregion
 
-		#region ReadMem
-		/// <summary>
-		/// IndicesAddress -> IndicesSize -> VerticesAddress -> VerticesSize
-		/// </summary>
-		/// <returns></returns>
-		public Tuple<ulong, int, ulong, int> GetScatterReadParameters()
-		{
-			return new Tuple<ulong, int, ulong, int>(IndicesAddr, HierarchyIndex + 1, VerticesAddr, 3 * HierarchyIndex + 3);
-		}
-		/// <summary>
-		/// Standalone Indices Read.
-		/// </summary>
-		/// <returns></returns>
-		private static List<int> ReadIndices(ulong address, int count)
-		{
-			var list = new List<int>();
-			if (count < 1)
-				return list;
+        #region ReadMem
+        /// <summary>
+        /// IndicesAddress -> IndicesSize -> VerticesAddress -> VerticesSize
+        /// </summary>
+        /// <returns></returns>
+        public Tuple<ulong, int, ulong, int> GetScatterReadParameters()
+        {
+            return new Tuple<ulong, int, ulong, int>(IndicesAddr, HierarchyIndex + 1, VerticesAddr, 3 * HierarchyIndex + 3);
+        }
+        /// <summary>
+        /// Standalone Indices Read.
+        /// </summary>
+        /// <returns></returns>
+        private static List<int> ReadIndices(ulong address, int count)
+        {
+            var list = new List<int>();
+            if (count < 1)
+                return list;
 
-			var scatterReadMap = new ScatterReadMap(count);
-			var round = scatterReadMap.AddRound();
+            var scatterReadMap = new ScatterReadMap(count);
+            var round = scatterReadMap.AddRound();
 
-			for (int i = 0; i < count; i++)
-			{
-				round.AddEntry<int>(0, i, address, null, (uint)(i * 4));
-			}
+            for (int i = 0; i < count; i++)
+            {
+                round.AddEntry<int>(0, i, address, null, (uint)(i * 4));
+            }
 
-			scatterReadMap.Execute();
+            scatterReadMap.Execute();
 
-			for (int i = 0; i < count; i++)
-			{
-				scatterReadMap.Results[0][i].TryGetResult<int>(out int result);
+            for (int i = 0; i < count; i++)
+            {
+                scatterReadMap.Results[0][i].TryGetResult<int>(out int result);
 
-				list.Add(result);
-			}
+                list.Add(result);
+            }
 
-			return list;
-		}
+            return list;
+        }
 
-		/// <summary>
-		/// Standalone Vertices Read.
-		/// </summary>
-		private static List<Vector128<float>> ReadVertices128(ulong address, int count)
-		{
-			var ret = new List<Vector128<float>>();
+        /// <summary>
+        /// Standalone Vertices Read.
+        /// </summary>
+        private static List<Vector128<float>> ReadVertices128(ulong address, int count)
+        {
+            var ret = new List<Vector128<float>>();
 
-			var buffer = Memory.ReadBuffer(address, count * 16);
+            var buffer = Memory.ReadBuffer(address, count * 16);
 
-			for (var i = 0; i < count * 16; i += 16)
-			{
-				var result = Vector128.Create(
-					buffer[i], buffer[i + 1], buffer[i + 2], buffer[i + 3], buffer[i + 4], buffer[i + 5],
-					buffer[i + 6], buffer[i + 7], buffer[i + 8], buffer[i + 9], buffer[i + 10], buffer[i + 11],
-					buffer[i + 12], buffer[i + 13], buffer[i + 14], buffer[i + 15])
-					.AsSingle<byte>();
+            for (var i = 0; i < count * 16; i += 16)
+            {
+                var result = Vector128.Create(
+                    buffer[i], buffer[i + 1], buffer[i + 2], buffer[i + 3], buffer[i + 4], buffer[i + 5],
+                    buffer[i + 6], buffer[i + 7], buffer[i + 8], buffer[i + 9], buffer[i + 10], buffer[i + 11],
+                    buffer[i + 12], buffer[i + 13], buffer[i + 14], buffer[i + 15])
+                    .AsSingle<byte>();
 
-				ret.Add(result);
-			}
+                ret.Add(result);
+            }
 
-			return ret;
-		}
+            return ret;
+        }
         #endregion
     }
 }

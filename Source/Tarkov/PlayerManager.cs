@@ -291,9 +291,23 @@ namespace eft_dma_radar
         {
             try
             {
+                if (on && xIntensity == 0 && yIntensity == 0)
+                {
+                    if (this._mask != 1)
+                        entries.Add(new ScatterWriteDataEntry<int>(this._proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.Mask, 1));
+                    return;
+                }
+
+                if (this._mask == 1)
+                    entries.Add(new ScatterWriteDataEntry<int>(this._proceduralWeaponAnimation + Offsets.ProceduralWeaponAnimation.Mask, (int)this.OriginalValues["Mask"]));
+
                 if (on && (this._recoilIntensity[0] != xIntensity || this._recoilIntensity[1] != yIntensity))
-                    entries.Add(new ScatterWriteDataEntry<Vector3>(this._newShotRecoil + Offsets.NewRecoilShotEffect.IntensitySeparateFactors, new Vector3(xIntensity, yIntensity, 1)));
-                else if (!on && this._recoilIntensity != DEFAULT_RECOIL)
+                {
+                    entries.Add(new ScatterWriteDataEntry<Vector3>(this._newShotRecoil + Offsets.NewRecoilShotEffect.IntensitySeparateFactors, new Vector3(xIntensity, yIntensity, 0)));
+                    return;
+                }
+
+                if (!on && this._recoilIntensity != DEFAULT_RECOIL)
                     entries.Add(new ScatterWriteDataEntry<Vector3>(this._newShotRecoil + Offsets.NewRecoilShotEffect.IntensitySeparateFactors, DEFAULT_RECOIL));
             }
             catch (Exception ex)

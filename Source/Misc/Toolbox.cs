@@ -8,6 +8,7 @@ namespace eft_dma_radar
         private CancellationTokenSource autoRefreshCancellationTokenSource;
 
         private const int MAX_ATTEMPTS = 4;
+        private bool _initialisingMonoAddresses = false;
 
         private bool medInfoPanel = false;
         private bool extendedReach = false;
@@ -56,7 +57,8 @@ namespace eft_dma_radar
         private bool FoundEFTHardSettings = false;
         private bool FoundTOD_Sky = false;
         private bool FoundWeatherController = false;
-        private bool ShouldInitializeToolboxMono => !this.ToolboxMonoInitialized && Memory.InGame && Memory.LocalPlayer is not null;
+        private bool ShouldInitializeToolboxMono => !this.ToolboxMonoInitialized && Memory.InGame && Memory.LocalPlayer is not null; 
+        public bool InitialisingMonoAddresses { get => this._initialisingMonoAddresses; }
 
         public bool UpdateExtendedReachDistance { get; set; } = false;
         public bool UpdateThermalSettings{ get; set; } = false;
@@ -150,30 +152,31 @@ namespace eft_dma_radar
             if (this.ShouldInitializeToolboxMono)
             {
                 var attempts = 0;
+                this._initialisingMonoAddresses = true;
 
-                while (attempts < MAX_ATTEMPTS && !this.FoundTOD_Sky)
-                {
-                    try
-                    {
-                        if (this._world.InitializeTOD_Sky())
-                        {
-                            this.FoundTOD_Sky = true;
-                            break;
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        attempts++;
-                        Program.Log("[ToolBox] Failed to get TOD_SKY, retrying in 500ms!");
-                        Thread.Sleep(500);
+                //while (attempts < MAX_ATTEMPTS && !this.FoundTOD_Sky)
+                //{
+                //    try
+                //    {
+                //        if (this._world.InitializeTOD_Sky())
+                //        {
+                //            this.FoundTOD_Sky = true;
+                //            break;
+                //        }
+                //    }
+                //    catch (Exception ex)
+                //    {
+                //        attempts++;
+                //        Program.Log("[ToolBox] Failed to get TOD_SKY, retrying in 500ms!");
+                //        Thread.Sleep(500);
 
-                        if (attempts == MAX_ATTEMPTS)
-                        {
-                            Program.Log($"[Toolbox] Failed to get TOD_Sky {MAX_ATTEMPTS} times, skipping!");
-                            break;
-                        }
-                    }
-                }
+                //        if (attempts == MAX_ATTEMPTS)
+                //        {
+                //            Program.Log($"[Toolbox] Failed to get TOD_Sky {MAX_ATTEMPTS} times, skipping!");
+                //            break;
+                //        }
+                //    }
+                //}
 
                 attempts = 0;
 
@@ -200,32 +203,35 @@ namespace eft_dma_radar
 
                 attempts = 0;
 
-                while (attempts < MAX_ATTEMPTS && !this.FoundWeatherController)
-                {
-                    try
-                    {
-                        if (this._world.InitializeWeatherController())
-                        {
-                            this.FoundWeatherController = true;
-                            break;
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        attempts++;
-                        Program.Log("[ToolBox] Failed to get EFT.Weather.WeatherController, retrying in 500ms!");
-                        Thread.Sleep(500);
+                //while (attempts < MAX_ATTEMPTS && !this.FoundWeatherController)
+                //{
+                //    try
+                //    {
+                //        if (this._world.InitializeWeatherController())
+                //        {
+                //            this.FoundWeatherController = true;
+                //            break;
+                //        }
+                //    }
+                //    catch (Exception ex)
+                //    {
+                //        attempts++;
+                //        Program.Log("[ToolBox] Failed to get EFT.Weather.WeatherController, retrying in 500ms!");
+                //        Thread.Sleep(500);
 
-                        if (attempts == MAX_ATTEMPTS)
-                        {
-                            Program.Log($"[Toolbox] Failed to get EFT.Weather.WeatherController {MAX_ATTEMPTS} times, skipping!");
-                            break;
-                        }
-                    }
-                }
+                //        if (attempts == MAX_ATTEMPTS)
+                //        {
+                //            Program.Log($"[Toolbox] Failed to get EFT.Weather.WeatherController {MAX_ATTEMPTS} times, skipping!");
+                //            break;
+                //        }
+                //    }
+                //}
 
                 if (this.FoundTOD_Sky || this.FoundEFTHardSettings || this.FoundWeatherController)
                     this.ToolboxMonoInitialized = true;
+
+                this._initialisingMonoAddresses = false;
+                Program.Log($"[ToolBox] - Attempt at initialising Mono Addresses complete");
             }
             else
             {

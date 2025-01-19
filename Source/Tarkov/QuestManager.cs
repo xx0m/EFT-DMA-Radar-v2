@@ -250,7 +250,6 @@ namespace eft_dma_radar
                         var cRound1 = scatterReadMapConditions.AddRound();
                         var hashsetStart = completedSubTaskList + Offsets.Hashset.Start;
 
-
                         for (int j = 0; j < completedSubTaskCount; j++)
                         {
                             var conditionID = cRound1.AddEntry<ulong>(j, 0, hashsetStart, null, (uint)j * Offsets.Hashset.Size);
