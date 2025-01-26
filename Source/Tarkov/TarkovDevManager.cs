@@ -536,6 +536,11 @@ namespace eft_dma_radar
             public string normalizedName { get; set; }
         }
 
+        public class Vendor
+        {
+            public string normalizedName { get; set; }
+        }
+
         public class VendorPrice
         {
             public Vendor vendor { get; set; }
